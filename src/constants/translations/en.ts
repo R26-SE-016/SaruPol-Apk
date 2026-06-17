@@ -1,0 +1,120 @@
+export default {
+  common: {
+    appName: "SaruPol",
+    loading: "Loading...",
+    success: "Success",
+    error: "Error",
+    save: "Save",
+    submit: "Submit",
+    cancel: "Cancel",
+    retry: "Retry",
+    next: "Next",
+    back: "Back",
+    confirm: "Confirm",
+    healthy: "Healthy",
+    diseased: "Diseased",
+    severity: "Severity",
+    offlineMode: "Offline Mode Enabled",
+    offlineWarning: "You are offline. Showing cached results. Advanced AI features will resume when online.",
+    guest: "Guest Mode",
+    welcome: "Welcome to SaruPol"
+  },
+  onboarding: {
+    slide1Title: "AI Pathology Scanner",
+    slide1Desc: "Instantly detect 15+ diseases in leaves, trunks, roots, crowns, nuts, and inflorescence using computer vision.",
+    slide2Title: "ML Yield Prediction",
+    slide2Desc: "Accurately forecast your annual and 45-day harvest yield by combining soil, climate, and palm age data.",
+    slide3Title: "Soil Intelligence",
+    slide3Desc: "Get instant soil health scores, deficiency analyses, and automated fertilizer plans tailored to your land.",
+    slide4Title: "AI Advisor Chatbot",
+    slide4Desc: "Ask our expert AI anything in English or Sinhala. Backed by verified Coconut Research Institute findings."
+  },
+  guest: {
+    title: "About SaruPol",
+    whoWeAreTitle: "Who We Are",
+    whoWeAreText: "SaruPol is a multiscale computer vision ecosystem developed by Sri Lankan researchers (R26-SE-016) to empower smallholder coconut farmers and plantation managers with state-of-the-art agricultural technology.",
+    whatWeDoTitle: "What We Do",
+    whatWeDoText: "We consolidate 4 pillars of precision agriculture: Deep Learning disease scanning, multi-model ensemble yield prediction, soil nutrient optimization, and a RAG-powered expert chatbot system.",
+    getStartedText: "Create an account or login to access premium tracking, historical graphs, and real-time syncing.",
+    featuresList: {
+      pathology: "🔬 Instantly analyze plant disease status",
+      yield: "📊 Project upcoming harvests to negotiate better prices",
+      soil: "🌱 Rationalize fertilizer use based on soil tests",
+      advisor: "💬 Chat with an expert AI to solve plantation issues"
+    }
+  },
+  auth: {
+    loginTitle: "Welcome Back",
+    registerTitle: "Create Account",
+    emailPlaceholder: "Enter your email",
+    passwordPlaceholder: "Enter your password",
+    namePlaceholder: "Enter your name",
+    loginBtn: "Login",
+    registerBtn: "Register",
+    guestBtn: "Continue as Guest",
+    noAccount: "Don't have an account? Sign up",
+    hasAccount: "Already have an account? Login",
+    premiumFeature: "Log in to access this feature!"
+  },
+  home: {
+    greetingMorning: "Good Morning",
+    greetingAfternoon: "Good Afternoon",
+    greetingEvening: "Good Evening",
+    weatherTitle: "Plantation Weather",
+    quickActions: "Quick Actions",
+    recentActivity: "Recent Activity",
+    tipTitle: "Tip of the Day",
+    statsTotalScans: "Total Scans",
+    statsAvgYield: "Avg Yield",
+    statsSoilScore: "Soil Score",
+    noRecentActivity: "No recent scans or predictions found."
+  },
+  pathology: {
+    title: "Pathology Scanner",
+    instruction: "Choose which part of the coconut palm you are scanning, then take a photo.",
+    partSelectorTitle: "Select Coconut Part",
+    captureBtn: "Take Photo",
+    galleryBtn: "Choose from Gallery",
+    resultTitle: "Diagnosis Result",
+    confidence: "Confidence Score",
+    recommendationTitle: "Treatment Recommendation",
+    chemicalTreatment: "Chemical Treatment",
+    culturalTreatment: "Cultural Practices",
+    preventiveTreatment: "Preventive Measures",
+    feedbackTitle: "Was this diagnosis correct?",
+    feedbackCorrect: "Correct",
+    feedbackIncorrect: "Incorrect",
+    diseaseLibrary: "Disease Library"
+  },
+  yield: {
+    title: "Yield Predictor",
+    predictModeAnnual: "Annual Projection",
+    predictMode45Day: "45-Day Cycle",
+    predictBtn: "Calculate Yield",
+    resultTitle: "Yield Prediction",
+    projectionUnit: "nuts / palm / year",
+    projectionUnit45: "nuts / palm / cycle",
+    confidenceInterval: "Confidence Range",
+    modelBreakdown: "Ensemble Contributions",
+    seasonalTitle: "Harvest Outlook",
+    weatherAlert: "Autofilled climate factors using GPS location."
+  },
+  soil: {
+    title: "Soil Intelligence",
+    healthScore: "Soil Health Score",
+    fertilityLabel: "Overall Fertility Status",
+    nutrientsDashboard: "Nutrients Dashboard",
+    deficiencyAlertTitle: "Nutrient Deficiencies Detected",
+    fertilizerPlanTitle: "Custom Fertilizer Schedule",
+    amountPerPalm: "per palm",
+    dosage: "Dosage",
+    instructions: "Instructions",
+    schedule: "Schedule"
+  },
+  advisor: {
+    title: "SaruPol Advisor",
+    suggestedQuestions: "Suggested Questions",
+    sourcesTitle: "Sources & Citations",
+    placeholder: "Ask about diseases, soil, fertilizer..."
+  }
+};

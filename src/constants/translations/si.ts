@@ -1,0 +1,120 @@
+export default {
+  common: {
+    appName: "සරුපොල් (SaruPol)",
+    loading: "ලෝඩ් වෙමින් පවතී...",
+    success: "සාර්ථකයි",
+    error: "දෝෂයකි",
+    save: "සුරකින්න",
+    submit: "යොමු කරන්න",
+    cancel: "අවලංගු කරන්න",
+    retry: "නැවත උත්සාහ කරන්න",
+    next: "ඊළඟ",
+    back: "ආපසු",
+    confirm: "තහවුරු කරන්න",
+    healthy: "නිරෝගී",
+    diseased: "රෝගී",
+    severity: "බරපතලකම",
+    offlineMode: "නොබැඳි (Offline) ක්‍රියාකාරිත්වය",
+    offlineWarning: "ඔබ අන්තර්ජාලයට සම්බන්ධ වී නැත. සුරැකි දත්ත පෙන්වයි. අන්තර්ජාලය ලැබුණු පසු AI විශේෂාංග නැවත ක්‍රියාත්මක වේ.",
+    guest: "අමුත්තන්ගේ ප්‍රකාරය",
+    welcome: "සරුපොල් වෙත සාදරයෙන් පිළිගනිමු"
+  },
+  onboarding: {
+    slide1Title: "AI රෝග හඳුනාගැනීම",
+    slide1Desc: "පත්‍ර, කඳ, මුල්, කරටිය, ගෙඩි සහ පුෂ්ප මංජරියෙහි ඇතිවන රෝග 15කට වඩා වැඩි ප්‍රමාණයක් ඡායාරූප මඟින් ක්ෂණිකව හඳුනාගන්න.",
+    slide2Title: "අස්වැන්න පුරෝකථනය",
+    slide2Desc: "පස, දේශගුණය සහ ගසේ වයස අනුව වාර්ෂික සහ දින 45ක අස්වනු ප්‍රමාණයන් නිවැරදිව පුරෝකථනය කරන්න.",
+    slide3Title: "පාංශු බුද්ධි විශ්ලේෂණය",
+    slide3Desc: "ඔබේ වගා බිමට ගැළපෙන පරිදි පසේ සෞඛ්‍ය තත්ත්වය, ඌනතා සහ පොහොර සැලසුම් ක්ෂණිකව ලබාගන්න.",
+    slide4Title: "AI උපදේශක (Chatbot)",
+    slide4Desc: "පොල් වගාව පිළිබඳ ඕනෑම ගැටලුවක් සිංහල හෝ ඉංග්‍රීසි භාෂාවෙන් විමසන්න. පොල් පර්යේෂණ ආයතනයේ නිර්දේශ මත පදනම් වේ."
+  },
+  guest: {
+    title: "සරුපොල් ගැන",
+    whoWeAreTitle: "අපි කවුද?",
+    whoWeAreText: "සරුපොල් යනු ශ්‍රී ලාංකික පර්යේෂකයන් කණ්ඩායමක් (R26-SE-016) විසින් පොල් වගාකරුවන් සහ වතු කළමනාකරුවන් නවීන කෘෂි තාක්ෂණයෙන් සන්නද්ධ කිරීම සඳහා නිපදවන ලද පරිගණක දෘෂ්ටි (Computer Vision) පරිසර පද්ධතියකි.",
+    whatWeDoTitle: "අපගේ සේවාවන්",
+    whatWeDoText: "අපි නිරවද්‍ය කෘෂිකර්මාන්තයේ ප්‍රධාන අංශ 4ක් ඒකාබද්ධ කරමු: රෝග හඳුනාගැනීම, අස්වැන්න පුරෝකථනය, පාංශු පෝෂක ප්‍රශස්තකරණය සහ AI උපදේශන සේවාව.",
+    getStartedText: "ඉතිහාස දත්ත සුරැකීමට, ප්‍රස්ථාර බැලීමට සහ උපාංග අතර දත්ත සමකාලීන කිරීමට ගිණුමක් සාදන්න හෝ ලොග් වන්න.",
+    featuresList: {
+      pathology: "🔬 ශාකයේ රෝගී තත්ත්වය ක්ෂණිකව විශ්ලේෂණය කරන්න",
+      yield: "📊 ඉදිරි අස්වැන්න කල්තියා දැනගෙන හොඳ මිලක් සාකච්ඡා කරගන්න",
+      soil: "🌱 පස් පරීක්ෂණ අනුව ක්‍රමානුකූලව පොහොර යොදන්න",
+      advisor: "💬 වගාවේ ගැටලු විසඳීමට විශේෂඥ AI සමඟ කතාබස් කරන්න"
+    }
+  },
+  auth: {
+    loginTitle: "නැවත සාදරයෙන් පිළිගනිමු",
+    registerTitle: "ගිණුමක් සාදන්න",
+    emailPlaceholder: "ඊමේල් ලිපිනය ඇතුළත් කරන්න",
+    passwordPlaceholder: "මුරපදය ඇතුළත් කරන්න",
+    namePlaceholder: "ඔබේ නම ඇතුළත් කරන්න",
+    loginBtn: "ඇතුල් වන්න (Login)",
+    registerBtn: "ලියාපදිංචි වන්න",
+    guestBtn: "ලියාපදිංචි නොවී ඉදිරියට යන්න",
+    noAccount: "ගිණුමක් නැද්ද? ලියාපදිංචි වන්න",
+    hasAccount: "දැනටමත් ගිණුමක් තිබේද? ඇතුල් වන්න",
+    premiumFeature: "මෙම අංගය භාවිත කිරීමට කරුණාකර ලොග් වන්න!"
+  },
+  home: {
+    greetingMorning: "සුබ උදෑසනක්",
+    greetingAfternoon: "සුබ දහවලක්",
+    greetingEvening: "සුබ සන්ධ්‍යාවක්",
+    weatherTitle: "වගා බිමේ කාලගුණය",
+    quickActions: "ක්‍ෂණික සේවා",
+    recentActivity: "මෑතකදී සිදුකළ ක්‍රියාකාරකම්",
+    tipTitle: "අද දවසේ උපදෙස",
+    statsTotalScans: "මුළු පරීක්ෂණ",
+    statsAvgYield: "සාමාන්‍ය අස්වැන්න",
+    statsSoilScore: "පාංශු සෞඛ්‍යය",
+    noRecentActivity: "මෑතකදී සිදුකළ පරීක්ෂණ කිසිවක් හමු නොවීය."
+  },
+  pathology: {
+    title: "රෝග ස්කෑනරය",
+    instruction: "පොල් ගසේ පරීක්ෂා කරන කොටස තෝරා ඡායාරූපයක් ලබාගන්න.",
+    partSelectorTitle: "පොල් ගසේ කොටස තෝරන්න",
+    captureBtn: "ඡායාරූපයක් ගන්න",
+    galleryBtn: "ගැලරියෙන් තෝරන්න",
+    resultTitle: "විශ්ලේෂණ ප්‍රතිඵලය",
+    confidence: "විශ්වාසනීයතා ප්‍රතිශතය",
+    recommendationTitle: "ප්‍රතිකාර නිර්දේශය",
+    chemicalTreatment: "රසායනික ප්‍රතිකාර",
+    culturalTreatment: "කෘෂිකාර්මික පිළිවෙත්",
+    preventiveTreatment: "වැළැක්වීමේ පියවර",
+    feedbackTitle: "මෙම රෝග විනිශ්චය නිවැරදිද?",
+    feedbackCorrect: "නිවැරදියි",
+    feedbackIncorrect: "වැරදියි",
+    diseaseLibrary: "රෝග නාමාවලිය"
+  },
+  yield: {
+    title: "අස්වනු අනාවැකි",
+    predictModeAnnual: "වාර්ෂික පුරෝකථනය",
+    predictMode45Day: "දින 45 චක්‍රය",
+    predictBtn: "අස්වැන්න ගණනය කරන්න",
+    resultTitle: "අස්වනු පුරෝකථනය",
+    projectionUnit: "ගෙඩි / ගසට / වසරකට",
+    projectionUnit45: "ගෙඩි / ගසට / චක්‍රයකට",
+    confidenceInterval: "විශ්වාසනීය පරාසය",
+    modelBreakdown: "AI මාදිලිවල දායකත්වය",
+    seasonalTitle: "අස්වනු දැක්ම",
+    weatherAlert: "ඔබගේ GPS පිහිටීම අනුව කාලගුණ දත්ත ස්වයංක්‍රීයව ඇතුළත් කරන ලදී."
+  },
+  soil: {
+    title: "පාංශු විශ්ලේෂණය",
+    healthScore: "පසේ සෞඛ්‍ය අගය",
+    fertilityLabel: "සමස්ත සාරවත් බව",
+    nutrientsDashboard: "පෝෂක දර්ශකය",
+    deficiencyAlertTitle: "පෝෂක ඌනතාවයන් හඳුනාගෙන ඇත",
+    fertilizerPlanTitle: "නියමිත පොහොර සැලැස්ම",
+    amountPerPalm: "ගසකට",
+    dosage: "ප්‍රමාණය",
+    instructions: "උපදෙස්",
+    schedule: "කාලසටහන"
+  },
+  advisor: {
+    title: "AI උපදේශක",
+    suggestedQuestions: "යෝජිත ප්‍රශ්න",
+    sourcesTitle: "මුලාශ්‍ර සහ සහතික කිරීම්",
+    placeholder: "රෝග, පස හෝ පොහොර ගැන විමසන්න..."
+  }
+};
