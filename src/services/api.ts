@@ -3,10 +3,9 @@ import { Platform } from 'react-native';
 import { useAppStore } from '../store/appStore';
 
 // Point to the unified API Gateway
-// We use 10.0.2.2 for Android Emulator, or localhost for iOS/web.
-// During setup, we can use localhost, but let's make it configurable or fallback gracefully.
-const GATEWAY_URL = 'http://localhost:8000'; 
-const EMULATOR_GATEWAY_URL = 'http://10.0.2.2:8000';
+// Use your local machine's IP address so physical mobile devices on the same Wi-Fi can connect.
+const BACKEND_IP = '10.54.124.87'; 
+const GATEWAY_URL = `http://${BACKEND_IP}:8000`;
 
 const api = axios.create({
   baseURL: GATEWAY_URL,
@@ -21,10 +20,8 @@ api.interceptors.request.use(
   (config) => {
     const state = useAppStore.getState();
     
-    // Fallback to Android emulator IP if running on android emulator
-    if (Platform.OS === 'android') {
-      config.baseURL = EMULATOR_GATEWAY_URL;
-    }
+    // Use the local IP for both Android and iOS physical/emulator devices
+    config.baseURL = GATEWAY_URL;
 
     if (state.token) {
       config.headers.Authorization = `Bearer ${state.token}`;
