@@ -2,10 +2,16 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import { useAppStore } from '../store/appStore';
 
-// Point to the unified API Gateway
-// Use your local machine's IP address so physical mobile devices on the same Wi-Fi can connect.
-const BACKEND_IP = '10.54.124.87'; 
-const GATEWAY_URL = `http://${BACKEND_IP}:8000`;
+import Constants from 'expo-constants';
+
+let ipAddress = 'localhost';
+if (Constants.expoConfig?.hostUri) {
+  ipAddress = Constants.expoConfig.hostUri.split(':')[0];
+} else if (Platform.OS === 'android') {
+  ipAddress = '10.0.2.2';
+}
+
+const GATEWAY_URL = `http://${ipAddress}:8000/api`;
 
 const api = axios.create({
   baseURL: GATEWAY_URL,
@@ -19,9 +25,6 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const state = useAppStore.getState();
-    
-    // Use the local IP for both Android and iOS physical/emulator devices
-    config.baseURL = GATEWAY_URL;
 
     if (state.token) {
       config.headers.Authorization = `Bearer ${state.token}`;

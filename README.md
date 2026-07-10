@@ -1,56 +1,51 @@
-# Welcome to your Expo app 👋
+<div align="center">
+  <h1>🌴 SaruPol</h1>
+  <p><strong>Your Ultimate Companion for Coconut Health & Pathology Detection</strong></p>
+  <p><em>Protecting plantations, empowering farmers, and securing yields with the power of Artificial Intelligence.</em></p>
+</div>
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+<br />
 
-## Get started
+## 🌱 About SaruPol
+SaruPol is a state-of-the-art mobile application designed to instantly identify, diagnose, and treat coconut tree diseases. Built with farmers and plantation owners in mind, SaruPol brings expert agricultural insights directly to the palm of your hand. 
 
-1. Install dependencies
+No more guesswork. No more delayed treatments. Just point, snap, and protect your livelihood.
 
-   ```bash
-   npm install
-   ```
+---
 
-2. Start the app
+## ✨ Why Choose SaruPol?
 
-   ```bash
-   npx expo start
-   ```
+### 🎯 Instant AI Diagnosis
+Snap a picture of a suspect leaf or trunk, and SaruPol’s cutting-edge AI engine will instantly detect devastating diseases like **Bud Rot**, **Stem Bleeding**, and **Gray Leaf Spot** with expert-level accuracy.
 
-In the output, you'll find options to open the app in a
+### 📈 Maximize Your Yields
+Early detection saves trees. By catching diseases in their infancy, SaruPol helps you apply the right treatments at the right time, minimizing crop loss and maximizing your harvest.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### 🤝 Built For Everyone
+Whether you manage a sprawling commercial estate or just have a few beloved coconut trees in your backyard, SaruPol's intuitive, breathtaking design makes agricultural health tracking as simple as sending a text message.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+### 🚀 Real-time Insights
+Stay informed with real-time feedback. Every scan not only provides a diagnosis but also delivers actionable advice and confidence scores to ensure you know exactly what steps to take next.
 
-## Get a fresh project
+---
 
-When you're ready, run:
+## 📱 Features at a Glance
 
-```bash
-npm run reset-project
-```
+- **Smart Scanning:** Effortless camera integration for clear, precise pathology scans.
+- **Disease Directory:** Access an encyclopedia of common and rare coconut diseases.
+- **Actionable Advice:** Step-by-step treatment plans tailored to your specific diagnosis.
+- **History Tracking:** Keep a visual log of your plantation's health journey over time.
+- **Seamless Experience:** A stunning, modern interface crafted for the best user experience.
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+---
 
-### Other setup steps
+## 🌟 Our Mission
+At SaruPol, we believe in a future where technology bridges the gap between traditional farming and modern innovation. We are dedicated to ensuring the sustainability of coconut agriculture worldwide, providing the tools necessary to fight back against the hidden threats that harm our environment and economies.
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+**Join the agricultural revolution today. Grow healthier, harvest better, with SaruPol.**
 
-## Learn more
+<br />
 
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+<div align="center">
+  <p><i>SaruPol — Smart Farming for a Greener Tomorrow.</i></p>
+</div>
