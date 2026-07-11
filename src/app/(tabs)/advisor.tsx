@@ -138,8 +138,19 @@ export default function AdvisorScreen() {
       let currentZone = 'Unknown Zone';
       if (status === 'granted') {
         try {
-          let location = await Location.getCurrentPositionAsync({});
-          currentZone = determineZone(location.coords.latitude, location.coords.longitude);
+          // Attempt to get last known location first (cached, resolves instantly)
+          let location = await Location.getLastKnownPositionAsync({});
+          
+          if (!location) {
+            // Fallback to active query with balanced accuracy for fast response
+            location = await Location.getCurrentPositionAsync({ 
+              accuracy: Location.Accuracy.Balanced 
+            });
+          }
+          
+          if (location) {
+            currentZone = determineZone(location.coords.latitude, location.coords.longitude);
+          }
         } catch (error) {
           console.log("Error getting location", error);
         }
@@ -150,12 +161,12 @@ export default function AdvisorScreen() {
     })();
   }, []);
 
-  // Suggested questions chips
+  // Suggested questions chips (related to English/Sinhala PDFs in our knowledge base)
   const suggestions = [
-    language === 'en' ? "How to treat Bud Rot disease?" : "කරටි කුණුවීමට ප්‍රතිකාර මොනවාද?",
-    language === 'en' ? "What is the NPK fertilizer dosage?" : "adult ගසකට පොහොර ප්‍රමාණය කොපමණද?",
-    language === 'en' ? "How to prevent Stem Bleeding?" : "කඳෙන් මැලියම් වැගිරීම පාලනය කරන්නේ කෙසේද?",
-    language === 'en' ? "When is the best harvesting cycle?" : "පොල් කැඩීම සඳහා හොඳම කාලය කවදාද?"
+    language === 'en' ? "How should I fertilize young coconut palms?" : "පොල් පැළ සඳහා පොහොර යෙදිය යුත්තේ කෙසේද?",
+    language === 'en' ? "How do I select a good mother palm?" : "හොඳ මව් ශාකයක් තෝරා ගන්නේ කෙසේද?",
+    language === 'en' ? "How do I control termites in coconut nursery?" : "පොල් තවාන් වල වේයන් පාලනය කරන්නේ කෙසේද?",
+    language === 'en' ? "What fertilizer mixture is recommended for coconut seedlings?" : "පොල් පැළ සඳහා නිර්දේශිත පොහොර මිශ්‍රණය කුමක්ද?"
   ];
 
   const handleSend = async (textToSend: string) => {
@@ -181,7 +192,7 @@ export default function AdvisorScreen() {
     setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
 
     try {
-      const response = await sendAdvisoryMessage(trimmed, userContext);
+      const response = await sendAdvisoryMessage(trimmed, userContext, language);
       
       const botMsg: Message = {
         id: Math.random().toString(),
