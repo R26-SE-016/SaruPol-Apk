@@ -2,20 +2,22 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import { useAppStore } from '../store/appStore';
 
-import Constants from 'expo-constants';
-
-let ipAddress = 'localhost';
-if (Constants.expoConfig?.hostUri) {
-  ipAddress = Constants.expoConfig.hostUri.split(':')[0];
-} else if (Platform.OS === 'android') {
-  ipAddress = '10.0.2.2';
-}
-
-const GATEWAY_URL = `http://${ipAddress}:8000/api`;
+// ============================================================
+// BACKEND CONNECTION CONFIGURATION
+// ------------------------------------------------------------
+// Web Browser (expo web): use localhost
+// Android/iOS Phone (expo go via Wi-Fi): use LAN IP
+// Run 'ipconfig' to find your LAN IP if you switch networks!
+// ============================================================
+const IS_WEB = Platform.OS === 'web';
+const LAN_IP = '192.168.1.62';  // Your machine LAN IP
+const BACKEND_URL = IS_WEB
+  ? 'http://localhost:8000'       // Browser: direct localhost
+  : `http://${LAN_IP}:8000`;     // Phone: LAN IP
 
 const api = axios.create({
-  baseURL: GATEWAY_URL,
-  timeout: 30000, // 30 seconds
+  baseURL: BACKEND_URL,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   }
@@ -25,7 +27,7 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const state = useAppStore.getState();
-
+    config.baseURL = BACKEND_URL;
     if (state.token) {
       config.headers.Authorization = `Bearer ${state.token}`;
     }
