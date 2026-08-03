@@ -116,5 +116,18 @@ export default {
     suggestedQuestions: "යෝජිත ප්‍රශ්න",
     sourcesTitle: "මුලාශ්‍ර සහ සහතික කිරීම්",
     placeholder: "රෝග, පස හෝ පොහොර ගැන විමසන්න..."
+  },
+  validate: {
+    title: "බහු-LLM වලංගුකරණය",
+    placeholder: "AI ආකෘති 3ක් හරහා වලංගු කිරීමට ප්‍රශ්නයක් අසන්න...",
+    querying: "LLM 3ක් විමසමින්...",
+    bestAnswer: "හොඳම පිළිතුර",
+    judgment: "AI විනිසුරු තර්කනය",
+    consensus: "එකඟතා ලකුණු",
+    high: "ඉහළ එකඟතාව",
+    medium: "මධ්‍යම එකඟතාව",
+    low: "අඩු එකඟතාව",
+    sources: "සත්‍යාපිත CRI මූලාශ්‍ර",
+    models: "AI ආකෘති ප්‍රතිචාර"
   }
 };

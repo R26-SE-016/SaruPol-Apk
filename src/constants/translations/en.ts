@@ -116,5 +116,18 @@ export default {
     suggestedQuestions: "Suggested Questions",
     sourcesTitle: "Sources & Citations",
     placeholder: "Ask about diseases, soil, fertilizer..."
+  },
+  validate: {
+    title: "Multi-LLM Validator",
+    placeholder: "Ask a question to validate across 3 AI models...",
+    querying: "Querying 3 LLMs...",
+    bestAnswer: "Best Answer",
+    judgment: "AI Judge Reasoning",
+    consensus: "Consensus Score",
+    high: "High Agreement",
+    medium: "Moderate Agreement",
+    low: "Low Agreement",
+    sources: "Verified CRI Sources",
+    models: "AI Model Responses"
   }
 };
