@@ -20,3 +20,20 @@ export const translateMessagesBatch = async (messages: TranslateItem[], targetLa
   });
   return response.data;
 };
+
+export const getTtsUrl = (text: string, lang: string) => {
+  const baseUrl = api.defaults.baseURL || 'http://localhost:8000';
+  return `${baseUrl}/tts?text=${encodeURIComponent(text)}&lang=${lang}`;
+};
+
+export const sendMultiLLMQuery = async (question: string, latitude: number | undefined, longitude: number | undefined, language: string) => {
+  const response = await api.post('/ask-multi', {
+    question,
+    latitude: latitude ?? null,
+    longitude: longitude ?? null,
+    language
+  }, {
+    timeout: 120000, // 120s — this endpoint runs 3 LLMs + judge + translations
+  });
+  return response.data;
+};

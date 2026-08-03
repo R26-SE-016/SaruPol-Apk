@@ -33,9 +33,6 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const state = useAppStore.getState();
-    
-    // Use the local IP for both Android and iOS physical/emulator devices
-    config.baseURL = GATEWAY_URL;
 
     if (state.token) {
       config.headers.Authorization = `Bearer ${state.token}`;
