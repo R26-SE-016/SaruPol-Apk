@@ -9,6 +9,7 @@
     "@react-native-community/netinfo": "11.4.1",
     "axios": "^1.18.0",
     "expo": "~54.0.0",
+    "expo-av": "^16.0.8",
     "expo-blur": "~15.0.8",
     "expo-camera": "~17.0.10",
     "expo-constants": "~18.0.13",
@@ -46,11 +47,11 @@
     "typescript": "~5.9.2"
   },
   "scripts": {
-    "start": "expo start",
+    "start": "expo start --port 3000",
     "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web",
+    "android": "expo start --android --port 3000",
+    "ios": "expo start --ios --port 3000",
+    "web": "expo start --web --port 3000",
     "lint": "expo lint"
   },
   "private": true
