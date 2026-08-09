@@ -7,6 +7,7 @@ import {
   ScrollView,
   Platform,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +24,8 @@ type SamplePoint = {
   temp: number;
 };
 
+const BASE_URL = 'http://127.0.0.1:8000/api/v1/analysis';
+
 export default function CheckNewTreeScreen() {
   const router = useRouter();
 
@@ -30,6 +33,10 @@ export default function CheckNewTreeScreen() {
   const [phase, setPhase] = useState<'CONNECT' | 'SAMPLING' | 'REPORT'>('CONNECT');
   const [deviceConnected, setDeviceConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
+
+  // Backend Session State
+  const [analysisId, setAnalysisId] = useState<string>('');
+  const [finalReport, setFinalReport] = useState<any>(null);
 
   // Sampling step: 1, 2, 3
   const [activeStep, setActiveStep] = useState<number>(1);
@@ -52,42 +59,99 @@ export default function CheckNewTreeScreen() {
     }, 1200);
   };
 
-  const handleStartSampling = () => {
-    setPhase('SAMPLING');
-    setActiveStep(1);
+  const handleStartSampling = async () => {
+    // Call backend to start session
+    try {
+      const res = await fetch(`${BASE_URL}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tree_no: "MK-101", zone_id: "Zone A" })
+      });
+      if (!res.ok) throw new Error("Failed to start analysis session on backend.");
+      const data = await res.json();
+      setAnalysisId(data.analysis_id);
+      console.log("Session started:", data.analysis_id);
+      
+      setPhase('SAMPLING');
+      setActiveStep(1);
+    } catch (err: any) {
+      Alert.alert("Backend Error", err.message);
+    }
   };
 
-  const handleGetSensorData = () => {
+  const handleGetSensorData = async () => {
     setLoadingSensor(true);
-    setTimeout(() => {
-      // Empirical Coconut Tree data matching All.csv (Tree #30, #49, #64)
+    
+    // Simulate getting hardware readings
+    setTimeout(async () => {
       const simulatedPoints: SamplePoint[] = [
         { id: 1, name: 'Point 1 · North Corner', n: 0.0159, p: 0.3430, k: 0.0629, ph: 6.4, ec: 1.2, humidity: 48, temp: 24.2 },
         { id: 2, name: 'Point 2 · East Corner', n: 0.0335, p: 0.1530, k: 0.0658, ph: 6.5, ec: 1.3, humidity: 50, temp: 24.6 },
         { id: 3, name: 'Point 3 · South Corner', n: 0.0218, p: 0.1109, k: 0.1118, ph: 6.3, ec: 1.1, humidity: 46, temp: 24.0 },
       ];
-
       const currentPointData = simulatedPoints[activeStep - 1];
 
-      setSamples((prev) =>
-        prev.map((item) => (item.id === activeStep ? currentPointData : item))
-      );
-
+      // Update Local State
+      setSamples((prev) => prev.map((item) => (item.id === activeStep ? currentPointData : item)));
       setSamplesCollected((prev) => {
         const next = [...prev];
         next[activeStep - 1] = true;
         return next;
       });
 
+      // Post reading to Backend immediately
+      try {
+        const res = await fetch(`${BASE_URL}/reading`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            analysis_id: analysisId,
+            tree_no: "MK-101",
+            point_name: `point${activeStep}`,
+            reading: {
+              N: currentPointData.n,
+              P: currentPointData.p,
+              K: currentPointData.k,
+              pH: currentPointData.ph,
+              EC: currentPointData.ec,
+              moisture: currentPointData.humidity,
+              temperature: currentPointData.temp
+            }
+          })
+        });
+        if (!res.ok) {
+           const errText = await res.text();
+           throw new Error(errText);
+        }
+      } catch (err: any) {
+        Alert.alert("Backend Error", err.message);
+      }
+
       setLoadingSensor(false);
     }, 800);
   };
 
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     if (activeStep < 3) {
       setActiveStep(activeStep + 1);
     } else {
-      setPhase('REPORT');
+      // Trigger Complete / ML Pipeline on Backend!
+      try {
+        const res = await fetch(`${BASE_URL}/complete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ analysis_id: analysisId, tree_no: "MK-101" })
+        });
+        if (!res.ok) {
+           const errText = await res.text();
+           throw new Error(errText);
+        }
+        const reportData = await res.json();
+        setFinalReport(reportData);
+        setPhase('REPORT');
+      } catch (err: any) {
+        Alert.alert("Prediction Failed", err.message);
+      }
     }
   };
 
@@ -104,31 +168,7 @@ export default function CheckNewTreeScreen() {
     );
   };
 
-  const calculateAverages = () => {
-    const validCount = samples.length;
-    const sum = samples.reduce(
-      (acc, s) => ({
-        n: acc.n + s.n,
-        p: acc.p + s.p,
-        k: acc.k + s.k,
-        ph: acc.ph + s.ph,
-        ec: acc.ec + s.ec,
-        humidity: acc.humidity + s.humidity,
-        temp: acc.temp + s.temp,
-      }),
-      { n: 0, p: 0, k: 0, ph: 0, ec: 0, humidity: 0, temp: 0 }
-    );
-
-    return {
-      n: (sum.n / validCount).toFixed(4),
-      p: (sum.p / validCount).toFixed(4),
-      k: (sum.k / validCount).toFixed(4),
-      ph: (sum.ph / validCount).toFixed(1),
-      ec: (sum.ec / validCount).toFixed(2),
-      humidity: (sum.humidity / validCount).toFixed(1),
-      temp: (sum.temp / validCount).toFixed(1),
-    };
-  };
+  // Averages are now calculated on the backend!
 
   return (
     <View style={styles.container}>
@@ -327,9 +367,19 @@ export default function CheckNewTreeScreen() {
 
                   {isCollected && (
                     <TouchableOpacity
-                      style={styles.primaryButton}
+                      style={[styles.primaryButton, activeStep === 3 && !samplesCollected.every(Boolean) && { opacity: 0.5 }]}
                       activeOpacity={0.85}
-                      onPress={handleNextStep}
+                      onPress={() => {
+                        if (activeStep < 3) {
+                          handleNextStep();
+                        } else {
+                          if (samplesCollected.every(Boolean)) {
+                            handleNextStep();
+                          } else {
+                            Alert.alert("Incomplete", "Please collect readings for all 3 points before calculating.");
+                          }
+                        }
+                      }}
                     >
                       <Text style={styles.primaryButtonText}>
                         {activeStep < 3
@@ -411,7 +461,16 @@ export default function CheckNewTreeScreen() {
               2. Calculated Averages vs. CRI Optimal Targets
             </Text>
             {(() => {
-              const avg = calculateAverages();
+              if (!finalReport) return null;
+              const avg = { 
+                n: finalReport.average.N, 
+                p: finalReport.average.P, 
+                k: finalReport.average.K, 
+                ph: finalReport.average.pH, 
+                ec: finalReport.average.EC, 
+                humidity: finalReport.average.moisture, 
+                temp: finalReport.average.temperature 
+              };
               return (
                 <View style={styles.averagesCard}>
                   <View style={styles.averagesHeaderRow}>
@@ -508,17 +567,20 @@ export default function CheckNewTreeScreen() {
             </Text>
 
             {(() => {
-              const avg = calculateAverages();
-              const leafN = (1.50 + Number(avg.n) * 16.0).toFixed(2);
-              const leafP = (0.11 + Number(avg.p) * 0.20).toFixed(3);
-              const leafK = (0.42 + Number(avg.k) * 1.10).toFixed(2);
+              if (!finalReport) return null;
+              
+              const avg = finalReport.average;
+              const leafN = finalReport.prediction.leafN;
+              const leafP = finalReport.prediction.leafP;
+              const leafK = finalReport.prediction.leafK;
+              const modelName = finalReport.prediction.modelVersion;
 
               return (
                 <View style={styles.aiLeafCard}>
                   <View style={styles.aiLeafBanner}>
                     <Ionicons name="sparkles" size={18} color="#2E7D32" />
                     <Text style={styles.aiLeafBannerText}>
-                      Based on your 3-Point Composite Soil Average (N: {avg.n}%, P: {avg.p}%, K: {avg.k}%), our Random Forest ML Model predicted the 14th Frond Leaf nutrient concentration below:
+                      Based on your 3-Point Composite Soil Average (N: {avg.N}%, P: {avg.P}%, K: {avg.K}%), our {modelName} ML Model predicted the 14th Frond Leaf nutrient concentration below:
                     </Text>
                   </View>
 
@@ -528,7 +590,7 @@ export default function CheckNewTreeScreen() {
                       <View style={styles.leafMetricTopRow}>
                         <Text style={styles.leafMetricTitle}>Leaf Nitrogen (N)</Text>
                         <View style={styles.leafBadgeOptimal}>
-                          <Text style={styles.leafBadgeText}>Optimal</Text>
+                          <Text style={styles.leafBadgeText}>Predicted</Text>
                         </View>
                       </View>
                       <Text style={styles.leafMetricVal}>{leafN}%</Text>
@@ -543,7 +605,7 @@ export default function CheckNewTreeScreen() {
                       <View style={styles.leafMetricTopRow}>
                         <Text style={styles.leafMetricTitle}>Leaf Phosphorus (P)</Text>
                         <View style={styles.leafBadgeOptimal}>
-                          <Text style={styles.leafBadgeText}>Optimal</Text>
+                          <Text style={styles.leafBadgeText}>Predicted</Text>
                         </View>
                       </View>
                       <Text style={styles.leafMetricVal}>{leafP}%</Text>
@@ -558,7 +620,7 @@ export default function CheckNewTreeScreen() {
                       <View style={styles.leafMetricTopRow}>
                         <Text style={styles.leafMetricTitle}>Leaf Potassium (K)</Text>
                         <View style={styles.leafBadgeOptimal}>
-                          <Text style={styles.leafBadgeText}>Optimal</Text>
+                          <Text style={styles.leafBadgeText}>Predicted</Text>
                         </View>
                       </View>
                       <Text style={styles.leafMetricVal}>{leafK}%</Text>
@@ -585,87 +647,30 @@ export default function CheckNewTreeScreen() {
             </Text>
 
             {(() => {
-              const avg = calculateAverages();
-              const leafNVal = Number((1.50 + Number(avg.n) * 16.0).toFixed(2));
-              const leafPVal = Number((0.11 + Number(avg.p) * 0.20).toFixed(3));
-              const leafKVal = Number((0.42 + Number(avg.k) * 1.10).toFixed(2));
-              const soilPhVal = Number(avg.ph);
-
-              // 1. Nitrogen (Urea)
-              let ureaKg = 0.8;
-              let nStatus = 'Optimal (ප්‍රශස්ත පරාසය: 1.9 - 2.1%)';
-              if (leafNVal < 1.6) {
-                ureaKg = 1.1;
-                nStatus = 'Severe Deficiency · දැඩි ඌනතාව (< 1.6%)';
-              } else if (leafNVal < 1.7) {
-                ureaKg = 1.0;
-                nStatus = 'Moderate Deficiency · මධ්‍යම ඌනතාව (1.6 - 1.69%)';
-              } else if (leafNVal < 1.9) {
-                ureaKg = 0.9;
-                nStatus = 'Mild Deficiency · සුළු ඌනතාව (1.7 - 1.89%)';
-              }
-
-              // 2. Potassium (MOP)
-              let mopKg = 1.6;
-              let kStatus = 'Optimal (ප්‍රශස්ත පරාසය: 1.2 - 1.5%)';
-              if (leafKVal < 0.6) {
-                mopKg = 2.2;
-                kStatus = 'Severe Deficiency · දැඩි ඌනතාව (< 0.6%)';
-              } else if (leafKVal < 0.7) {
-                mopKg = 2.0;
-                kStatus = 'Deficiency Level (0.6 - 0.69%)';
-              } else if (leafKVal < 0.8) {
-                mopKg = 1.9;
-                kStatus = 'Deficiency Level (0.7 - 0.79%)';
-              } else if (leafKVal < 1.0) {
-                mopKg = 1.8;
-                kStatus = 'Moderate Deficiency · මධ්‍යම ඌනතාව (0.8 - 0.99%)';
-              } else if (leafKVal < 1.2) {
-                mopKg = 1.7;
-                kStatus = 'Mild Deficiency · සුළු ඌනතාව (1.0 - 1.19%)';
-              }
-
-              // 3. Phosphorus (IRP / TSP / ERP)
-              let pFertName = 'Eppawala Rock Phosphate (එ.රො.පො.)';
-              let pKg = 0.9;
-              let pStatus = 'Optimal (ප්‍රශස්ත පරාසය: 0.11 - 0.13%)';
-              if (leafPVal < 0.08) {
-                pFertName = 'Triple Super Phosphate (ට්‍රි.සු.පො.)';
-                pKg = 0.6;
-                pStatus = 'Severe Deficiency (< 0.08%)';
-              } else if (leafPVal < 0.09) {
-                pFertName = 'IRP (0.3 kg) + TSP (0.3 kg)';
-                pKg = 0.6;
-                pStatus = 'Moderate Deficiency (0.08 - 0.09%)';
-              } else if (leafPVal < 0.11) {
-                pFertName = 'Imported Rock Phosphate (ආ.රො.පො.)';
-                pKg = 0.8;
-                pStatus = 'Mild Deficiency (0.09 - 0.11%)';
-              }
-
-              // 4. Dolomite / Mg
-              let doloDesc = '1.0 kg Dolomite / tree / year (ප්‍රශස්ත Mg මට්ටම)';
-              if (soilPhVal < 5.8) {
-                doloDesc = '2.0 kg Dolomite + 1.0 kg Kieserite (අම්ල පස හා Mg සමතුලිත කිරීමට)';
-              }
-
-              // Evaluate Palm Health Status
-              let healthTitle = 'HEALTHY PALM · ප්‍රශස්ත නිරෝගී පොල් ගසක්';
+              if (!finalReport) return null;
+              
+              const recomm = finalReport.recommendation;
+              const ureaKg = recomm.urea;
+              const mopKg = recomm.MOP;
+              const pKg = recomm.ERP;
+              const doloKg = recomm.dolomite;
+              
+              let healthTitle = 'HEALTHY PALM';
               let healthSub = 'All leaf NPK nutrients meet CRI optimal standards. Standard maintenance dosage applies.';
               let healthColor = '#2E7D32';
               let healthBg = '#EAF5EA';
               let healthBorder = '#C8E6C5';
               let healthIcon = 'checkmark-circle';
 
-              if (leafNVal < 1.7 || leafKVal < 0.8 || leafPVal < 0.09) {
-                healthTitle = 'UNHEALTHY / WEAK PALM · දැඩි පෝෂණ ඌනතාව සහිත ගසක්';
+              if (recomm.healthStatus.includes('Deficiency') || recomm.healthStatus.includes('Poor')) {
+                healthTitle = 'UNHEALTHY / WEAK PALM';
                 healthSub = 'Immediate remedial fertilization required. See CRI elevated dosage prescriptions below.';
                 healthColor = '#C62828';
                 healthBg = '#FDEDED';
                 healthBorder = '#F5C6C6';
                 healthIcon = 'warning';
-              } else if (leafNVal < 1.9 || leafKVal < 1.2 || leafPVal < 0.11) {
-                healthTitle = 'MODERATE HEALTH · මධ්‍යම පෝෂණ මට්ටම (සුළු ඌනතාවක් ඇත)';
+              } else if (recomm.healthStatus.includes('Sub-optimal') || recomm.healthStatus.includes('Mild')) {
+                healthTitle = 'MODERATE HEALTH';
                 healthSub = 'Minor nutrient deficiency detected. Follow CRI corrective dosage below.';
                 healthColor = '#E68A00';
                 healthBg = '#FFF8EC';
@@ -681,6 +686,9 @@ export default function CheckNewTreeScreen() {
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.palmHealthTitle, { color: healthColor }]}>{healthTitle}</Text>
                       <Text style={styles.palmHealthSub}>{healthSub}</Text>
+                      <Text style={{ fontSize: 13, color: healthColor, fontWeight: '700', marginTop: 4 }}>
+                        Backend Status: {recomm.healthStatus}
+                      </Text>
                     </View>
                   </View>
 
@@ -693,8 +701,8 @@ export default function CheckNewTreeScreen() {
                           <Text style={styles.criIconText}>N</Text>
                         </View>
                         <View style={{ flex: 1 }}>
-                          <Text style={styles.criCardTitle}>Nitrogen Prescription · යූරියා (Urea)</Text>
-                          <Text style={styles.criCardStatus}>{nStatus}</Text>
+                          <Text style={styles.criCardTitle}>Nitrogen Prescription (Urea)</Text>
+                          <Text style={styles.criCardStatus}>{recomm.nutrientEvaluation?.Nitrogen}</Text>
                         </View>
                         <View style={styles.criDosageBadge}>
                           <Text style={styles.criDosageText}>{ureaKg} kg/year</Text>
@@ -712,8 +720,8 @@ export default function CheckNewTreeScreen() {
                           <Text style={styles.criIconText}>K</Text>
                         </View>
                         <View style={{ flex: 1 }}>
-                          <Text style={styles.criCardTitle}>Potassium Prescription · මි.ම.පො. (MOP)</Text>
-                          <Text style={styles.criCardStatus}>{kStatus}</Text>
+                          <Text style={styles.criCardTitle}>Potassium Prescription (MOP)</Text>
+                          <Text style={styles.criCardStatus}>{recomm.nutrientEvaluation?.Potassium}</Text>
                         </View>
                         <View style={styles.criDosageBadge}>
                           <Text style={styles.criDosageText}>{mopKg} kg/year</Text>
@@ -731,15 +739,15 @@ export default function CheckNewTreeScreen() {
                           <Text style={styles.criIconText}>P</Text>
                         </View>
                         <View style={{ flex: 1 }}>
-                          <Text style={styles.criCardTitle}>Phosphorus Prescription · {pFertName}</Text>
-                          <Text style={styles.criCardStatus}>{pStatus}</Text>
+                          <Text style={styles.criCardTitle}>Phosphorus Prescription (ERP / TSP)</Text>
+                          <Text style={styles.criCardStatus}>{recomm.nutrientEvaluation?.Phosphorus}</Text>
                         </View>
                         <View style={styles.criDosageBadge}>
                           <Text style={styles.criDosageText}>{pKg} kg/year</Text>
                         </View>
                       </View>
                       <Text style={styles.criCardBody}>
-                        Recommended phosphorus source: <Text style={styles.recommBold}>{pFertName}</Text> at <Text style={styles.recommBold}>{pKg} kg/tree/year</Text>.
+                        Recommended phosphorus source: at <Text style={styles.recommBold}>{pKg} kg/tree/year</Text>.
                       </Text>
                     </View>
 
@@ -749,13 +757,26 @@ export default function CheckNewTreeScreen() {
                         <Ionicons name="shield-checkmark" size={22} color="#4A7C3B" />
                         <View style={{ flex: 1 }}>
                           <Text style={styles.criCardTitle}>Magnesium & Soil Acidity Buffering</Text>
-                          <Text style={styles.criCardStatus}>Soil pH: {soilPhVal}</Text>
+                          <Text style={styles.criCardStatus}>Dolomite Dosage: {doloKg} kg/year</Text>
                         </View>
                       </View>
                       <Text style={styles.criCardBody}>
-                        Recommended dosage: <Text style={styles.recommBold}>{doloDesc}</Text>. Apply at least 2 weeks before chemical fertilizer application.
+                        Recommended dosage: <Text style={styles.recommBold}>{doloKg} kg Dolomite</Text>. Apply at least 2 weeks before chemical fertilizer application.
                       </Text>
                     </View>
+                    
+                    {/* Agronomic Advice Card */}
+                    {recomm.agronomicAdvice && recomm.agronomicAdvice.length > 0 && (
+                      <View style={styles.criPrescriptionCardSecondary}>
+                        <View style={styles.criCardHeader}>
+                           <Ionicons name="information-circle" size={22} color="#4A7C3B" />
+                           <Text style={styles.criCardTitle}>Agronomic Advice</Text>
+                        </View>
+                        {recomm.agronomicAdvice.map((advice: string, idx: number) => (
+                           <Text key={idx} style={[styles.criCardBody, { marginBottom: 6 }]}>• {advice}</Text>
+                        ))}
+                      </View>
+                    )}
                   </View>
 
                   <TouchableOpacity

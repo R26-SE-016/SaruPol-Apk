@@ -139,6 +139,8 @@ export default function SoilMapCanvas({
         {zones?.map((zone) => {
           const isSelected = selectedZone?.id === zone.id;
           const treeNumber = zone.treeNo || (zone.id === 'A' ? 30 : zone.id === 'B' ? 49 : zone.id === 'C' ? 64 : zone.id === 'D' ? 148 : 209);
+          
+          const isHealthy = zone.n >= 40 && zone.n <= 80 && zone.p >= 20 && zone.p <= 50 && zone.k >= 120 && zone.k <= 250;
 
           return (
             <TouchableOpacity
@@ -157,7 +159,7 @@ export default function SoilMapCanvas({
               <View
                 style={[
                   styles.treePinInner,
-                  isSelected ? styles.treePinInnerSelected : styles.treePinInnerDefault,
+                  isSelected ? styles.treePinInnerSelected : (isHealthy ? styles.treePinInnerDefault : styles.treePinInnerWarning),
                 ]}
               >
                 <Text
@@ -398,6 +400,9 @@ const styles = StyleSheet.create({
   },
   treePinInnerDefault: {
     backgroundColor: '#7A9B48',
+  },
+  treePinInnerWarning: {
+    backgroundColor: '#D65D45',
   },
   treePinInnerSelected: {
     backgroundColor: '#2E7D32',

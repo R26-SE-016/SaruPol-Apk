@@ -166,6 +166,7 @@ export default function SoilDashboard() {
           currentVal={selectedZone.n}
           minVal={0}
           maxVal={150}
+          targetText="CRI Target: 40~80"
         />
 
         {/* Phosphorus Card */}
@@ -178,6 +179,7 @@ export default function SoilDashboard() {
           currentVal={selectedZone.p}
           minVal={0}
           maxVal={100}
+          targetText="CRI Target: 20~50"
         />
 
         {/* Potassium Card */}
@@ -190,6 +192,7 @@ export default function SoilDashboard() {
           currentVal={selectedZone.k}
           minVal={0}
           maxVal={300}
+          targetText="CRI Target: 120~250"
         />
 
         {/* Soil pH Card */}
@@ -198,10 +201,11 @@ export default function SoilDashboard() {
           label="Soil pH"
           value={selectedZone.ph.toFixed(1)}
           unit=""
-          status="Optimal"
+          status={selectedZone.ph >= 5.5 && selectedZone.ph <= 7.5 ? 'Optimal' : 'Adjust'}
           currentVal={selectedZone.ph}
           minVal={3}
           maxVal={10}
+          targetText="Optimal: 5.5~7.5"
         />
 
         {/* Conductivity Card */}
@@ -210,10 +214,11 @@ export default function SoilDashboard() {
           label="Conductivity"
           value={selectedZone.ec.toFixed(1)}
           unit="dS/m"
-          status="Optimal"
+          status={selectedZone.ec >= 0.8 && selectedZone.ec <= 1.5 ? 'Optimal' : 'Adjust'}
           currentVal={selectedZone.ec}
           minVal={0}
           maxVal={4}
+          targetText="Optimal: 0.8~1.5"
         />
 
         {/* Humidity Card */}
@@ -222,10 +227,11 @@ export default function SoilDashboard() {
           label="Humidity"
           value={selectedZone.humidity.toString()}
           unit="%"
-          status="Optimal"
+          status={selectedZone.humidity >= 40 && selectedZone.humidity <= 60 ? 'Optimal' : 'Adjust'}
           currentVal={selectedZone.humidity}
           minVal={0}
           maxVal={100}
+          targetText="Optimal: 40~60%"
         />
 
         {/* Temperature Card */}
@@ -234,10 +240,11 @@ export default function SoilDashboard() {
           label="Temperature"
           value={selectedZone.temp.toString()}
           unit="°C"
-          status="Optimal"
+          status={selectedZone.temp >= 22 && selectedZone.temp <= 28 ? 'Optimal' : 'Adjust'}
           currentVal={selectedZone.temp}
           minVal={0}
           maxVal={50}
+          targetText="Optimal: 22~28°C"
         />
       </View>
 
@@ -341,6 +348,7 @@ function MetricCard({
   currentVal,
   minVal,
   maxVal,
+  targetText,
 }: {
   icon: any;
   label: string;
@@ -350,6 +358,7 @@ function MetricCard({
   currentVal: number;
   minVal: number;
   maxVal: number;
+  targetText?: string;
 }) {
   const percent = Math.min(
     100,
@@ -376,6 +385,12 @@ function MetricCard({
         <Text style={styles.metricValueText}>{value}</Text>
         {unit ? <Text style={styles.metricUnitText}> {unit}</Text> : null}
       </View>
+
+      {targetText ? (
+        <Text style={{ fontSize: 11, color: '#6A7D64', marginTop: -2, marginBottom: 4, fontWeight: '600' }}>
+          {targetText}
+        </Text>
+      ) : null}
 
       <View style={styles.rangeBarTrack}>
         <View
