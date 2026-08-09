@@ -4,20 +4,99 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { COLORS, ROUNDING } from '../../constants/theme';
 import GlassCard from '../../components/common/GlassCard';
-import { sendAdvisoryMessage } from '../../services/advisoryService';
+import { sendAdvisoryMessage, translateMessagesBatch } from '../../services/advisoryService';
 import { useAppStore } from '../../store/appStore';
+import * as Location from 'expo-location';
+import { determineSeason, getMonthName, determineZone } from '../../utils/contextHelper';
 
 interface Message {
   id: string;
   sender: 'user' | 'bot';
   text: string;
+  translations?: {
+    en?: string;
+    si?: string;
+  };
   sources?: string[];
+  context_used?: string;
   timestamp: string;
 }
 
 export default function AdvisorScreen() {
   const { t } = useTranslation();
   const language = useAppStore(state => state.language);
+  const setLanguage = useAppStore(state => state.setLanguage);
+
+  const [translating, setTranslating] = useState(false);
+
+  const toggleLanguage = async () => {
+    const nextLang = language === 'en' ? 'si' : 'en';
+    const currentLang = language;
+    await setLanguage(nextLang);
+
+    // Find messages that don't have the translation cached
+    const messagesToTranslate = messages
+      .filter(m => m.id !== 'welcome')
+      .filter(m => !m.translations?.[nextLang])
+      .map(m => ({ id: m.id, text: m.text }));
+
+    if (messagesToTranslate.length === 0) {
+      // All translations cached, just switch text
+      setMessages(prev => prev.map(msg => {
+        if (msg.id === 'welcome') return msg;
+        return {
+          ...msg,
+          text: msg.translations?.[nextLang] || msg.text
+        };
+      }));
+      return;
+    }
+
+    setTranslating(true);
+    try {
+      const result = await translateMessagesBatch(messagesToTranslate, nextLang);
+      if (result.success) {
+        setMessages(prev => prev.map(msg => {
+          if (msg.id === 'welcome') return msg;
+          
+          const translation = result.translations.find((t: any) => t.id === msg.id);
+          const cachedTranslations = msg.translations || {};
+          
+          // Cache current text if not saved yet
+          if (!cachedTranslations[currentLang]) {
+            cachedTranslations[currentLang] = msg.text;
+          }
+          
+          if (translation) {
+            cachedTranslations[nextLang] = translation.translated_text;
+            return {
+              ...msg,
+              text: translation.translated_text,
+              translations: cachedTranslations
+            };
+          } else {
+            return {
+              ...msg,
+              text: cachedTranslations[nextLang] || msg.text,
+              translations: cachedTranslations
+            };
+          }
+        }));
+      }
+    } catch (err) {
+      console.warn("Failed to translate previous messages:", err);
+      // Fallback: load from cache if available
+      setMessages(prev => prev.map(msg => {
+        if (msg.id === 'welcome') return msg;
+        return {
+          ...msg,
+          text: msg.translations?.[nextLang] || msg.text
+        };
+      }));
+    } finally {
+      setTranslating(false);
+    }
+  };
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -29,9 +108,47 @@ export default function AdvisorScreen() {
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
+
+  // Keep welcome message translated dynamically when language switches
+  React.useEffect(() => {
+    setMessages(prev => prev.map(msg => {
+      if (msg.id === 'welcome') {
+        return {
+          ...msg,
+          text: language === 'en'
+            ? "Hello! I am your SaruPol AI Farming Advisor. I can answer any questions about coconut cultivation, pest controls, diseases, or fertilizer schedules. Ask me anything!"
+            : "ආයුබෝවන්! මම සරුපොල් AI වගා උපදේශකයා වෙමි. පොල් වගාව, පළිබෝධ පාලනය, රෝග හෝ පොහොර යෙදීම් පිළිබඳ ඕනෑම ගැටලුවක් මගෙන් විමසන්න."
+        };
+      }
+      return msg;
+    }));
+  }, [language]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
+  const [userContext, setUserContext] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  React.useEffect(() => {
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      const currentDate = new Date();
+      const currentSeason = determineSeason(currentDate);
+      const currentMonth = getMonthName(currentDate);
+
+      let currentZone = 'Unknown Zone';
+      if (status === 'granted') {
+        try {
+          let location = await Location.getCurrentPositionAsync({});
+          currentZone = determineZone(location.coords.latitude, location.coords.longitude);
+        } catch (error) {
+          console.log("Error getting location", error);
+        }
+      }
+
+      const contextString = `${currentZone} | ${currentSeason} Season (${currentMonth})`;
+      setUserContext(contextString);
+    })();
+  }, []);
 
   // Suggested questions chips
   const suggestions = [
@@ -50,6 +167,9 @@ export default function AdvisorScreen() {
       id: Math.random().toString(),
       sender: 'user',
       text: trimmed,
+      translations: {
+        [language]: trimmed
+      },
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
@@ -61,13 +181,17 @@ export default function AdvisorScreen() {
     setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
 
     try {
-      const response = await sendAdvisoryMessage(trimmed);
+      const response = await sendAdvisoryMessage(trimmed, userContext);
       
       const botMsg: Message = {
         id: Math.random().toString(),
         sender: 'bot',
         text: response.answer,
-        sources: response.sources || [],
+        translations: {
+          [language]: response.answer
+        },
+        sources: response.sources ? response.sources.map((s: any) => s.title) : [],
+        context_used: response.context_used,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
 
@@ -92,20 +216,62 @@ export default function AdvisorScreen() {
     handleSend(question);
   };
 
+  const startNewChat = () => {
+    setMessages([
+      {
+        id: 'welcome',
+        sender: 'bot',
+        text: language === 'en'
+          ? "Hello! I am your SaruPol AI Farming Advisor. I can answer any questions about coconut cultivation, pest controls, diseases, or fertilizer schedules. Ask me anything!"
+          : "ආයුබෝවන්! මම සරුපොල් AI වගා උපදේශකයා වෙමි. පොල් වගාව, පළිබෝධ පාලනය, රෝග හෝ පොහොර යෙදීම් පිළිබඳ ඕනෑම ගැටලුවක් මගෙන් විමසන්න.",
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
+    ]);
+    setInputText('');
+    setLoading(false);
+  };
+
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       style={styles.container}
     >
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>{t('advisor.title')}</Text>
+        <View style={styles.headerActions}>
+          <TouchableOpacity onPress={startNewChat} style={styles.newChatButton}>
+            <Ionicons name="add" size={20} color={COLORS.textSecondary} />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={toggleLanguage} 
+            style={styles.langButton}
+            disabled={translating}
+          >
+            {translating ? (
+              <ActivityIndicator size="small" color={COLORS.textSecondary} style={{ width: 36, height: 16 }} />
+            ) : (
+              <Text style={styles.langText}>
+                {language === 'en' ? 'සිංහල' : 'English'}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {/* Context Banner */}
+      {userContext && (
+        <View style={styles.contextBanner}>
+          <Ionicons name="location" size={14} color={COLORS.primaryLight} />
+          <Text style={styles.contextBannerText}>{userContext}</Text>
+        </View>
+      )}
 
       {/* Messages Scroll Area */}
       <ScrollView
         ref={scrollViewRef}
+        style={styles.scrollView}
         contentContainerStyle={styles.messageList}
         keyboardShouldPersistTaps="handled"
       >
@@ -126,6 +292,15 @@ export default function AdvisorScreen() {
               <GlassCard style={styles.botBubble}>
                 <Text style={styles.botText}>{msg.text}</Text>
                 
+                {/* Context used */}
+                {msg.context_used && (
+                  <View style={styles.contextUsedContainer}>
+                    <Text style={styles.contextUsedText}>
+                      <Ionicons name="location-outline" size={11} color={COLORS.textSecondary} /> {language === 'en' ? 'Context Used:' : 'භාවිතා කළ සන්දර්භය:'} {msg.context_used}
+                    </Text>
+                  </View>
+                )}
+
                 {/* Citations / Sources */}
                 {msg.sources && msg.sources.length > 0 && (
                   <View style={styles.sourcesContainer}>
@@ -197,7 +372,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    paddingHorizontal: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 30,
     paddingBottom: 16,
     borderBottomWidth: 1,
@@ -208,7 +386,37 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     fontSize: 22,
     fontWeight: '800',
-    textAlign: 'center',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  newChatButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(76, 175, 80, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(76, 175, 80, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  langButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: ROUNDING.full,
+    backgroundColor: 'rgba(76, 175, 80, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(76, 175, 80, 0.3)',
+  },
+  langText: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  scrollView: {
+    flex: 1,
   },
   messageList: {
     padding: 16,
@@ -356,5 +564,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8,
+  },
+  contextBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(27, 94, 32, 0.2)',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(76, 175, 80, 0.15)',
+  },
+  contextBannerText: {
+    marginLeft: 8,
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  contextUsedContainer: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(76, 175, 80, 0.15)',
+  },
+  contextUsedText: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    fontStyle: 'italic',
   },
 });
