@@ -18,6 +18,7 @@ interface Message {
   translations?: {
     en?: string;
     si?: string;
+    [key: string]: string | undefined;
   };
   sources?: string[];
   images?: ImageReference[];
@@ -129,9 +130,9 @@ export default function AdvisorScreen() {
       if (result.success) {
         setMessages(prev => prev.map(msg => {
           if (msg.id === 'welcome') return msg;
-
-          const cachedTranslations = msg.translations || {};
-
+          
+          const cachedTranslations = { ...(msg.translations || {}) };
+          
           // Cache current text if not saved yet
           if (!cachedTranslations[currentLang]) {
             cachedTranslations[currentLang] = msg.text;
@@ -279,7 +280,7 @@ export default function AdvisorScreen() {
 
   const onPlaybackStatusUpdate = (status: any) => {
     if (status.didJustFinish) {
-      stopAudio();
+      void stopAudio();
     }
   };
 
@@ -306,7 +307,7 @@ export default function AdvisorScreen() {
       });
 
       const url = getTtsUrl(text, language);
-      console.log("Fetching TTS from:", url);
+      if (__DEV__) console.log("Fetching TTS audio from endpoint:", url.split('?')[0]);
 
       const { sound } = await Audio.Sound.createAsync(
         { uri: url },
@@ -328,7 +329,7 @@ export default function AdvisorScreen() {
   React.useEffect(() => {
     return () => {
       if (soundRef.current) {
-        soundRef.current.unloadAsync().catch(err => console.log("Clean up sound error", err));
+        soundRef.current.unloadAsync().catch((err: unknown) => console.log("Clean up sound error", err));
       }
     };
   }, []);
@@ -496,11 +497,6 @@ export default function AdvisorScreen() {
     handleSend(question);
   };
 
-  const INLINE_MODEL_INFO: Record<string, { icon: string; label: string; color: string }> = {
-    llama: { icon: '🦙', label: 'LLaMA 3.3 70B', color: '#7C4DFF' },
-    llama8b: { icon: '💎', label: 'LLaMA 3.1 8B', color: '#00BCD4' },
-    qwen: { icon: '💎', label: 'Gemma 2 9B', color: '#FF6D00' },
-  };
 
   const startNewChat = () => {
     const newSessionId = generateUUID();
@@ -573,7 +569,7 @@ export default function AdvisorScreen() {
         >
           <Ionicons name="shield-checkmark-outline" size={16} color={chatMode === 'multi' ? COLORS.textPrimary : COLORS.textSecondary} />
           <Text style={[styles.modeTabText, chatMode === 'multi' && styles.modeTabTextActive]}>
-            {language === 'en' ? 'Different-LLM-Validator' : 'බහු-LLM වලංගුකරණය'}
+            {t('validate.title')}
           </Text>
         </TouchableOpacity>
       </View>

@@ -10,13 +10,13 @@ const getGatewayUrl = () => {
     const hostUri = Constants.expoConfig?.hostUri;
     if (hostUri) {
       const ip = hostUri.split(':')[0];
-      return `http://${ip}:8000`;
+      return `http://${ip}:8000/api`;
     }
     // Fallback for emulators if hostUri is not available
-    return Platform.OS === 'android' ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
+    return Platform.OS === 'android' ? 'http://10.0.2.2:8000/api' : 'http://localhost:8000/api';
   }
   // Production/fallback URL (update this if you deploy the backend to a cloud service)
-  return 'http://192.168.1.7:8000';
+  return 'http://192.168.1.7:8000/api';
 };
 
 const GATEWAY_URL = getGatewayUrl();
