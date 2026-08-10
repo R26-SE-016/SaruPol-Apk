@@ -1,10 +1,20 @@
 import api from './api';
 
-export const sendAdvisoryMessage = async (question: string, context?: string | null, language?: string) => {
+export const sendAdvisoryMessage = async (
+  question: string,
+  context?: string | null,
+  language?: string,
+  sessionId?: string | null,
+  latitude?: number | null,
+  longitude?: number | null
+) => {
   const response = await api.post('/ask', {
     question,
     context: context || null,
-    language: language || 'en'
+    language: language || 'en',
+    session_id: sessionId || null,
+    latitude: latitude ?? null,
+    longitude: longitude ?? null
   });
   return response.data;
 };
