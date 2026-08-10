@@ -1,17 +1,25 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { useAppStore } from '../store/appStore';
 
-import Constants from 'expo-constants';
+// Dynamically determine the backend IP in development so physical devices on the same Wi-Fi can connect automatically.
+const getGatewayUrl = () => {
+  if (__DEV__) {
+    // Constants.expoConfig?.hostUri contains the dev server's host and port (e.g. "192.168.1.7:8081")
+    const hostUri = Constants.expoConfig?.hostUri;
+    if (hostUri) {
+      const ip = hostUri.split(':')[0];
+      return `http://${ip}:8000/api`;
+    }
+    // Fallback for emulators if hostUri is not available
+    return Platform.OS === 'android' ? 'http://10.0.2.2:8000/api' : 'http://localhost:8000/api';
+  }
+  // Production/fallback URL (update this if you deploy the backend to a cloud service)
+  return 'http://192.168.1.7:8000/api';
+};
 
-let ipAddress = 'localhost';
-if (Constants.expoConfig?.hostUri) {
-  ipAddress = Constants.expoConfig.hostUri.split(':')[0];
-} else if (Platform.OS === 'android') {
-  ipAddress = '10.0.2.2';
-}
-
-const GATEWAY_URL = `http://${ipAddress}:8000/api`;
+const GATEWAY_URL = getGatewayUrl();
 
 const api = axios.create({
   baseURL: GATEWAY_URL,
