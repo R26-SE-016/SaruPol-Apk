@@ -1,14 +1,15 @@
-import React, { useState, useRef } from 'react';
-import { StyleSheet, View, Text, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTranslation } from 'react-i18next';
-import { COLORS, ROUNDING } from '../../constants/theme';
-import GlassCard from '../../components/common/GlassCard';
-import { sendAdvisoryMessage, translateMessagesBatch, getTtsUrl, sendMultiLLMQuery } from '../../services/advisoryService';
 import { Audio } from 'expo-av';
-import { useAppStore } from '../../store/appStore';
 import * as Location from 'expo-location';
-import { determineSeason, getMonthName, determineZone } from '../../utils/contextHelper';
+import React, { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import GlassCard from '../../components/common/GlassCard';
+import ImageCard, { ImageReference } from '../../components/ImageCard';
+import { COLORS, ROUNDING } from '../../constants/theme';
+import { getTtsUrl, sendAdvisoryMessage, sendMultiLLMQuery, translateMessagesBatch } from '../../services/advisoryService';
+import { useAppStore } from '../../store/appStore';
+import { determineSeason, determineZone, getMonthName } from '../../utils/contextHelper';
 
 interface Message {
   id: string;
@@ -20,6 +21,7 @@ interface Message {
     [key: string]: string | undefined;
   };
   sources?: string[];
+  images?: ImageReference[];
   context_used?: string;
   timestamp: string;
   // Multi-LLM fields
@@ -32,12 +34,34 @@ interface Message {
   qwen_answer?: string;
 }
 
+const generateUUID = () => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
 export default function AdvisorScreen() {
   const { t } = useTranslation();
   const language = useAppStore(state => state.language);
   const setLanguage = useAppStore(state => state.setLanguage);
 
+  const [sessionId, setSessionId] = useState<string>(() => generateUUID());
+  const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
   const [translating, setTranslating] = useState(false);
+  const textInputRef = useRef<TextInput>(null);
+
+  const handleEditQuestion = (msg: Message) => {
+    setEditingMsgId(msg.id);
+    setInputText(msg.text);
+    setTimeout(() => textInputRef.current?.focus(), 50);
+  };
+
+  const cancelEdit = () => {
+    setEditingMsgId(null);
+    setInputText('');
+  };
 
   const toggleLanguage = async () => {
     const nextLang = language === 'en' ? 'si' : 'en';
@@ -48,13 +72,13 @@ export default function AdvisorScreen() {
     const messagesToTranslate: { id: string; text: string }[] = [];
     messages.forEach(msg => {
       if (msg.id === 'welcome') return;
-      
+
       // If standard or Multi-LLM text is not cached
       if (!msg.translations?.[nextLang]) {
         const textToTranslate = msg.translations?.['en'] || msg.translations?.['si'] || msg.text;
         messagesToTranslate.push({ id: msg.id + "_text", text: textToTranslate });
       }
-      
+
       if (msg.isMultiLlm) {
         // Check LLaMA
         if (!msg.translations?.[`llama_${nextLang}`] && msg.llama_answer) {
@@ -79,12 +103,12 @@ export default function AdvisorScreen() {
       // All translations cached, just switch text
       setMessages(prev => prev.map(msg => {
         if (msg.id === 'welcome') return msg;
-        
+
         let updatedMsg = {
           ...msg,
           text: msg.translations?.[nextLang] || msg.text
         };
-        
+
         if (msg.isMultiLlm) {
           updatedMsg = {
             ...updatedMsg,
@@ -94,7 +118,7 @@ export default function AdvisorScreen() {
             judge_reason: msg.translations?.[`reason_${nextLang}`] || msg.judge_reason,
           };
         }
-        
+
         return updatedMsg;
       }));
       return;
@@ -127,19 +151,19 @@ export default function AdvisorScreen() {
               cachedTranslations[`reason_${currentLang}`] = msg.judge_reason;
             }
           }
-          
+
           // 1. Text translation
           const textTrans = result.translations.find((t: any) => t.id === msg.id + "_text" || t.id === msg.id);
           if (textTrans) {
             cachedTranslations[nextLang] = textTrans.translated_text;
           }
-          
+
           let updatedMsg = {
             ...msg,
             text: cachedTranslations[nextLang] || msg.text,
             translations: cachedTranslations
           };
-          
+
           if (msg.isMultiLlm) {
             // 2. LLaMA translation
             const llamaTrans = result.translations.find((t: any) => t.id === msg.id + "_llama");
@@ -161,7 +185,7 @@ export default function AdvisorScreen() {
             if (reasonTrans) {
               cachedTranslations[`reason_${nextLang}`] = reasonTrans.translated_text;
             }
-            
+
             updatedMsg = {
               ...updatedMsg,
               llama_answer: cachedTranslations[`llama_${nextLang}`] || msg.llama_answer,
@@ -170,7 +194,7 @@ export default function AdvisorScreen() {
               judge_reason: cachedTranslations[`reason_${nextLang}`] || msg.judge_reason,
             };
           }
-          
+
           return updatedMsg;
         }));
       }
@@ -179,12 +203,12 @@ export default function AdvisorScreen() {
       // Fallback: load from cache if available
       setMessages(prev => prev.map(msg => {
         if (msg.id === 'welcome') return msg;
-        
+
         let updatedMsg = {
           ...msg,
           text: msg.translations?.[nextLang] || msg.text
         };
-        
+
         if (msg.isMultiLlm) {
           updatedMsg = {
             ...updatedMsg,
@@ -194,7 +218,7 @@ export default function AdvisorScreen() {
             judge_reason: msg.translations?.[`reason_${nextLang}`] || msg.judge_reason,
           };
         }
-        
+
         return updatedMsg;
       }));
     } finally {
@@ -279,7 +303,7 @@ export default function AdvisorScreen() {
         playsInSilentModeIOS: true,
         allowsRecordingIOS: false,
         staysActiveInBackground: false,
-        shouldRouteThroughEarpieceAndroid: false,
+        playThroughEarpieceAndroid: false,
       });
 
       const url = getTtsUrl(text, language);
@@ -322,14 +346,14 @@ export default function AdvisorScreen() {
         try {
           // Attempt to get last known location first (cached, resolves instantly)
           let location = await Location.getLastKnownPositionAsync({});
-          
+
           if (!location) {
             // Fallback to active query with balanced accuracy for fast response
-            location = await Location.getCurrentPositionAsync({ 
-              accuracy: Location.Accuracy.Balanced 
+            location = await Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.Balanced
             });
           }
-          
+
           if (location) {
             currentZone = determineZone(location.coords.latitude, location.coords.longitude);
             setUserCoords({ lat: location.coords.latitude, lon: location.coords.longitude });
@@ -356,6 +380,17 @@ export default function AdvisorScreen() {
     const trimmed = textToSend.trim();
     if (!trimmed) return;
 
+    if (editingMsgId) {
+      setMessages(prev => {
+        const targetIdx = prev.findIndex(m => m.id === editingMsgId);
+        if (targetIdx !== -1) {
+          return prev.slice(0, targetIdx);
+        }
+        return prev;
+      });
+      setEditingMsgId(null);
+    }
+
     const isSinhalaInput = /[\u0D80-\u0DFF]/.test(trimmed);
     const detectedLang = isSinhalaInput ? 'si' : 'en';
 
@@ -373,7 +408,7 @@ export default function AdvisorScreen() {
     setMessages(prev => [...prev, userMsg]);
     setInputText('');
     setLoading(true);
-    
+
     // Auto Scroll to bottom
     setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
 
@@ -406,7 +441,19 @@ export default function AdvisorScreen() {
           setMessages(prev => [...prev, botMsg]);
         }
       } else {
-        const response = await sendAdvisoryMessage(trimmed, userContext, language);
+        const response = await sendAdvisoryMessage(
+          trimmed,
+          userContext,
+          language,
+          sessionId,
+          userCoords?.lat,
+          userCoords?.lon
+        );
+
+        if (response.session_id) {
+          setSessionId(response.session_id);
+        }
+
         // If backend returned translated question in Sinhala, update user question message
         if (response.question && language === 'si' && !isSinhalaInput) {
           setMessages(prev => prev.map(m => m.id === userMsg.id ? {
@@ -424,6 +471,7 @@ export default function AdvisorScreen() {
             [language]: response.answer
           },
           sources: response.sources ? response.sources.map((s: any) => s.title) : [],
+          images: response.images || [],
           context_used: response.context_used,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
@@ -433,7 +481,7 @@ export default function AdvisorScreen() {
       const errorMsg: Message = {
         id: Math.random().toString(),
         sender: 'bot',
-        text: language === 'en' 
+        text: language === 'en'
           ? "Sorry, I am facing connectivity issues to my knowledge base. Please check your internet connection."
           : "සමාවන්න, උපදේශන සේවාව සමඟ සම්බන්ධ වීමට අපොහොසත් විය. කරුණාකර අන්තර්ජාලය පරීක්ෂා කරන්න.",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -451,6 +499,9 @@ export default function AdvisorScreen() {
 
 
   const startNewChat = () => {
+    const newSessionId = generateUUID();
+    setSessionId(newSessionId);
+    setEditingMsgId(null);
     setMessages([
       {
         id: 'welcome',
@@ -482,11 +533,11 @@ export default function AdvisorScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>{t('advisor.title')}</Text>
         <View style={styles.headerActions}>
-          <TouchableOpacity onPress={startNewChat} style={styles.newChatButton}>
-            <Ionicons name="add" size={20} color={COLORS.textSecondary} />
+          <TouchableOpacity onPress={startNewChat} style={styles.iconOnlyDeleteButton} activeOpacity={0.7}>
+            <Ionicons name="trash-outline" size={18} color={COLORS.diseased} />
           </TouchableOpacity>
-          <TouchableOpacity 
-            onPress={toggleLanguage} 
+          <TouchableOpacity
+            onPress={toggleLanguage}
             style={styles.langButton}
             disabled={translating}
           >
@@ -547,9 +598,26 @@ export default function AdvisorScreen() {
             ]}
           >
             {msg.sender === 'user' ? (
-              <View style={styles.userBubble}>
-                <Text style={styles.userText}>{msg.text}</Text>
-                <Text style={styles.userTime}>{msg.timestamp}</Text>
+              <View style={styles.userBubbleWrapper}>
+                <View style={styles.userBubble}>
+                  <View style={styles.userBubbleHeader}>
+                    <Text style={styles.userSenderLabel}>
+                      {language === 'en' ? 'You' : 'ඔබ'}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => handleEditQuestion(msg)}
+                      style={styles.userEditButton}
+                      activeOpacity={0.75}
+                    >
+                      <Ionicons name="create-outline" size={12} color="#FFFFFF" />
+                      <Text style={styles.userEditText}>
+                        {language === 'en' ? 'Edit' : 'සංස්කරණය'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.userText}>{msg.text}</Text>
+                  <Text style={styles.userTime}>{msg.timestamp}</Text>
+                </View>
               </View>
             ) : (
               <GlassCard style={[styles.botBubble, msg.isMultiLlm && styles.botBubbleMultiLlm]}>
@@ -561,7 +629,7 @@ export default function AdvisorScreen() {
                     </Text>
                   </View>
                 )}
-                
+
                 <Text style={styles.botText}>{msg.text}</Text>
 
                 {/* Multi-LLM Accordion Expansion */}
@@ -613,7 +681,7 @@ export default function AdvisorScreen() {
 
                         {/* Model response snippets */}
                         <Text style={styles.inlineSectionTitle}>{language === 'en' ? 'Individual Model Answers:' : 'ආකෘති මට්ටමින් පිළිතුරු:'}</Text>
-                        
+
                         {/* LLaMA 3.3 */}
                         {msg.llama_answer && (() => {
                           const isBest = msg.best_model === 'llama';
@@ -673,7 +741,7 @@ export default function AdvisorScreen() {
                     )}
                   </View>
                 )}
-                
+
                 {/* Context used */}
                 {msg.context_used && (
                   <View style={styles.contextUsedContainer}>
@@ -694,9 +762,21 @@ export default function AdvisorScreen() {
                     ))}
                   </View>
                 )}
-                
+
+                {/* CRI Reference Images */}
+                {msg.images && msg.images.length > 0 && (
+                  <View style={styles.imagesContainer}>
+                    <Text style={styles.imagesHeader}>
+                      📷 {language === 'en' ? 'Reference Images:' : 'යොමු රූප සටහන්:'}
+                    </Text>
+                    {msg.images.map((img, idx) => (
+                      <ImageCard key={idx} image={img} />
+                    ))}
+                  </View>
+                )}
+
                 <View style={styles.botBubbleFooter}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={() => toggleAudio(msg.id, msg.text)}
                     style={styles.audioButton}
                     disabled={audioLoadingMsgId === msg.id}
@@ -704,10 +784,10 @@ export default function AdvisorScreen() {
                     {audioLoadingMsgId === msg.id ? (
                       <ActivityIndicator size="small" color={COLORS.primaryLight} style={{ marginRight: 4, transform: [{ scale: 0.8 }] }} />
                     ) : (
-                      <Ionicons 
-                        name={activeAudioMsgId === msg.id ? "volume-mute-outline" : "volume-medium-outline"} 
-                        size={16} 
-                        color={activeAudioMsgId === msg.id ? COLORS.primaryLight : COLORS.textSecondary} 
+                      <Ionicons
+                        name={activeAudioMsgId === msg.id ? "volume-mute-outline" : "volume-medium-outline"}
+                        size={16}
+                        color={activeAudioMsgId === msg.id ? COLORS.primaryLight : COLORS.textSecondary}
                         style={{ marginRight: 4 }}
                       />
                     )}
@@ -715,8 +795,8 @@ export default function AdvisorScreen() {
                       styles.audioButtonText,
                       activeAudioMsgId === msg.id ? styles.audioActiveText : styles.audioInactiveText
                     ]}>
-                      {activeAudioMsgId === msg.id 
-                        ? (language === 'en' ? 'Stop' : 'නවතන්න') 
+                      {activeAudioMsgId === msg.id
+                        ? (language === 'en' ? 'Stop' : 'නවතන්න')
                         : (language === 'en' ? 'Listen' : 'සවන් දෙන්න')}
                     </Text>
                   </TouchableOpacity>
@@ -756,8 +836,34 @@ export default function AdvisorScreen() {
 
       {/* Message Inputs Footer */}
       <View style={styles.footer}>
+        {editingMsgId && (() => {
+          const editingMsg = messages.find(m => m.id === editingMsgId);
+          return (
+            <View style={styles.editingBanner}>
+              <View style={styles.editingBannerHeader}>
+                <View style={styles.editingBannerTitleRow}>
+                  <View style={styles.editingIconBadge}>
+                    <Ionicons name="create" size={12} color={COLORS.primaryLight} />
+                  </View>
+                  <Text style={styles.editingBannerTitle}>
+                    {language === 'en' ? 'Editing Question' : 'ප්‍රශ්නය සංස්කරණය කිරීම'}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={cancelEdit} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Ionicons name="close" size={16} color={COLORS.textMuted} />
+                </TouchableOpacity>
+              </View>
+              {editingMsg && (
+                <Text style={styles.editingPreviewText} numberOfLines={1}>
+                  "{editingMsg.text}"
+                </Text>
+              )}
+            </View>
+          );
+        })()}
         <View style={styles.inputContainer}>
           <TextInput
+            ref={textInputRef}
             style={styles.textInput}
             value={inputText}
             onChangeText={setInputText}
@@ -766,7 +872,7 @@ export default function AdvisorScreen() {
             onSubmitEditing={() => handleSend(inputText)}
           />
           <TouchableOpacity onPress={() => handleSend(inputText)} style={styles.sendButton}>
-            <Ionicons name="send" size={20} color={COLORS.textPrimary} />
+            <Ionicons name={editingMsgId ? "checkmark" : "send"} size={20} color={COLORS.textPrimary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -799,6 +905,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  iconOnlyDeleteButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(244, 67, 54, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(244, 67, 54, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   newChatButton: {
     width: 32,
@@ -841,24 +957,108 @@ const styles = StyleSheet.create({
   rowBot: {
     justifyContent: 'flex-start',
   },
-  userBubble: {
-    backgroundColor: COLORS.primary,
-    borderRadius: ROUNDING.md,
-    borderBottomRightRadius: 0,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+  userBubbleWrapper: {
+    alignItems: 'flex-end',
     maxWidth: '85%',
   },
+  userBubble: {
+    backgroundColor: 'rgba(46, 125, 50, 0.95)',
+    borderRadius: ROUNDING.md,
+    borderBottomRightRadius: 2,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  userBubbleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+    paddingBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.18)',
+  },
+  userSenderLabel: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  userEditButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: ROUNDING.full,
+  },
+  userEditText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+  },
   userText: {
-    color: COLORS.textPrimary,
+    color: '#FFFFFF',
     fontSize: 15,
-    lineHeight: 20,
+    lineHeight: 21,
   },
   userTime: {
-    color: COLORS.textSecondary,
+    color: 'rgba(255, 255, 255, 0.65)',
     fontSize: 10,
     alignSelf: 'flex-end',
-    marginTop: 4,
+    marginTop: 6,
+  },
+  editingBanner: {
+    backgroundColor: COLORS.surface,
+    borderRadius: ROUNDING.md,
+    padding: 10,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(76, 175, 80, 0.35)',
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.primaryLight,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  editingBannerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  editingBannerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  editingIconBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(76, 175, 80, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editingBannerTitle: {
+    color: COLORS.textPrimary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  editingPreviewText: {
+    color: COLORS.textSecondary,
+    fontSize: 11,
+    fontStyle: 'italic',
+    marginTop: 3,
   },
   botBubble: {
     maxWidth: '85%',
@@ -887,6 +1087,18 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: 11,
     lineHeight: 16,
+  },
+  imagesContainer: {
+    marginTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(76, 175, 80, 0.15)',
+    paddingTop: 8,
+  },
+  imagesHeader: {
+    color: COLORS.primaryLight,
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginBottom: 6,
   },
   botTime: {
     color: COLORS.textMuted,
