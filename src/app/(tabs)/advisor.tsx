@@ -31,6 +31,7 @@ interface Message {
   consensus_score?: number;
   llama_answer?: string;
   llama8b_answer?: string;
+  gemma_answer?: string;
   qwen_answer?: string;
 }
 
@@ -88,9 +89,10 @@ export default function AdvisorScreen() {
         if (!msg.translations?.[`llama8b_${nextLang}`] && msg.llama8b_answer) {
           messagesToTranslate.push({ id: msg.id + "_llama8b", text: msg.llama8b_answer });
         }
-        // Check Qwen
-        if (!msg.translations?.[`qwen_${nextLang}`] && msg.qwen_answer) {
-          messagesToTranslate.push({ id: msg.id + "_qwen", text: msg.qwen_answer });
+        // Check Gemma
+        const gemmaAns = msg.gemma_answer || msg.qwen_answer;
+        if (!msg.translations?.[`gemma_${nextLang}`] && !msg.translations?.[`qwen_${nextLang}`] && gemmaAns) {
+          messagesToTranslate.push({ id: msg.id + "_gemma", text: gemmaAns });
         }
         // Check Judge Reason
         if (!msg.translations?.[`reason_${nextLang}`] && msg.judge_reason) {
@@ -114,7 +116,8 @@ export default function AdvisorScreen() {
             ...updatedMsg,
             llama_answer: msg.translations?.[`llama_${nextLang}`] || msg.llama_answer,
             llama8b_answer: msg.translations?.[`llama8b_${nextLang}`] || msg.llama8b_answer,
-            qwen_answer: msg.translations?.[`qwen_${nextLang}`] || msg.qwen_answer,
+            gemma_answer: msg.translations?.[`gemma_${nextLang}`] || msg.translations?.[`qwen_${nextLang}`] || msg.gemma_answer || msg.qwen_answer,
+            qwen_answer: msg.translations?.[`gemma_${nextLang}`] || msg.translations?.[`qwen_${nextLang}`] || msg.gemma_answer || msg.qwen_answer,
             judge_reason: msg.translations?.[`reason_${nextLang}`] || msg.judge_reason,
           };
         }
@@ -144,8 +147,12 @@ export default function AdvisorScreen() {
             if (!cachedTranslations[`llama8b_${currentLang}`]) {
               cachedTranslations[`llama8b_${currentLang}`] = msg.llama8b_answer;
             }
-            if (!cachedTranslations[`qwen_${currentLang}`]) {
-              cachedTranslations[`qwen_${currentLang}`] = msg.qwen_answer;
+            const gemmaAns = msg.gemma_answer || msg.qwen_answer;
+            if (!cachedTranslations[`gemma_${currentLang}`] && gemmaAns) {
+              cachedTranslations[`gemma_${currentLang}`] = gemmaAns;
+            }
+            if (!cachedTranslations[`qwen_${currentLang}`] && gemmaAns) {
+              cachedTranslations[`qwen_${currentLang}`] = gemmaAns;
             }
             if (!cachedTranslations[`reason_${currentLang}`]) {
               cachedTranslations[`reason_${currentLang}`] = msg.judge_reason;
@@ -175,10 +182,11 @@ export default function AdvisorScreen() {
             if (llama8bTrans) {
               cachedTranslations[`llama8b_${nextLang}`] = llama8bTrans.translated_text;
             }
-            // 4. Qwen translation
-            const qwenTrans = result.translations.find((t: any) => t.id === msg.id + "_qwen");
-            if (qwenTrans) {
-              cachedTranslations[`qwen_${nextLang}`] = qwenTrans.translated_text;
+            // 4. Gemma translation
+            const gemmaTrans = result.translations.find((t: any) => t.id === msg.id + "_gemma" || t.id === msg.id + "_qwen");
+            if (gemmaTrans) {
+              cachedTranslations[`gemma_${nextLang}`] = gemmaTrans.translated_text;
+              cachedTranslations[`qwen_${nextLang}`] = gemmaTrans.translated_text;
             }
             // 5. Judge Reason translation
             const reasonTrans = result.translations.find((t: any) => t.id === msg.id + "_reason");
@@ -190,7 +198,8 @@ export default function AdvisorScreen() {
               ...updatedMsg,
               llama_answer: cachedTranslations[`llama_${nextLang}`] || msg.llama_answer,
               llama8b_answer: cachedTranslations[`llama8b_${nextLang}`] || msg.llama8b_answer,
-              qwen_answer: cachedTranslations[`qwen_${nextLang}`] || msg.qwen_answer,
+              gemma_answer: cachedTranslations[`gemma_${nextLang}`] || cachedTranslations[`qwen_${nextLang}`] || msg.gemma_answer || msg.qwen_answer,
+              qwen_answer: cachedTranslations[`gemma_${nextLang}`] || cachedTranslations[`qwen_${nextLang}`] || msg.gemma_answer || msg.qwen_answer,
               judge_reason: cachedTranslations[`reason_${nextLang}`] || msg.judge_reason,
             };
           }
@@ -214,7 +223,8 @@ export default function AdvisorScreen() {
             ...updatedMsg,
             llama_answer: msg.translations?.[`llama_${nextLang}`] || msg.llama_answer,
             llama8b_answer: msg.translations?.[`llama8b_${nextLang}`] || msg.llama8b_answer,
-            qwen_answer: msg.translations?.[`qwen_${nextLang}`] || msg.qwen_answer,
+            gemma_answer: msg.translations?.[`gemma_${nextLang}`] || msg.translations?.[`qwen_${nextLang}`] || msg.gemma_answer || msg.qwen_answer,
+            qwen_answer: msg.translations?.[`gemma_${nextLang}`] || msg.translations?.[`qwen_${nextLang}`] || msg.gemma_answer || msg.qwen_answer,
             judge_reason: msg.translations?.[`reason_${nextLang}`] || msg.judge_reason,
           };
         }
@@ -416,6 +426,7 @@ export default function AdvisorScreen() {
       if (chatMode === 'multi') {
         const response = await sendMultiLLMQuery(trimmed, userCoords?.lat, userCoords?.lon, language);
         if (response.success) {
+          const gemmaAns = response.gemma_answer || response.qwen_answer;
           const botMsg: Message = {
             id: Math.random().toString(),
             sender: 'bot',
@@ -424,7 +435,8 @@ export default function AdvisorScreen() {
               [language]: response.best_answer,
               [`llama_${language}`]: response.llama_answer,
               [`llama8b_${language}`]: response.llama8b_answer,
-              [`qwen_${language}`]: response.qwen_answer,
+              [`gemma_${language}`]: gemmaAns,
+              [`qwen_${language}`]: gemmaAns,
               [`reason_${language}`]: response.reason,
             },
             sources: response.sources ? response.sources.map((s: any) => s.title) : [],
@@ -436,7 +448,8 @@ export default function AdvisorScreen() {
             consensus_score: response.consensus_score,
             llama_answer: response.llama_answer,
             llama8b_answer: response.llama8b_answer,
-            qwen_answer: response.qwen_answer,
+            gemma_answer: gemmaAns,
+            qwen_answer: gemmaAns,
           };
           setMessages(prev => [...prev, botMsg]);
         }
@@ -713,8 +726,9 @@ export default function AdvisorScreen() {
                         })()}
 
                         {/* Gemma 2 9B */}
-                        {msg.qwen_answer && (() => {
-                          const isBest = msg.best_model === 'qwen';
+                        {(msg.gemma_answer || msg.qwen_answer) && (() => {
+                          const isBest = msg.best_model === 'gemma' || msg.best_model === 'qwen';
+                          const answerText = msg.gemma_answer || msg.qwen_answer;
                           return (
                             <View style={[styles.inlineModelRow, isBest && styles.inlineModelRowBest]}>
                               <View style={styles.inlineModelHeader}>
@@ -722,7 +736,7 @@ export default function AdvisorScreen() {
                                 <Text style={[styles.inlineModelName, { color: '#FF6D00' }]}>Gemma 2 9B</Text>
                                 {isBest && <Text style={styles.inlineBestBadge}>✓ Selected</Text>}
                               </View>
-                              <Text style={styles.inlineModelAnswer}>{msg.qwen_answer}</Text>
+                              <Text style={styles.inlineModelAnswer}>{answerText}</Text>
                             </View>
                           );
                         })()}
