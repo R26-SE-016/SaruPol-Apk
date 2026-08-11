@@ -1,22 +1,28 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { useAppStore } from '../store/appStore';
 
-// ============================================================
-// BACKEND CONNECTION CONFIGURATION
-// ------------------------------------------------------------
-// Web Browser (expo web): use localhost
-// Android/iOS Phone (expo go via Wi-Fi): use LAN IP
-// Run 'ipconfig' to find your LAN IP if you switch networks!
-// ============================================================
-const IS_WEB = Platform.OS === 'web';
-const LAN_IP = '192.168.1.62';  // Your machine LAN IP
-const BACKEND_URL = IS_WEB
-  ? 'http://localhost:8000'       // Browser: direct localhost
-  : `http://${LAN_IP}:8000`;     // Phone: LAN IP
+// Dynamically determine the backend IP in development so physical devices on the same Wi-Fi can connect automatically.
+const getGatewayUrl = () => {
+  if (__DEV__) {
+    // Constants.expoConfig?.hostUri contains the dev server's host and port (e.g. "192.168.1.7:8081")
+    const hostUri = Constants.expoConfig?.hostUri;
+    if (hostUri) {
+      const ip = hostUri.split(':')[0];
+      return `http://${ip}:8000/api`;
+    }
+    // Fallback for emulators if hostUri is not available
+    return Platform.OS === 'android' ? 'http://10.0.2.2:8000/api' : 'http://localhost:8000/api';
+  }
+  // Production/fallback URL (update this if you deploy the backend to a cloud service)
+  return 'http://192.168.1.7:8000/api';
+};
+
+const GATEWAY_URL = getGatewayUrl();
 
 const api = axios.create({
-  baseURL: BACKEND_URL,
+  baseURL: GATEWAY_URL,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -27,7 +33,7 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const state = useAppStore.getState();
-    config.baseURL = BACKEND_URL;
+    config.baseURL = GATEWAY_URL;
     if (state.token) {
       config.headers.Authorization = `Bearer ${state.token}`;
     }
