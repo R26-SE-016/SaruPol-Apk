@@ -23,7 +23,7 @@ const GATEWAY_URL = getGatewayUrl();
 
 const api = axios.create({
   baseURL: GATEWAY_URL,
-  timeout: 30000, // 30 seconds
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   }
@@ -33,7 +33,7 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const state = useAppStore.getState();
-
+    config.baseURL = GATEWAY_URL;
     if (state.token) {
       config.headers.Authorization = `Bearer ${state.token}`;
     }
