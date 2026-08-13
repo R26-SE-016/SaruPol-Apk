@@ -28,12 +28,12 @@ const STEPS = ['Select Part', 'Take Photo', 'Analyze'];
 
 // ── Coconut Part Config ───────────────────────────────────────────────
 const PARTS = [
-  { id: 'leaf',          labelEn: '🍃 Leaf',        labelSi: '🍃 කොළ' },
-  { id: 'trunk',         labelEn: '🪵 Trunk',        labelSi: '🪵 කඳ' },
-  { id: 'crown',         labelEn: '👑 Crown',        labelSi: '👑 කරටිය' },
-  { id: 'root',          labelEn: '🕸️ Root',         labelSi: '🕸️ මුල්' },
-  { id: 'nut',           labelEn: '🥥 Nut',          labelSi: '🥥 ගෙඩි' },
-  { id: 'inflorescence', labelEn: '🌾 Flower',       labelSi: '🌾 කරල' },
+  { id: 'leaf',          labelEn: '🍃 Leaf',        labelSi: '🍃 කොළ',       labelTa: '🍃 இலை' },
+  { id: 'trunk',         labelEn: '🪵 Trunk',        labelSi: '🪵 කඳ',        labelTa: '🪵 தண்டு' },
+  { id: 'crown',         labelEn: '👑 Crown',        labelSi: '👑 කරටිය',     labelTa: '👑 கிரீடம்' },
+  { id: 'root',          labelEn: '🕸️ Root',         labelSi: '🕸️ මුල්',       labelTa: '🕸️ வேர்' },
+  { id: 'nut',           labelEn: '🥥 Nut',          labelSi: '🥥 ගෙඩි',       labelTa: '🥥 காய்' },
+  { id: 'inflorescence', labelEn: '🌾 Flower',       labelSi: '🌾 කරල',       labelTa: '🌾 பூ' },
 ];
 
 // ── Analysis step labels ──────────────────────────────────────────────
@@ -323,7 +323,7 @@ export default function ScanScreen() {
                 styles.partBtnText,
                 selectedPart === part.id && styles.partBtnTextSelected
               ]}>
-                {language === 'en' ? part.labelEn : part.labelSi}
+                {language === 'ta' ? part.labelTa : language === 'si' ? part.labelSi : part.labelEn}
               </Text>
             </TouchableOpacity>
           ))}

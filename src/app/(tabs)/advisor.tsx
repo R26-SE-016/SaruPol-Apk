@@ -68,9 +68,10 @@ export default function AdvisorScreen() {
     setInputText('');
   };
 
-  const toggleLanguage = async () => {
-    const nextLang = language === 'en' ? 'si' : 'en';
+  const handleLanguageChange = async (targetLang: 'en' | 'si' | 'ta') => {
+    if (targetLang === language || translating) return;
     const currentLang = language;
+    const nextLang = targetLang;
     await setLanguage(nextLang);
 
     // Find messages that don't have the translation cached
@@ -244,9 +245,11 @@ export default function AdvisorScreen() {
     {
       id: 'welcome',
       sender: 'bot',
-      text: language === 'en'
-        ? "Hello! I am your SaruPol AI Farming Advisor. I can answer any questions about coconut cultivation, pest controls, diseases, or fertilizer schedules. Ask me anything!"
-        : "ආයුබෝවන්! මම සරුපොල් AI වගා උපදේශකයා වෙමි. පොල් වගාව, පළිබෝධ පාලනය, රෝග හෝ පොහොර යෙදීම් පිළිබඳ ඕනෑම ගැටලුවක් මගෙන් විමසන්න.",
+      text: language === 'ta'
+        ? "வணக்கம்! நான் SaruPol AI விவசாய ஆலோசகர். தேங்காய் பயிர்ச்செய்கை, பூச்சி கட்டுப்பாடு, நோய்கள் அல்லது உர திட்டங்கள் பற்றி எந்தக் கேள்வியையும் கேளுங்கள்!"
+        : language === 'si'
+        ? "ආයුබෝවන්! මම සරුපොල් AI වගා උපදේශකයා වෙමි. පොල් වගාව, පළිබෝධ පාලනය, රෝග හෝ පොහොර යෙදීම් පිළිබඳ ඕනෑම ගැටලුවක් මගෙන් විමසන්න."
+        : "Hello! I am your SaruPol AI Farming Advisor. I can answer any questions about coconut cultivation, pest controls, diseases, or fertilizer schedules. Ask me anything!",
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -257,9 +260,11 @@ export default function AdvisorScreen() {
       if (msg.id === 'welcome') {
         return {
           ...msg,
-          text: language === 'en'
-            ? "Hello! I am your SaruPol AI Farming Advisor. I can answer any questions about coconut cultivation, pest controls, diseases, or fertilizer schedules. Ask me anything!"
-            : "ආයුබෝවන්! මම සරුපොල් AI වගා උපදේශකයා වෙමි. පොල් වගාව, පළිබෝධ පාලනය, රෝග හෝ පොහොර යෙදීම් පිළිබඳ ඕනෑම ගැටලුවක් මගෙන් විමසන්න."
+          text: language === 'ta'
+            ? "வணக்கம்! நான் SaruPol AI விவசாய ஆலோசகர். தேங்காய் பயிர்ச்செய்கை, பூச்சி கட்டுப்பாடு, நோய்கள் அல்லது உர திட்டங்கள் பற்றி எந்தக் கேள்வியையும் கேளுங்கள்!"
+            : language === 'si'
+            ? "ආයුබෝවන්! මම සරුපොල් AI වගා උපදේශකයා වෙමි. පොල් වගාව, පළිබෝධ පාලනය, රෝග හෝ පොහොර යෙදීම් පිළිබඳ ඕනෑම ගැටලුවක් මගෙන් විමසන්න."
+            : "Hello! I am your SaruPol AI Farming Advisor. I can answer any questions about coconut cultivation, pest controls, diseases, or fertilizer schedules. Ask me anything!"
         };
       }
       return msg;
@@ -384,10 +389,10 @@ export default function AdvisorScreen() {
 
   // Suggested questions chips (related to English/Sinhala PDFs in our knowledge base)
   const suggestions = [
-    language === 'en' ? "How should I fertilize young coconut palms?" : "පොල් පැළ සඳහා පොහොර යෙදිය යුත්තේ කෙසේද?",
-    language === 'en' ? "How do I select a good mother palm?" : "හොඳ මව් ශාකයක් තෝරා ගන්නේ කෙසේද?",
-    language === 'en' ? "How do I control termites in coconut nursery?" : "පොල් තවාන් වල වේයන් පාලනය කරන්නේ කෙසේද?",
-    language === 'en' ? "What fertilizer mixture is recommended for coconut seedlings?" : "පොල් පැළ සඳහා නිර්දේශිත පොහොර මිශ්‍රණය කුමක්ද?"
+    language === 'ta' ? "இளம் தேங்காய் மரங்களுக்கு உரமிட வேண்டியது எப்படி?" : language === 'si' ? "පොල් පැළ සඳහා පොහොර යෙදිය යුත්තේ කෙසේද?" : "How should I fertilize young coconut palms?",
+    language === 'ta' ? "நல்ல தாய் பனையை தேர்ந்தெடுப்பது எப்படி?" : language === 'si' ? "හොඳ මව් ශාකයක් තෝරා ගන්නේ කෙසේද?" : "How do I select a good mother palm?",
+    language === 'ta' ? "தேங்காய் நாற்றங்காலில் கறையானைகளை கட்டுப்படுத்துவது எப்படி?" : language === 'si' ? "පොල් තවාන් වල වේයන් පාලනය කරන්නේ කෙසේද?" : "How do I control termites in coconut nursery?",
+    language === 'ta' ? "தேங்காய் நாற்றுகளுக்கு பரிந்துரைக்கப்படும் உரக் கலவை என்ன?" : language === 'si' ? "පොල් පැළ සඳහා නිර්දේශිත පොහොර මිශ්‍රණය කුමක්ද?" : "What fertilizer mixture is recommended for coconut seedlings?"
   ];
 
   const handleSend = async (textToSend: string) => {
@@ -406,7 +411,8 @@ export default function AdvisorScreen() {
     }
 
     const isSinhalaInput = /[\u0D80-\u0DFF]/.test(trimmed);
-    const detectedLang = isSinhalaInput ? 'si' : 'en';
+    const isTamilInput = /[\u0B80-\u0BFF]/.test(trimmed);
+    const detectedLang = isSinhalaInput ? 'si' : isTamilInput ? 'ta' : 'en';
 
     // Add User Message
     const userMsg: Message = {
@@ -476,11 +482,11 @@ export default function AdvisorScreen() {
         }
 
         // If backend returned translated question in Sinhala, update user question message
-        if (response.question && language === 'si' && !isSinhalaInput) {
+        if (response.question && language !== 'en' && detectedLang === 'en') {
           setMessages(prev => prev.map(m => m.id === userMsg.id ? {
             ...m,
             text: response.question,
-            translations: { ...m.translations, si: response.question }
+            translations: { ...m.translations, [language]: response.question }
           } : m));
         }
 
@@ -502,9 +508,11 @@ export default function AdvisorScreen() {
       const errorMsg: Message = {
         id: Math.random().toString(),
         sender: 'bot',
-        text: language === 'en'
-          ? "Sorry, I am facing connectivity issues to my knowledge base. Please check your internet connection."
-          : "සමාවන්න, උපදේශන සේවාව සමඟ සම්බන්ධ වීමට අපොහොසත් විය. කරුණාකර අන්තර්ජාලය පරීක්ෂා කරන්න.",
+        text: language === 'ta'
+          ? "மன்னிக்கவும், தகவல் தளத்துடன் இணைப்பதில் சிக்கல் ஏற்பட்டுள்ளது. உங்கள் இணைய இணைப்பை சரிபார்க்கவும்."
+          : language === 'si'
+          ? "සමාවන්න, උපදේශන සේවාව සමඟ සම්බන්ධ වීමට අපොහොසත් විය. කරුණාකර අන්තර්ජාලය පරීක්ෂා කරන්න."
+          : "Sorry, I am facing connectivity issues to my knowledge base. Please check your internet connection.",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setMessages(prev => [...prev, errorMsg]);
@@ -527,9 +535,11 @@ export default function AdvisorScreen() {
       {
         id: 'welcome',
         sender: 'bot',
-        text: language === 'en'
-          ? "Hello! I am your SaruPol AI Farming Advisor. I can answer any questions about coconut cultivation, pest controls, diseases, or fertilizer schedules. Ask me anything!"
-          : "ආයුබෝවන්! මම සරුපොල් AI වගා උපදේශකයා වෙමි. පොල් වගාව, පළිබෝධ පාලනය, රෝග හෝ පොහොර යෙදීම් පිළිබඳ ඕනෑම ගැටලුවක් මගෙන් විමසන්න.",
+        text: language === 'ta'
+          ? "வணக்கம்! நான் SaruPol AI விவசாய ஆலோசகர். தேங்காய் பயிர்ச்செய்கை, பூச்சி கட்டுப்பாடு, நோய்கள் அல்லது உர திட்டங்கள் பற்றி எந்தக் கேள்வியையும் கேளுங்கள்!"
+          : language === 'si'
+          ? "ආයුබෝවන්! මම සරුපොල් AI වගා උපදේශකයා වෙමි. පොල් වගාව, පළිබෝධ පාලනය, රෝග හෝ පොහොර යෙදීම් පිළිබඳ ඕනෑම ගැටලුවක් මගෙන් විමසන්න."
+          : "Hello! I am your SaruPol AI Farming Advisor. I can answer any questions about coconut cultivation, pest controls, diseases, or fertilizer schedules. Ask me anything!",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
     ]);
@@ -557,19 +567,26 @@ export default function AdvisorScreen() {
           <TouchableOpacity onPress={startNewChat} style={styles.iconOnlyDeleteButton} activeOpacity={0.7}>
             <Ionicons name="trash-outline" size={18} color={COLORS.diseased} />
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={toggleLanguage}
-            style={styles.langButton}
-            disabled={translating}
-          >
-            {translating ? (
-              <ActivityIndicator size="small" color={COLORS.textSecondary} style={{ width: 36, height: 16 }} />
-            ) : (
-              <Text style={styles.langText}>
-                {language === 'en' ? 'සිංහල' : 'English'}
-              </Text>
-            )}
-          </TouchableOpacity>
+          <View style={styles.langSelectorRow}>
+            {(['en', 'si', 'ta'] as const).map((lang) => (
+              <TouchableOpacity
+                key={lang}
+                style={[
+                  styles.langToggle,
+                  language === lang && styles.langToggleActive
+                ]}
+                onPress={() => handleLanguageChange(lang)}
+                disabled={translating}
+              >
+                <Text style={[
+                  styles.langToggleText,
+                  language === lang && styles.langToggleTextActive
+                ]}>
+                  {lang === 'en' ? 'EN' : lang === 'si' ? 'සිං' : 'த'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
       </View>
 
@@ -581,7 +598,7 @@ export default function AdvisorScreen() {
         >
           <Ionicons name="chatbubble-ellipses-outline" size={16} color={chatMode === 'standard' ? COLORS.textPrimary : COLORS.textSecondary} />
           <Text style={[styles.modeTabText, chatMode === 'standard' && styles.modeTabTextActive]}>
-            {language === 'en' ? 'AI Chat' : 'AI සංවාදය'}
+            {language === 'ta' ? 'AI அரட்டை' : language === 'si' ? 'AI සංවාදය' : 'AI Chat'}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -623,7 +640,7 @@ export default function AdvisorScreen() {
                 <View style={styles.userBubble}>
                   <View style={styles.userBubbleHeader}>
                     <Text style={styles.userSenderLabel}>
-                      {language === 'en' ? 'You' : 'ඔබ'}
+                      {language === 'ta' ? 'நீங்கள்' : language === 'si' ? 'ඔබ' : 'You'}
                     </Text>
                     <TouchableOpacity
                       onPress={() => handleEditQuestion(msg)}
@@ -632,7 +649,7 @@ export default function AdvisorScreen() {
                     >
                       <Ionicons name="create-outline" size={12} color="#FFFFFF" />
                       <Text style={styles.userEditText}>
-                        {language === 'en' ? 'Edit' : 'සංස්කරණය'}
+                        {language === 'ta' ? 'திருத்து' : language === 'si' ? 'සංස්කරණය' : 'Edit'}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -648,12 +665,12 @@ export default function AdvisorScreen() {
                       <View style={styles.earlyExitBadge}>
                         <Ionicons name="flash" size={12} color="#66BB6A" />
                         <Text style={styles.earlyExitBadgeText}>
-                          {language === 'en' ? 'Fast Validated' : 'ඉක්මන් සත්‍යාපනය'}
+                          {language === 'ta' ? 'விரைவு சரிபார்ப்பு' : language === 'si' ? 'ඉක්මන් සත්‍යාපනය' : 'Fast Validated'}
                         </Text>
                         {msg.similarity_score != null && (
                           <View style={styles.similarityChip}>
                             <Text style={styles.similarityChipText}>
-                              {Math.round(msg.similarity_score * 100)}% {language === 'en' ? 'match' : 'ගැලපීම'}
+                              {Math.round(msg.similarity_score * 100)}% {language === 'ta' ? 'பொருத்தம்' : language === 'si' ? 'ගැලපීම' : 'match'}
                             </Text>
                           </View>
                         )}
@@ -662,7 +679,7 @@ export default function AdvisorScreen() {
                       <View style={styles.bestAnswerBadge}>
                         <Ionicons name="shield-checkmark" size={12} color={COLORS.healthy} />
                         <Text style={styles.bestAnswerBadgeText}>
-                          {language === 'en' ? 'Best Answer Selected' : 'තෝරාගත් හොඳම පිළිතුර'}
+                          {language === 'ta' ? 'சிறந்த பதில் தேர்ந்தெடுக்கப்பட்டது' : language === 'si' ? 'තෝරාගත් හොඳම පිළිතුර' : 'Best Answer Selected'}
                         </Text>
                       </View>
                     )}
@@ -691,8 +708,8 @@ export default function AdvisorScreen() {
                       />
                       <Text style={styles.expandToggleText}>
                         {expandedMultiLlmMsgIds[msg.id]
-                          ? (language === 'en' ? 'Hide Comparison Details' : 'සංසන්දනාත්මක විස්තර සඟවන්න')
-                          : (language === 'en' ? 'View 3 Model Answers & Judgment' : 'ආකෘති 3හි පිළිතුරු සහ විනිශ්චය බලන්න')}
+                          ? (language === 'ta' ? 'ஒப்பீட்டு விவரங்களை மறை' : language === 'si' ? 'සංසන්දනාත්මක විස්තර සඟවන්න' : 'Hide Comparison Details')
+                          : (language === 'ta' ? '3 மாதிரி பதில்கள் & தீர்ப்பைப் பார்' : language === 'si' ? 'ආකෘති 3හි පිළිතුරු සහ විනිශ්චය බලන්න' : 'View 3 Model Answers & Judgment')}
                       </Text>
                     </TouchableOpacity>
 
@@ -701,19 +718,19 @@ export default function AdvisorScreen() {
                         {/* Consensus Score */}
                         {msg.consensus_score !== undefined && (() => {
                           let consensusColor = COLORS.healthy;
-                          let consensusLabel = language === 'en' ? 'High Agreement' : 'ඉහළ එකඟතාව';
+                          let consensusLabel = language === 'ta' ? 'அதிக ஒருமித்தம்' : language === 'si' ? 'ඉහළ එකඟතාව' : 'High Agreement';
                           if (msg.consensus_score < 50) {
                             consensusColor = COLORS.diseased;
-                            consensusLabel = language === 'en' ? 'Low Agreement' : 'අඩු එකඟතාව';
+                            consensusLabel = language === 'ta' ? 'குறைந்த ஒருமித்தம்' : language === 'si' ? 'අඩු එකඟතාව' : 'Low Agreement';
                           } else if (msg.consensus_score < 80) {
                             consensusColor = COLORS.warning;
-                            consensusLabel = language === 'en' ? 'Moderate Agreement' : 'මධ්‍යම එකඟතාව';
+                            consensusLabel = language === 'ta' ? 'நடுத்தர ஒருமித்தம்' : language === 'si' ? 'මධ්‍යම එකඟතාව' : 'Moderate Agreement';
                           }
                           return (
                             <View style={styles.inlineConsensus}>
                               <View style={styles.inlineConsensusHeader}>
                                 <Text style={styles.inlineConsensusLabel}>
-                                  {language === 'en' ? 'Model Consensus:' : 'ආකෘති එකඟතාව:'} <Text style={{ color: consensusColor, fontWeight: '800' }}>{consensusLabel}</Text>
+                                  {language === 'ta' ? 'மாதிரி ஒருமித்தம்:' : language === 'si' ? 'ආකෘති එකඟතාව:' : 'Model Consensus:'} <Text style={{ color: consensusColor, fontWeight: '800' }}>{consensusLabel}</Text>
                                 </Text>
                                 <Text style={[styles.inlineConsensusScore, { color: consensusColor }]}>{msg.consensus_score}%</Text>
                               </View>
@@ -725,7 +742,7 @@ export default function AdvisorScreen() {
                         })()}
 
                         {/* Model response snippets */}
-                        <Text style={styles.inlineSectionTitle}>{language === 'en' ? 'Individual Model Answers:' : 'ආකෘති මට්ටමින් පිළිතුරු:'}</Text>
+                        <Text style={styles.inlineSectionTitle}>{language === 'ta' ? 'தனிநபர் மாதிரி பதில்கள்:' : language === 'si' ? 'ආකෘති මට්ටමින් පිළිතුරු:' : 'Individual Model Answers:'}</Text>
 
                         {/* LLaMA 3.3 */}
                         {msg.llama_answer && (() => {
@@ -778,7 +795,7 @@ export default function AdvisorScreen() {
                           <View style={styles.inlineJudgment}>
                             <View style={styles.inlineJudgmentHeader}>
                               <Ionicons name="ribbon-outline" size={13} color={COLORS.accentLight} />
-                              <Text style={styles.inlineJudgmentTitle}>{language === 'en' ? 'AI Judge Reasoning:' : 'AI විනිසුරු තර්කනය:'}</Text>
+                              <Text style={styles.inlineJudgmentTitle}>{language === 'ta' ? 'AI நீதிபதி தர்க்கம்:' : language === 'si' ? 'AI විනිසුරු තර්කනය:' : 'AI Judge Reasoning:'}</Text>
                             </View>
                             <Text style={styles.inlineJudgmentText}>{msg.judge_reason}</Text>
                           </View>
@@ -792,7 +809,7 @@ export default function AdvisorScreen() {
                 {msg.context_used && (
                   <View style={styles.contextUsedContainer}>
                     <Text style={styles.contextUsedText}>
-                      <Ionicons name="location-outline" size={11} color={COLORS.textSecondary} /> {language === 'en' ? 'Context Used:' : 'භාවිතා කළ සන්දර්භය:'} {msg.context_used}
+                      <Ionicons name="location-outline" size={11} color={COLORS.textSecondary} /> {language === 'ta' ? 'பயன்படுத்தப்பட்ட சூழல்:' : language === 'si' ? 'භාවිතා කළ සන්දර්භය:' : 'Context Used:'} {msg.context_used}
                     </Text>
                   </View>
                 )}
@@ -801,7 +818,7 @@ export default function AdvisorScreen() {
                 {msg.sources && msg.sources.length > 0 && (
                   <View style={styles.sourcesContainer}>
                     <Text style={styles.sourcesHeader}>
-                      📚 {language === 'en' ? 'Verified Sources:' : 'සහතික කළ මූලාශ්‍ර:'}
+                      📚 {language === 'ta' ? 'சரிபார்க்கப்பட்ட ஆதாரங்கள்:' : language === 'si' ? 'සහතික කළ මූලාශ්‍ර:' : 'Verified Sources:'}
                     </Text>
                     {msg.sources.map((src, i) => (
                       <Text key={i} style={styles.sourceText}>• {src}</Text>
@@ -813,7 +830,7 @@ export default function AdvisorScreen() {
                 {msg.images && msg.images.length > 0 && (
                   <View style={styles.imagesContainer}>
                     <Text style={styles.imagesHeader}>
-                      📷 {language === 'en' ? 'Reference Images:' : 'යොමු රූප සටහන්:'}
+                      📷 {language === 'ta' ? 'குறிப்பு படங்கள்:' : language === 'si' ? 'යොමු රූප සටහන්:' : 'Reference Images:'}
                     </Text>
                     {msg.images.map((img, idx) => (
                       <ImageCard key={idx} image={img} />
@@ -842,8 +859,8 @@ export default function AdvisorScreen() {
                       activeAudioMsgId === msg.id ? styles.audioActiveText : styles.audioInactiveText
                     ]}>
                       {activeAudioMsgId === msg.id
-                        ? (language === 'en' ? 'Stop' : 'නවතන්න')
-                        : (language === 'en' ? 'Listen' : 'සවන් දෙන්න')}
+                        ? (language === 'ta' ? 'நிறுத்து' : language === 'si' ? 'නවතන්න' : 'Stop')
+                        : (language === 'ta' ? 'கேட்க' : language === 'si' ? 'සවන් දෙන්න' : 'Listen')}
                     </Text>
                   </TouchableOpacity>
                   <Text style={styles.botTime}>{msg.timestamp}</Text>
@@ -859,7 +876,7 @@ export default function AdvisorScreen() {
             <GlassCard style={styles.loadingCard}>
               <ActivityIndicator color={COLORS.primaryLight} size="small" />
               <Text style={styles.loadingText}>
-                {language === 'en' ? 'Searching knowledge base...' : 'විශ්ලේෂණය කරමින් පවතී...'}
+                {language === 'ta' ? 'தகவல் தளத்தை தேடுகிறது...' : language === 'si' ? 'විශ්ලේෂණය කරමින් පවතී...' : 'Searching knowledge base...'}
               </Text>
             </GlassCard>
           </View>
@@ -892,7 +909,7 @@ export default function AdvisorScreen() {
                     <Ionicons name="create" size={12} color={COLORS.primaryLight} />
                   </View>
                   <Text style={styles.editingBannerTitle}>
-                    {language === 'en' ? 'Editing Question' : 'ප්‍රශ්නය සංස්කරණය කිරීම'}
+                    {language === 'ta' ? 'கேள்வியைத் திருத்துகிறது' : language === 'si' ? 'ප්‍රශ්නය සංස්කරණය කිරීම' : 'Editing Question'}
                   </Text>
                 </View>
                 <TouchableOpacity onPress={cancelEdit} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -935,7 +952,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: Platform.OS === 'ios' ? 60 : 30,
     paddingBottom: 16,
     borderBottomWidth: 1,
@@ -944,18 +961,21 @@ const styles = StyleSheet.create({
   },
   title: {
     color: COLORS.textPrimary,
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '800',
+    flex: 1,
+    marginRight: 8,
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 0,
     gap: 8,
   },
   iconOnlyDeleteButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: 'rgba(244, 67, 54, 0.12)',
     borderWidth: 1,
     borderColor: 'rgba(244, 67, 54, 0.25)',
@@ -972,18 +992,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  langButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: ROUNDING.full,
-    backgroundColor: 'rgba(76, 175, 80, 0.15)',
+  langSelectorRow: {
+    flexDirection: 'row',
+    gap: 3,
+    backgroundColor: 'rgba(0, 0, 0, 0.22)',
+    padding: 2,
+    borderRadius: ROUNDING.sm,
     borderWidth: 1,
-    borderColor: 'rgba(76, 175, 80, 0.3)',
+    borderColor: 'rgba(76, 175, 80, 0.2)',
   },
-  langText: {
+  langToggle: {
+    backgroundColor: 'transparent',
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: ROUNDING.sm - 2,
+    minWidth: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  langToggleActive: {
+    backgroundColor: 'rgba(76, 175, 80, 0.40)',
+    borderColor: COLORS.primaryLight,
+    borderWidth: 1,
+  },
+  langToggleText: {
     color: COLORS.textSecondary,
-    fontSize: 12,
-    fontWeight: '700',
+    fontWeight: 'bold',
+    fontSize: 11,
+  },
+  langToggleTextActive: {
+    color: '#FFFFFF',
   },
   scrollView: {
     flex: 1,

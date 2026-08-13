@@ -23,7 +23,7 @@ export default function TabLayout() {
           paddingTop: 10,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: '600',
         },
       }}
@@ -31,8 +31,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="home"
         options={{
-          title: t('home.quickActions'),
-          tabBarLabel: t('common.welcome'),
+          title: t('common.home'),
+          tabBarLabel: t('common.home'),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? "home" : "home-outline"} size={24} color={color} />
           ),
