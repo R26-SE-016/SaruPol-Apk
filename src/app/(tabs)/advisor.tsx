@@ -33,6 +33,10 @@ interface Message {
   llama8b_answer?: string;
   gemma_answer?: string;
   qwen_answer?: string;
+  // Early exit optimization fields
+  early_exit?: boolean;
+  similarity_score?: number;
+  latency_ms?: number;
 }
 
 const generateUUID = () => {
@@ -440,6 +444,7 @@ export default function AdvisorScreen() {
               [`reason_${language}`]: response.reason,
             },
             sources: response.sources ? response.sources.map((s: any) => s.title) : [],
+            images: response.images || [],
             context_used: response.zone ? `${response.zone} | ${response.season}` : undefined,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             isMultiLlm: true,
@@ -450,6 +455,9 @@ export default function AdvisorScreen() {
             llama8b_answer: response.llama8b_answer,
             gemma_answer: gemmaAns,
             qwen_answer: gemmaAns,
+            early_exit: response.early_exit ?? false,
+            similarity_score: response.similarity_score ?? null,
+            latency_ms: response.latency_ms ?? null,
           };
           setMessages(prev => [...prev, botMsg]);
         }
@@ -635,11 +643,35 @@ export default function AdvisorScreen() {
             ) : (
               <GlassCard style={[styles.botBubble, msg.isMultiLlm && styles.botBubbleMultiLlm]}>
                 {msg.isMultiLlm && (
-                  <View style={styles.bestAnswerBadge}>
-                    <Ionicons name="shield-checkmark" size={12} color={COLORS.healthy} />
-                    <Text style={styles.bestAnswerBadgeText}>
-                      {language === 'en' ? 'Best Answer Selected' : 'තෝරාගත් හොඳම පිළිතුර'}
-                    </Text>
+                  <View style={styles.earlyExitBadgeRow}>
+                    {msg.early_exit ? (
+                      <View style={styles.earlyExitBadge}>
+                        <Ionicons name="flash" size={12} color="#66BB6A" />
+                        <Text style={styles.earlyExitBadgeText}>
+                          {language === 'en' ? 'Fast Validated' : 'ඉක්මන් සත්‍යාපනය'}
+                        </Text>
+                        {msg.similarity_score != null && (
+                          <View style={styles.similarityChip}>
+                            <Text style={styles.similarityChipText}>
+                              {Math.round(msg.similarity_score * 100)}% {language === 'en' ? 'match' : 'ගැලපීම'}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    ) : (
+                      <View style={styles.bestAnswerBadge}>
+                        <Ionicons name="shield-checkmark" size={12} color={COLORS.healthy} />
+                        <Text style={styles.bestAnswerBadgeText}>
+                          {language === 'en' ? 'Best Answer Selected' : 'තෝරාගත් හොඳම පිළිතුර'}
+                        </Text>
+                      </View>
+                    )}
+                    {msg.latency_ms != null && (
+                      <View style={styles.latencyChip}>
+                        <Ionicons name="timer-outline" size={10} color={COLORS.textSecondary} />
+                        <Text style={styles.latencyChipText}>{msg.latency_ms}ms</Text>
+                      </View>
+                    )}
                   </View>
                 )}
 
@@ -1312,6 +1344,57 @@ const styles = StyleSheet.create({
     color: COLORS.healthy,
     fontSize: 10,
     fontWeight: '700',
+  },
+  earlyExitBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 6,
+  },
+  earlyExitBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(102, 187, 106, 0.18)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: ROUNDING.full,
+    borderWidth: 1,
+    borderColor: 'rgba(102, 187, 106, 0.4)',
+  },
+  earlyExitBadgeText: {
+    color: '#66BB6A',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  similarityChip: {
+    backgroundColor: 'rgba(102, 187, 106, 0.12)',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: ROUNDING.full,
+    marginLeft: 2,
+  },
+  similarityChipText: {
+    color: '#81C784',
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  latencyChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: ROUNDING.full,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  latencyChipText: {
+    color: COLORS.textSecondary,
+    fontSize: 9,
+    fontWeight: '600',
   },
   multiLlmSection: {
     marginTop: 8,
