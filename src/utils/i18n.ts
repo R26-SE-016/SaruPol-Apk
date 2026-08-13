@@ -5,10 +5,12 @@ import * as Localization from 'expo-localization';
 
 import en from '../constants/translations/en';
 import si from '../constants/translations/si';
+import ta from '../constants/translations/ta';
 
 const RESOURCES = {
   en: { translation: en },
-  si: { translation: si }
+  si: { translation: si },
+  ta: { translation: ta }
 };
 
 const LANGUAGE_KEY = 'sarupol_user_lang';
@@ -20,7 +22,7 @@ export const initI18n = async () => {
     // Detect device language
     const locales = Localization.getLocales();
     const deviceLanguage = locales && locales.length > 0 ? locales[0].languageCode : 'en';
-    savedLanguage = deviceLanguage === 'si' ? 'si' : 'en';
+    savedLanguage = deviceLanguage === 'si' ? 'si' : deviceLanguage === 'ta' ? 'ta' : 'en';
   }
 
   await i18n
@@ -36,7 +38,7 @@ export const initI18n = async () => {
     } as any);
 };
 
-export const changeLanguage = async (lang: 'en' | 'si') => {
+export const changeLanguage = async (lang: 'en' | 'si' | 'ta') => {
   await AsyncStorage.setItem(LANGUAGE_KEY, lang);
   await i18n.changeLanguage(lang);
 };
