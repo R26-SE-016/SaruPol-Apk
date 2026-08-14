@@ -54,9 +54,11 @@ export default function HomeScreen() {
   }, []);
 
   const handleLogout = () => {
+    const logoutTitle = language === 'ta' ? 'வெளியேறு' : language === 'si' ? 'පිටවීම' : 'Logout';
+    const logoutMsg = language === 'ta' ? 'நீங்கள் வெளியேற விரும்புகிறீர்களா?' : language === 'si' ? 'ඔබට ගිණුමෙන් ඉවත් වීමට අවශ්‍ය බව ස්ථිරද?' : 'Are you sure you want to log out?';
     Alert.alert(
-      language === 'en' ? 'Logout' : 'පිටවීම',
-      language === 'en' ? 'Are you sure you want to log out?' : 'ඔබට ගිණුමෙන් ඉවත් වීමට අවශ්‍ය බව ස්ථිරද?',
+      logoutTitle,
+      logoutMsg,
       [
         { text: t('common.cancel'), style: 'cancel' },
         { text: t('auth.loginBtn'), onPress: async () => {
@@ -82,22 +84,33 @@ export default function HomeScreen() {
     <View style={styles.container}>
       {/* Top Banner / Navigation Bar */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.greetingText}>{getGreeting()},</Text>
-          <Text style={styles.userNameText}>
+        <View style={styles.userSection}>
+          <Text style={styles.greetingText} numberOfLines={1}>{getGreeting()},</Text>
+          <Text style={styles.userNameText} numberOfLines={1} ellipsizeMode="tail">
             {isGuest ? t('common.guest') : (user?.name || 'Farmer')}
           </Text>
         </View>
 
         <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={styles.langToggle}
-            onPress={() => setLanguage(language === 'en' ? 'si' : 'en')}
-          >
-            <Text style={styles.langToggleText}>
-              {language === 'en' ? 'සිංහල' : 'English'}
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.langSelectorRow}>
+            {(['en', 'si', 'ta'] as const).map((lang) => (
+              <TouchableOpacity
+                key={lang}
+                style={[
+                  styles.langToggle,
+                  language === lang && styles.langToggleActive
+                ]}
+                onPress={() => setLanguage(lang)}
+              >
+                <Text style={[
+                  styles.langToggleText,
+                  language === lang && styles.langToggleTextActive
+                ]}>
+                  {lang === 'en' ? 'EN' : lang === 'si' ? 'සිං' : 'த'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
           {!isGuest && (
             <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
@@ -129,10 +142,10 @@ export default function HomeScreen() {
               </View>
               <View style={styles.weatherDetailCol}>
                 <Text style={styles.weatherDetailText}>
-                  💧 {language === 'en' ? 'Humidity' : 'තෙතමනය'}: {weather?.humidity}%
+                  💧 {language === 'ta' ? 'ஈரப்பதம்' : language === 'si' ? 'තෙතමනය' : 'Humidity'}: {weather?.humidity}%
                 </Text>
                 <Text style={styles.weatherDetailText}>
-                  💨 {language === 'en' ? 'Wind' : 'සුළඟ'}: {weather?.windSpeed} km/h
+                  💨 {language === 'ta' ? 'காற்று' : language === 'si' ? 'සුළඟ' : 'Wind'}: {weather?.windSpeed} km/h
                 </Text>
               </View>
             </View>
@@ -150,7 +163,7 @@ export default function HomeScreen() {
               <Ionicons name="scan" size={28} color={COLORS.healthy} />
             </View>
             <Text style={styles.gridBtnText}>
-              {language === 'en' ? 'Disease Scan' : 'රෝග හඳුනාගැනීම'}
+              {language === 'ta' ? 'நோய் ஸ்கேன்' : language === 'si' ? 'රෝග හඳුනාගැනීම' : 'Disease Scan'}
             </Text>
           </TouchableOpacity>
 
@@ -162,7 +175,7 @@ export default function HomeScreen() {
               <Ionicons name="trending-up" size={28} color={COLORS.accent} />
             </View>
             <Text style={styles.gridBtnText}>
-              {language === 'en' ? 'Yield Predict' : 'අස්වනු අනාවැකි'}
+              {language === 'ta' ? 'விளைச்சல் கணிப்பு' : language === 'si' ? 'අස්වනු අනාවැකි' : 'Yield Predict'}
             </Text>
           </TouchableOpacity>
 
@@ -174,7 +187,7 @@ export default function HomeScreen() {
               <Ionicons name="leaf" size={28} color={COLORS.info} />
             </View>
             <Text style={styles.gridBtnText}>
-              {language === 'en' ? 'Soil Health' : 'පාංශු පරීක්ෂාව'}
+              {language === 'ta' ? 'மண் ஆரோக்கியம்' : language === 'si' ? 'පාංශු පරීක්ෂාව' : 'Soil Health'}
             </Text>
           </TouchableOpacity>
 
@@ -186,14 +199,14 @@ export default function HomeScreen() {
               <Ionicons name="chatbubbles" size={28} color={COLORS.diseased} />
             </View>
             <Text style={styles.gridBtnText}>
-              {language === 'en' ? 'Ask AI Expert' : 'AI උපදේශක'}
+              {language === 'ta' ? 'AI ஆலோசகர்' : language === 'si' ? 'AI උපදේශක' : 'Ask AI Expert'}
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Plantation Statistics */}
         <Text style={styles.sectionTitle}>
-          {language === 'en' ? 'Plantation Stats' : 'වතු දත්ත සාරාංශය'}
+          {language === 'ta' ? 'தோட்ட புள்ளிவிவரம்' : language === 'si' ? 'වතු දත්ත සාරාංශය' : 'Plantation Stats'}
         </Text>
         <View style={styles.statsRow}>
           <GlassCard style={styles.statCard}>
@@ -219,9 +232,11 @@ export default function HomeScreen() {
             <Text style={styles.tipHeader}>{t('home.tipTitle')}</Text>
           </View>
           <Text style={styles.tipBody}>
-            {language === 'en'
-              ? 'Applying Organic Compost along with standard NPK doses improves soil carbon concentration and moisture holding capacity, raising overall palm yield by up to 15%.'
-              : 'සාමාන්‍ය NPK පොහොර සමඟ කාබනික කොම්පෝස්ට් යෙදීමෙන් පසේ කාබන් සාන්ද්‍රණය සහ ජලය රඳවා ගැනීමේ හැකියාව වැඩි දියුණු වන අතර එමඟින් මුළු අස්වැන්න 15% කින් පමණ ඉහළ යයි.'}
+            {language === 'ta'
+              ? 'நிலையான NPK உரத்துடன் கரிம உரத்தைச் சேர்ப்பதன் மூலம் மண்ணின் கரிம செறிவு மற்றும் ஈரப்பதத்தை தக்கவைக்கும் திறன் மேம்படும், இது ஒட்டுமொத்த விளைச்சலை 15% வரை அதிகரிக்கும்.'
+              : language === 'si'
+              ? 'සාමාන්‍ය NPK පොහොර සමඟ කාබනික කොම්පෝස්ට් යෙදීමෙන් පසේ කාබන් සාන්ද්‍රණය සහ ජලය රඳවා ගැනීමේ හැකියාව වැඩි දියුණු වන අතර එමඟින් මුළු අස්වැන්න 15% කින් පමණ ඉහළ යයි.'
+              : 'Applying Organic Compost along with standard NPK doses improves soil carbon concentration and moisture holding capacity, raising overall palm yield by up to 15%.'}
           </Text>
         </GlassCard>
 
@@ -232,7 +247,7 @@ export default function HomeScreen() {
             onPress={() => router.push('/(screens)/history')}
           >
             <Text style={styles.historyLinkText}>
-              {language === 'en' ? 'View All History Logs' : 'පසුගිය වාර්තා සියල්ල බලන්න'} →
+              {language === 'ta' ? 'அனைத்து வரலாற்றுப் பதிவுகளையும் பார்க்க' : language === 'si' ? 'පසුගිය වාර්තා සියල්ල බලන්න' : 'View All History Logs'} →
             </Text>
           </TouchableOpacity>
         )}
@@ -250,40 +265,64 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
     paddingTop: Platform.OS === 'ios' ? 60 : 30,
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(76, 175, 80, 0.12)',
     backgroundColor: COLORS.surface,
   },
+  userSection: {
+    flex: 1,
+    marginRight: 8,
+    justifyContent: 'center',
+  },
   greetingText: {
     color: COLORS.textSecondary,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
   },
   userNameText: {
     color: COLORS.textPrimary,
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: 'bold',
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    flexShrink: 0,
+    gap: 8,
   },
-  langToggle: {
-    backgroundColor: 'rgba(76, 175, 80, 0.15)',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+  langSelectorRow: {
+    flexDirection: 'row',
+    gap: 3,
+    backgroundColor: 'rgba(0, 0, 0, 0.22)',
+    padding: 2,
     borderRadius: ROUNDING.sm,
     borderWidth: 1,
-    borderColor: 'rgba(76, 175, 80, 0.25)',
+    borderColor: 'rgba(76, 175, 80, 0.2)',
+  },
+  langToggle: {
+    backgroundColor: 'transparent',
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: ROUNDING.sm - 2,
+    minWidth: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  langToggleActive: {
+    backgroundColor: 'rgba(76, 175, 80, 0.40)',
+    borderColor: COLORS.primaryLight,
+    borderWidth: 1,
   },
   langToggleText: {
-    color: COLORS.textPrimary,
+    color: COLORS.textSecondary,
     fontWeight: 'bold',
-    fontSize: 12,
+    fontSize: 11,
+  },
+  langToggleTextActive: {
+    color: '#FFFFFF',
   },
   logoutBtn: {
     padding: 6,

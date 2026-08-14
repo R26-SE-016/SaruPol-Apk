@@ -23,7 +23,7 @@ export interface TranslateItem {
   text: string;
 }
 
-export const translateMessagesBatch = async (messages: TranslateItem[], targetLang: 'en' | 'si') => {
+export const translateMessagesBatch = async (messages: TranslateItem[], targetLang: 'en' | 'si' | 'ta') => {
   const response = await api.post('/translate-batch', {
     messages,
     target_lang: targetLang

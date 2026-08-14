@@ -24,11 +24,11 @@ interface AppState {
   isGuest: boolean;
   history: PredictionHistoryItem[];
   isConnected: boolean;
-  language: 'en' | 'si';
+  language: 'en' | 'si' | 'ta';
   
   // Setters
   setConnectionStatus: (connected: boolean) => void;
-  setLanguage: (lang: 'en' | 'si') => Promise<void>;
+  setLanguage: (lang: 'en' | 'si' | 'ta') => Promise<void>;
   
   // Auth Actions
   loginUser: (token: string, user: User) => Promise<void>;
@@ -113,7 +113,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       const user = userStr ? JSON.parse(userStr) : null;
       const isGuest = guestStr === 'false' ? false : true;
       const history = historyStr ? JSON.parse(historyStr) : [];
-      const language = (langStr as 'en' | 'si') || 'en';
+      const language = (langStr as 'en' | 'si' | 'ta') || 'en';
 
       set({
         token: isGuest ? null : token,

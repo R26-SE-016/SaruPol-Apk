@@ -17,7 +17,8 @@ export default {
     offlineMode: "Offline Mode Enabled",
     offlineWarning: "You are offline. Showing cached results. Advanced AI features will resume when online.",
     guest: "Guest Mode",
-    welcome: "Welcome to SaruPol"
+    welcome: "Welcome to SaruPol",
+    home: "Home"
   },
   onboarding: {
     slide1Title: "AI Pathology Scanner",
