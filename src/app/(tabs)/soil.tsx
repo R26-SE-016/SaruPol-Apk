@@ -11,123 +11,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import SoilMapCanvas, { ZoneNode } from '../../components/SoilMapCanvas';
 
-const INITIAL_ZONES: ZoneNode[] = [
-  {
-    id: 'A',
-    label: 'A',
-    title: 'Zone A · North Bed',
-    treeNo: 30,
-    soilN: 0.0159,
-    leafN: 1.1544,
-    lat: '7.32041° N',
-    lon: '79.98210° E',
-    n: 55,
-    p: 32,
-    k: 180,
-    ph: 6.4,
-    ec: 1.2,
-    humidity: 48,
-    temp: 24,
-    status: 'Optimal',
-    position: { top: '62%', left: '20%' },
-  },
-  {
-    id: 'B',
-    label: 'B',
-    title: 'Zone B · East Bed',
-    treeNo: 49,
-    soilN: 0.0335,
-    leafN: 1.5392,
-    lat: '7.32035° N',
-    lon: '79.98245° E',
-    n: 62,
-    p: 38,
-    k: 195,
-    ph: 6.6,
-    ec: 1.4,
-    humidity: 52,
-    temp: 25,
-    status: 'Optimal',
-    position: { top: '35%', left: '68%' },
-  },
-  {
-    id: 'C',
-    label: 'C',
-    title: 'Zone C · Centre',
-    treeNo: 64,
-    soilN: 0.0218,
-    leafN: 2.4293,
-    lat: '7.32021° N',
-    lon: '79.98230° E',
-    n: 48,
-    p: 28,
-    k: 165,
-    ph: 6.2,
-    ec: 1.1,
-    humidity: 45,
-    temp: 24.5,
-    status: 'Optimal',
-    position: { top: '78%', left: '42%' },
-  },
-  {
-    id: 'D',
-    label: 'D',
-    title: 'Zone D · South Bed',
-    treeNo: 148,
-    soilN: 0.0371,
-    leafN: 2.3569,
-    lat: '7.32010° N',
-    lon: '79.98215° E',
-    n: 58,
-    p: 34,
-    k: 185,
-    ph: 6.5,
-    ec: 1.3,
-    humidity: 50,
-    temp: 23.8,
-    status: 'Optimal',
-    position: { top: '25%', left: '38%' },
-  },
-  {
-    id: 'E',
-    label: 'E',
-    title: 'Zone E · West Bed',
-    treeNo: 209,
-    soilN: 0.0265,
-    leafN: 2.0483,
-    lat: '7.32025° N',
-    lon: '79.98195° E',
-    n: 52,
-    p: 30,
-    k: 175,
-    ph: 6.3,
-    ec: 1.2,
-    humidity: 47,
-    temp: 24.2,
-    status: 'Optimal',
-    position: { top: '50%', left: '80%' },
-  },
-];
-
 export default function SoilDashboard() {
   const router = useRouter();
-  const [zones, setZones] = useState<ZoneNode[]>(INITIAL_ZONES);
-  const [selectedZoneId, setSelectedZoneId] = useState<string>('A');
-
-  const selectedZone = zones.find((z) => z.id === selectedZoneId) || zones[0];
-
-  const handleZoneSelect = (zone: ZoneNode) => {
-    setSelectedZoneId(zone.id);
-  };
-
-  // Dynamically update selected zone NPK values when sliders change so cards & bars change instantly
-  const updateSelectedNutrient = (key: 'n' | 'p' | 'k', newValue: number) => {
-    setZones((prev) =>
-      prev.map((zone) =>
-        zone.id === selectedZone.id ? { ...zone, [key]: newValue } : zone
-      )
-    );
-  };
 
   return (
     <ScrollView
@@ -160,91 +45,91 @@ export default function SoilDashboard() {
         <MetricCard
           icon="leaf-outline"
           label="Nitrogen"
-          value={selectedZone.n.toString()}
+          value="1.9 - 2.1"
           unit="mg/kg"
-          status={selectedZone.n >= 40 && selectedZone.n <= 80 ? 'Optimal' : 'Adjust'}
-          currentVal={selectedZone.n}
+          status="Optimal"
+          currentVal={2}
           minVal={0}
-          maxVal={150}
-          targetText="CRI Target: 40~80"
+          maxVal={5}
+          targetText="CRI Recommendation range"
         />
 
         {/* Phosphorus Card */}
         <MetricCard
           icon="layers-outline"
           label="Phosphorus"
-          value={selectedZone.p.toString()}
+          value="0.11 - 0.13"
           unit="mg/kg"
-          status={selectedZone.p >= 20 && selectedZone.p <= 50 ? 'Optimal' : 'Adjust'}
-          currentVal={selectedZone.p}
+          status="Optimal"
+          currentVal={0.12}
           minVal={0}
-          maxVal={100}
-          targetText="CRI Target: 20~50"
+          maxVal={0.5}
+          targetText="CRI Recommendation range"
         />
 
         {/* Potassium Card */}
         <MetricCard
           icon="cube-outline"
           label="Potassium"
-          value={selectedZone.k.toString()}
+          value="1.2 - 1.5"
           unit="mg/kg"
-          status={selectedZone.k >= 120 && selectedZone.k <= 250 ? 'Optimal' : 'Adjust'}
-          currentVal={selectedZone.k}
+          status="Optimal"
+          currentVal={1.35}
           minVal={0}
-          maxVal={300}
-          targetText="CRI Target: 120~250"
+          maxVal={3}
+          targetText="CRI Recommendation range"
         />
 
         {/* Soil pH Card */}
         <MetricCard
           icon="flask-outline"
           label="Soil pH"
-          value={selectedZone.ph.toFixed(1)}
+          value="6.4"
           unit=""
-          status={selectedZone.ph >= 5.5 && selectedZone.ph <= 7.5 ? 'Optimal' : 'Adjust'}
-          currentVal={selectedZone.ph}
+          status="Optimal"
+          currentVal={6.4}
           minVal={3}
           maxVal={10}
-          targetText="Optimal: 5.5~7.5"
+          targetText="CRI Recommendation range"
         />
 
         {/* Conductivity Card */}
         <MetricCard
           icon="flash-outline"
           label="Conductivity"
-          value={selectedZone.ec.toFixed(1)}
+          value="1.2"
           unit="dS/m"
-          status={selectedZone.ec >= 0.8 && selectedZone.ec <= 1.5 ? 'Optimal' : 'Adjust'}
-          currentVal={selectedZone.ec}
+          status="Optimal"
+          currentVal={1.2}
           minVal={0}
           maxVal={4}
-          targetText="Optimal: 0.8~1.5"
+          targetText="CRI Recommendation range"
         />
 
         {/* Humidity Card */}
         <MetricCard
           icon="water-outline"
           label="Humidity"
-          value={selectedZone.humidity.toString()}
+          value="48"
           unit="%"
-          status={selectedZone.humidity >= 40 && selectedZone.humidity <= 60 ? 'Optimal' : 'Adjust'}
-          currentVal={selectedZone.humidity}
+          status="Optimal"
+          currentVal={48}
           minVal={0}
           maxVal={100}
-          targetText="Optimal: 40~60%"
+          targetText="CRI Recommendation range"
         />
 
         {/* Temperature Card */}
         <MetricCard
           icon="thermometer-outline"
           label="Temperature"
-          value={selectedZone.temp.toString()}
+          value="24"
           unit="°C"
-          status={selectedZone.temp >= 22 && selectedZone.temp <= 28 ? 'Optimal' : 'Adjust'}
-          currentVal={selectedZone.temp}
+          status="Optimal"
+          currentVal={24}
           minVal={0}
           maxVal={50}
-          targetText="Optimal: 22~28°C"
+          targetText="CRI Recommendation range"
         />
       </View>
 
@@ -260,76 +145,40 @@ export default function SoilDashboard() {
             <Text style={styles.cardSubtitle}>Satellite & Coconut Tree Layer</Text>
           </View>
 
-          <SoilMapCanvas
-            zones={zones}
-            selectedZone={selectedZone}
-            onSelectZone={handleZoneSelect}
-          />
+          <SoilMapCanvas />
         </View>
 
         {/* Right Card: NPK Levels & Interactive Sliders */}
         <View style={styles.npkCard}>
           <View style={styles.cardHeaderRow}>
             <Text style={styles.cardTitle}>NPK levels</Text>
-            <Text style={styles.cardSubtitle}>adjust to simulate & update cards</Text>
           </View>
 
-          {/* 3 Vertical Bars for N, P, K dynamically linked to selectedZone */}
+          {/* 3 Vertical Bars for N, P, K dynamically linked */}
           <View style={styles.verticalBarsContainer}>
             <VerticalBarItem
               label="Nitrogen"
               icon="leaf-outline"
-              value={selectedZone.n}
-              max={150}
-              targetText="CRI target 40~80"
+              value={2.0}
+              max={5}
+              targetText="CRI target 1.9~2.1"
               barColor="#5C9E43"
             />
             <VerticalBarItem
               label="Phosphorus"
               icon="layers-outline"
-              value={selectedZone.p}
-              max={100}
-              targetText="CRI target 20~50"
+              value={0.12}
+              max={0.5}
+              targetText="CRI target 0.11~0.13"
               barColor="#1D6F8A"
             />
             <VerticalBarItem
               label="Potassium"
               icon="cube-outline"
-              value={selectedZone.k}
-              max={300}
-              targetText="CRI target 120~250"
+              value={1.35}
+              max={3}
+              targetText="CRI target 1.2~1.5"
               barColor="#8C6324"
-            />
-          </View>
-
-          {/* Interactive Sliders linking directly to NPK levels */}
-          <View style={styles.targetSlidersContainer}>
-            <SafeRangeSlider
-              label="Nitrogen (N)"
-              val={selectedZone.n}
-              setVal={(v) => updateSelectedNutrient('n', v)}
-              min={10}
-              max={140}
-              step={2}
-              color="#5C9E43"
-            />
-            <SafeRangeSlider
-              label="Phosphorus (P)"
-              val={selectedZone.p}
-              setVal={(v) => updateSelectedNutrient('p', v)}
-              min={5}
-              max={90}
-              step={2}
-              color="#1D6F8A"
-            />
-            <SafeRangeSlider
-              label="Potassium (K)"
-              val={selectedZone.k}
-              setVal={(v) => updateSelectedNutrient('k', v)}
-              min={30}
-              max={280}
-              step={5}
-              color="#8C6324"
             />
           </View>
         </View>

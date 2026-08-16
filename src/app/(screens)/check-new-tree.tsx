@@ -91,13 +91,8 @@ export default function CheckNewTreeScreen() {
       ];
       const currentPointData = simulatedPoints[activeStep - 1];
 
-      // Update Local State
+      // Update Local State for samples
       setSamples((prev) => prev.map((item) => (item.id === activeStep ? currentPointData : item)));
-      setSamplesCollected((prev) => {
-        const next = [...prev];
-        next[activeStep - 1] = true;
-        return next;
-      });
 
       // Post reading to Backend immediately
       try {
@@ -123,6 +118,13 @@ export default function CheckNewTreeScreen() {
            const errText = await res.text();
            throw new Error(errText);
         }
+        
+        // Only mark as collected after successful backend save
+        setSamplesCollected((prev) => {
+          const next = [...prev];
+          next[activeStep - 1] = true;
+          return next;
+        });
       } catch (err: any) {
         Alert.alert("Backend Error", err.message);
       }

@@ -30,16 +30,16 @@ export interface ZoneNode {
 }
 
 interface SoilMapCanvasProps {
-  zones: ZoneNode[];
-  selectedZone: ZoneNode;
-  onSelectZone: (zone: ZoneNode) => void;
+  zones?: ZoneNode[];
+  selectedZone?: ZoneNode;
+  onSelectZone?: (zone: ZoneNode) => void;
 }
 
 export default function SoilMapCanvas({
-  zones,
+  zones = [],
   selectedZone,
   onSelectZone,
-}: SoilMapCanvasProps) {
+}: SoilMapCanvasProps = {}) {
   const [mapLayer, setMapLayer] = useState<'SATELLITE' | 'NDVI' | 'SOIL_N'>('SATELLITE');
 
   return (
