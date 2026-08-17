@@ -71,7 +71,7 @@ export default function CheckNewTreeScreen() {
       const data = await res.json();
       setAnalysisId(data.analysis_id);
       console.log("Session started:", data.analysis_id);
-      
+
       setPhase('SAMPLING');
       setActiveStep(1);
     } catch (err: any) {
@@ -81,7 +81,7 @@ export default function CheckNewTreeScreen() {
 
   const handleGetSensorData = async () => {
     setLoadingSensor(true);
-    
+
     // Simulate getting hardware readings
     setTimeout(async () => {
       const simulatedPoints: SamplePoint[] = [
@@ -91,13 +91,8 @@ export default function CheckNewTreeScreen() {
       ];
       const currentPointData = simulatedPoints[activeStep - 1];
 
-      // Update Local State
+      // Update Local State for samples
       setSamples((prev) => prev.map((item) => (item.id === activeStep ? currentPointData : item)));
-      setSamplesCollected((prev) => {
-        const next = [...prev];
-        next[activeStep - 1] = true;
-        return next;
-      });
 
       // Post reading to Backend immediately
       try {
@@ -120,9 +115,16 @@ export default function CheckNewTreeScreen() {
           })
         });
         if (!res.ok) {
-           const errText = await res.text();
-           throw new Error(errText);
+          const errText = await res.text();
+          throw new Error(errText);
         }
+
+        // Only mark as collected after successful backend save
+        setSamplesCollected((prev) => {
+          const next = [...prev];
+          next[activeStep - 1] = true;
+          return next;
+        });
       } catch (err: any) {
         Alert.alert("Backend Error", err.message);
       }
@@ -143,8 +145,8 @@ export default function CheckNewTreeScreen() {
           body: JSON.stringify({ analysis_id: analysisId, tree_no: "MK-101" })
         });
         if (!res.ok) {
-           const errText = await res.text();
-           throw new Error(errText);
+          const errText = await res.text();
+          throw new Error(errText);
         }
         const reportData = await res.json();
         setFinalReport(reportData);
@@ -462,14 +464,14 @@ export default function CheckNewTreeScreen() {
             </Text>
             {(() => {
               if (!finalReport) return null;
-              const avg = { 
-                n: finalReport.average.N, 
-                p: finalReport.average.P, 
-                k: finalReport.average.K, 
-                ph: finalReport.average.pH, 
-                ec: finalReport.average.EC, 
-                humidity: finalReport.average.moisture, 
-                temp: finalReport.average.temperature 
+              const avg = {
+                n: finalReport.average.N,
+                p: finalReport.average.P,
+                k: finalReport.average.K,
+                ph: finalReport.average.pH,
+                ec: finalReport.average.EC,
+                humidity: finalReport.average.moisture,
+                temp: finalReport.average.temperature
               };
               return (
                 <View style={styles.averagesCard}>
@@ -568,7 +570,7 @@ export default function CheckNewTreeScreen() {
 
             {(() => {
               if (!finalReport) return null;
-              
+
               const avg = finalReport.average;
               const leafN = finalReport.prediction.leafN;
               const leafP = finalReport.prediction.leafP;
@@ -648,13 +650,13 @@ export default function CheckNewTreeScreen() {
 
             {(() => {
               if (!finalReport) return null;
-              
+
               const recomm = finalReport.recommendation;
               const ureaKg = recomm.urea;
               const mopKg = recomm.MOP;
               const pKg = recomm.ERP;
               const doloKg = recomm.dolomite;
-              
+
               let healthTitle = 'HEALTHY PALM';
               let healthSub = 'All leaf NPK nutrients meet CRI optimal standards. Standard maintenance dosage applies.';
               let healthColor = '#2E7D32';
@@ -764,16 +766,16 @@ export default function CheckNewTreeScreen() {
                         Recommended dosage: <Text style={styles.recommBold}>{doloKg} kg Dolomite</Text>. Apply at least 2 weeks before chemical fertilizer application.
                       </Text>
                     </View>
-                    
+
                     {/* Agronomic Advice Card */}
                     {recomm.agronomicAdvice && recomm.agronomicAdvice.length > 0 && (
                       <View style={styles.criPrescriptionCardSecondary}>
                         <View style={styles.criCardHeader}>
-                           <Ionicons name="information-circle" size={22} color="#4A7C3B" />
-                           <Text style={styles.criCardTitle}>Agronomic Advice</Text>
+                          <Ionicons name="information-circle" size={22} color="#4A7C3B" />
+                          <Text style={styles.criCardTitle}>Agronomic Advice</Text>
                         </View>
                         {recomm.agronomicAdvice.map((advice: string, idx: number) => (
-                           <Text key={idx} style={[styles.criCardBody, { marginBottom: 6 }]}>• {advice}</Text>
+                          <Text key={idx} style={[styles.criCardBody, { marginBottom: 6 }]}>• {advice}</Text>
                         ))}
                       </View>
                     )}
@@ -785,7 +787,7 @@ export default function CheckNewTreeScreen() {
                     onPress={() => router.push('/(tabs)/soil')}
                   >
                     <Text style={styles.doneReportBtnText}>
-                      Save Official CRI Report & Return to Dashboard
+                      Return to Dashboard
                     </Text>
                     <Ionicons name="checkmark-done" size={18} color="#FFFFFF" />
                   </TouchableOpacity>
