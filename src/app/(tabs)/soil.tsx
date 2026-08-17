@@ -319,6 +319,7 @@ const styles = StyleSheet.create({
     padding: 14,
     minWidth: 150,
     flex: 1,
+    flexGrow: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,

@@ -157,7 +157,7 @@ export default function CheckNewTreeScreen() {
     }
   };
 
-  const updateSampleValue = (id: number, key: 'n' | 'p' | 'k' | 'ph', delta: number) => {
+  const updateSampleValue = (id: number, key: 'n' | 'p' | 'k' | 'ph' | 'ec' | 'humidity' | 'temp', delta: number) => {
     setSamples((prev) =>
       prev.map((item) => {
         if (item.id === id) {
@@ -418,42 +418,64 @@ export default function CheckNewTreeScreen() {
                   <Text style={styles.pointMiniSub}>{point.name.split('·')[1] || point.name}</Text>
                   <View style={styles.pointMiniDivider} />
 
-                  <EditableMetricRow
-                    label="Nitrogen (N)"
-                    unit="%"
-                    val={point.n}
-                    onDecrease={() => updateSampleValue(point.id, 'n', -0.002)}
-                    onIncrease={() => updateSampleValue(point.id, 'n', 0.002)}
-                    icon="leaf-outline"
-                  />
-                  <EditableMetricRow
-                    label="Phosphorus (P)"
-                    unit="%"
-                    val={point.p}
-                    onDecrease={() => updateSampleValue(point.id, 'p', -0.02)}
-                    onIncrease={() => updateSampleValue(point.id, 'p', 0.02)}
-                    icon="layers-outline"
-                  />
-                  <EditableMetricRow
-                    label="Potassium (K)"
-                    unit="%"
-                    val={point.k}
-                    onDecrease={() => updateSampleValue(point.id, 'k', -0.01)}
-                    onIncrease={() => updateSampleValue(point.id, 'k', 0.01)}
-                    icon="cube-outline"
-                  />
-                  <EditableMetricRow
-                    label="Soil pH"
-                    unit=""
-                    val={point.ph}
-                    onDecrease={() => updateSampleValue(point.id, 'ph', -0.2)}
-                    onIncrease={() => updateSampleValue(point.id, 'ph', 0.2)}
-                    icon="flask-outline"
-                  />
-
-                  <Text style={styles.pointStaticFoot}>
-                    EC: {point.ec} dS/m · {point.humidity}% Hum
-                  </Text>
+                  <View style={styles.readingsGrid}>
+                    <EditableMetricRow
+                      label="Nitrogen (N)"
+                      unit="%"
+                      val={point.n}
+                      onDecrease={() => updateSampleValue(point.id, 'n', -0.002)}
+                      onIncrease={() => updateSampleValue(point.id, 'n', 0.002)}
+                      icon="leaf-outline"
+                    />
+                    <EditableMetricRow
+                      label="Phosphorus (P)"
+                      unit="%"
+                      val={point.p}
+                      onDecrease={() => updateSampleValue(point.id, 'p', -0.02)}
+                      onIncrease={() => updateSampleValue(point.id, 'p', 0.02)}
+                      icon="layers-outline"
+                    />
+                    <EditableMetricRow
+                      label="Potassium (K)"
+                      unit="%"
+                      val={point.k}
+                      onDecrease={() => updateSampleValue(point.id, 'k', -0.01)}
+                      onIncrease={() => updateSampleValue(point.id, 'k', 0.01)}
+                      icon="cube-outline"
+                    />
+                    <EditableMetricRow
+                      label="Soil pH"
+                      unit=""
+                      val={point.ph}
+                      onDecrease={() => updateSampleValue(point.id, 'ph', -0.2)}
+                      onIncrease={() => updateSampleValue(point.id, 'ph', 0.2)}
+                      icon="flask-outline"
+                    />
+                    <EditableMetricRow
+                      label="Conductivity (EC)"
+                      unit="dS/m"
+                      val={point.ec}
+                      onDecrease={() => updateSampleValue(point.id, 'ec', -0.1)}
+                      onIncrease={() => updateSampleValue(point.id, 'ec', 0.1)}
+                      icon="flash-outline"
+                    />
+                    <EditableMetricRow
+                      label="Humidity"
+                      unit="%"
+                      val={point.humidity}
+                      onDecrease={() => updateSampleValue(point.id, 'humidity', -1)}
+                      onIncrease={() => updateSampleValue(point.id, 'humidity', 1)}
+                      icon="water-outline"
+                    />
+                    <EditableMetricRow
+                      label="Temperature"
+                      unit="°C"
+                      val={point.temp}
+                      onDecrease={() => updateSampleValue(point.id, 'temp', -0.5)}
+                      onIncrease={() => updateSampleValue(point.id, 'temp', 0.5)}
+                      icon="thermometer-outline"
+                    />
+                  </View>
                 </View>
               ))}
             </View>
@@ -1080,6 +1102,7 @@ const styles = StyleSheet.create({
   cellBox: {
     width: '31%',
     minWidth: 100,
+    flexGrow: 1,
     backgroundColor: '#F9F8F5',
     borderRadius: 12,
     padding: 12,
@@ -1164,7 +1187,7 @@ const styles = StyleSheet.create({
   },
   pointMiniCard: {
     flex: 1,
-    minWidth: 150,
+    minWidth: 300,
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1,
@@ -1556,6 +1579,7 @@ const styles = StyleSheet.create({
   cellBoxEditable: {
     width: '47%',
     minWidth: 135,
+    flexGrow: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     padding: 12,
