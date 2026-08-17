@@ -49,7 +49,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="predict"
+        name="yield"
         options={{
           title: t('yield.title'),
           tabBarLabel: t('yield.title'),
