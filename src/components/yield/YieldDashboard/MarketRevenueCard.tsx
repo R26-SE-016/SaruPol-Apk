@@ -54,7 +54,7 @@ export function MarketRevenueCard({ locationName, predictedNuts }: MarketRevenue
       <View className="flex-row items-start justify-between">
         <View className="flex-row items-center gap-3 flex-1">
           <View className="w-10 h-10 bg-emerald-900 rounded-2xl items-center justify-center border border-emerald-700/50 flex-shrink-0 shadow-sm">
-            <Image source={require('../../../../assets/icons/rupee.png')} style={{ width: 24, height: 24, resizeMode: 'contain' }} />
+            <Image source={{ uri: 'https://i.ibb.co/nqg19nYx/rupee.png' }} style={{ width: 24, height: 24, resizeMode: 'contain' }} />
           </View>
           <Text className="text-white font-bold text-base leading-tight flex-1" numberOfLines={2}>
             Live CDA Market Intelligence
