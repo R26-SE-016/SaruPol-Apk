@@ -5,7 +5,7 @@ module.exports = function (api) {
       ["babel-preset-expo", { jsxImportSource: "nativewind", unstable_transformImportMeta: true }],
     ],
     plugins: [
-      "babel-plugin-transform-import-meta"
+      
     ]
   };
 };

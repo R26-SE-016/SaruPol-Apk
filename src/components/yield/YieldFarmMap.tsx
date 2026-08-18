@@ -67,13 +67,9 @@ export function YieldFarmMap({
           coordinate={{ latitude: centerLat, longitude: centerLng }}
           onPress={onClearSelection}
           zIndex={100}
-        >
-          <View className="bg-red-600 px-3 py-1.5 rounded-full border-2 border-white shadow-lg">
-            <Text className="text-white font-bold text-xs">
-              📍 {farmInfo?.name || 'Farm'} ({actualFarmData.totalTrees} Trees)
-            </Text>
-          </View>
-        </Marker>
+          title={`📍 ${farmInfo?.name || 'Farm'} (${actualFarmData.totalTrees} Trees)`}
+          pinColor="red"
+        />
       </MapView>
     </View>
   );

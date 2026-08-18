@@ -1,10 +1,14 @@
 import React, { useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { View, Platform } from 'react-native';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Html, Billboard } from '@react-three/drei';
+import { OrbitControls, Html, Billboard, Text3D } from '@react-three/drei';
 import type { FarmData, Tree } from "@/types/yield";
 // @ts-ignore
-import treeIcon from '../../../assets/icons/coconut-tree-3d.png';
+const treeIcon = 'https://i.ibb.co/xKSGghy9/coconut-tree-3d.png';
+const fontJson = require('../../../assets/fonts/helvetiker.json');
+import { Center } from '@react-three/drei';
+const SafeHtml = Html || (({ children }: any) => null);
+
 
 interface Studio3DProps {
   farmData: FarmData | undefined;
@@ -45,7 +49,7 @@ function TreeModel({
 }) {
   const x = nx * scale;
   const z = nz * scale;
-  const [imgError, setImgError] = useState(false);
+  const [imgError, setImgError] = useState(Platform.OS !== 'web');
 
   return (
     <group 
@@ -96,7 +100,7 @@ function TreeModel({
           </group>
         </group>
       ) : (
-        <Html position={[0, 2.5, 0]} center transform sprite zIndexRange={[80, 0]}>
+        <SafeHtml position={[0, 2.5, 0]} center transform sprite zIndexRange={[80, 0]}>
           <img 
             src={treeIcon as unknown as string} 
             onError={() => setImgError(true)}
@@ -110,10 +114,11 @@ function TreeModel({
             }} 
             alt="Coconut Tree"
           />
-        </Html>
+        </SafeHtml>
       )}
       {/* Floating Badge */}
-      <Html position={[0, 5.5, 0]} center zIndexRange={[100, 0]}>
+      {Platform.OS === 'web' ? (
+      <SafeHtml position={[0, 5.5, 0]} center zIndexRange={[100, 0]}>
         <div
           style={{
             backgroundColor: isSelected ? '#FBBF24' : (zoneColor || '#1E293B'),
@@ -132,7 +137,15 @@ function TreeModel({
         >
           #{tree.number.toString().padStart(2, '0')}
         </div>
-      </Html>
+      </SafeHtml>
+      ) : (
+      <Center position={[0, 5.5, 0]}>
+        <Text3D font={fontJson as any} size={0.6} height={0.05} bevelEnabled={false}>
+          {tree.number.toString()}
+          <meshStandardMaterial color={isSelected ? '#FBBF24' : (zoneColor || '#ffffff')} />
+        </Text3D>
+      </Center>
+      )}
     </group>
   );
 }
