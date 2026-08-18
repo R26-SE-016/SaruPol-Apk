@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
-import { onAuthStateChanged, signInAnonymously } from "firebase/auth";
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth, rtdb } from "@/services/firebase";
 import { ref, onValue } from "firebase/database";
 import type { AppUser, Farm, Zone } from "@/types";
@@ -17,7 +17,7 @@ interface YieldAppContextValue {
 const YieldAppContext = createContext<YieldAppContextValue | null>(null);
 
 export function YieldAppProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AppUser | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [farms, setFarms] = useState<Farm[]>([]);
   const [currentFarmId, setCurrentFarmId] = useState<string | null>(null);
@@ -26,19 +26,19 @@ export function YieldAppProvider({ children }: { children: ReactNode }) {
   // --- auth ---
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (fbUser) => {
-      if (fbUser) {
-        setUser({ uid: fbUser.uid, email: fbUser.email, displayName: fbUser.displayName });
-      } else {
-        // auto anon sign-in so the app is usable without account creation friction
-        signInAnonymously(auth).catch(() => setAuthReady(true));
-        setUser(null);
-      }
+      setFirebaseUser(fbUser);
       setAuthReady(true);
     });
     return unsub;
   }, []);
 
-  // --- farms subscription (only when we have a uid) ---
+  const user = firebaseUser ? {
+    uid: firebaseUser.uid,
+    email: firebaseUser.email,
+    displayName: firebaseUser.displayName
+  } : null;
+
+  // --- farms subscription ---
   useEffect(() => {
     if (!user) {
       setFarms([]);
@@ -63,7 +63,7 @@ export function YieldAppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!currentFarmId) return;
     const farm = farms.find((f) => f.id === currentFarmId);
-    if (!farm) return;
+    if (!farm || !farm.deviceId) return;
     const unsub = onValue(ref(rtdb, `/devices/${farm.deviceId}/latest`), (snap) => {
       setDeviceLive(!!snap.val());
     });

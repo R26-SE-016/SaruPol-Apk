@@ -60,3 +60,8 @@ api.interceptors.response.use(
 );
 
 export default api;
+
+export const getBaseIp = () => {
+  const url = new URL(GATEWAY_URL);
+  return url.hostname;
+};

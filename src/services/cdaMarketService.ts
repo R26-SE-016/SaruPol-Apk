@@ -1,3 +1,4 @@
+import api from './api';
 export interface CdaRateResponse {
   lastUpdated: string;
   rates: Record<string, number>;
@@ -5,9 +6,9 @@ export interface CdaRateResponse {
 
 export const fetchLiveCdaRates = async (): Promise<CdaRateResponse> => {
   try {
-    const res = await fetch("http://localhost:5000/api/cda-rates");
-    if (res.ok) {
-      const data = await res.json();
+    const res = await api.get("/cda-rates");
+    if (res.data) {
+      const data = res.data;
       return {
         lastUpdated: data.date || new Date().toISOString(),
         rates: {
