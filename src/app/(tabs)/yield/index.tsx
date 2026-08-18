@@ -13,6 +13,7 @@ import Svg, { Polyline, Circle as SvgCircle, G, Line, Text as SvgText } from "re
 import { LinearGradient } from "expo-linear-gradient";
 import { useYieldApp } from "@/store-yield/YieldAppContext";
 import { deleteFarm, subscribeTrees } from "@/services/yieldFarmDb";
+import { predictDashboardYield } from "@/services/yieldService";
 import { buildFarmData, aggregateHealth, healthColor } from "@/utils/yieldTreeFactory";
 import { generateAdvisories, generateWeatherSeries, latestWeather, ensureYieldHistory, hasHealthRecords, allTreesHealthy } from "@/utils/yieldAnalytics";
 import { useYieldHybridTelemetry, resolveEnvValues } from "@/hooks/useYieldHybridTelemetry";
@@ -174,11 +175,6 @@ export default function YieldDashboardScreen() {
     const fetchPrediction = async () => {
       setIsPredicting(true);
       try {
-        let apiHost = 'localhost';
-        if (Platform.OS === 'android') {
-          apiHost = '10.0.2.2';
-        }
-        
         const logsRef = ref(rtdb, `users/${user.uid}/harvests/${currentFarm.id}`);
         const snap = await get(logsRef);
         let logs: any[] = [];
@@ -206,14 +202,9 @@ export default function YieldDashboardScreen() {
           actual_harvest_logs: logs
         };
 
-        const res = await fetch(`http://${apiHost}:5000/api/predict`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(reqBody)
-        });
+        const data = await predictDashboardYield(reqBody);
 
-        if (res.ok) {
-          const data = await res.json();
+        if (data) {
           setDashboardPrediction(data);
         } else {
           setDashboardPrediction(null);
@@ -341,7 +332,7 @@ export default function YieldDashboardScreen() {
         <View className="rounded-b-[40px] overflow-hidden bg-[#0C3B2E]">
           {/* Absolute Background Image */}
           <Image 
-            source={require('../../../../assets/icons/farm-hero.png')} 
+            source={{ uri: 'https://i.ibb.co/fVxBr2gZ/farm-hero.png' }} 
             style={{ position: 'absolute', right: '-10%', bottom: 0, width: '110%', height: '100%', opacity: 0.8 }} 
             resizeMode="cover"
           />
@@ -414,7 +405,7 @@ export default function YieldDashboardScreen() {
             {/* Card 1 */}
             <View className="flex-1 bg-white rounded-3xl p-3 shadow-sm items-start" style={{ shadowColor: '#12211C', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.06, shadowRadius: 25, elevation: 5 }}>
               <View className="w-9 h-9 rounded-xl bg-green-50 items-center justify-center mb-4">
-                <Image source={require('../../../../assets/icons/farmland.png')} style={{ width: 24, height: 24, resizeMode: 'contain' }} />
+                <Image source={{ uri: 'https://i.ibb.co/b050Cjy/farmland.png' }} style={{ width: 24, height: 24, resizeMode: 'contain' }} />
               </View>
               <Text className="text-slate-500 text-[10px] font-medium mb-1">Total Farms</Text>
               <Text className="text-slate-800 font-extrabold text-xl mb-3">{totalFarms}</Text>
@@ -427,7 +418,7 @@ export default function YieldDashboardScreen() {
             {/* Card 2 */}
             <View className="flex-1 bg-white rounded-3xl p-3 shadow-sm items-start" style={{ shadowColor: '#12211C', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.06, shadowRadius: 25, elevation: 5 }}>
               <View className="w-9 h-9 rounded-xl bg-blue-50 items-center justify-center mb-4">
-                <Image source={require('../../../../assets/icons/coconut-fruit.png')} style={{ width: 22, height: 22, resizeMode: 'contain' }} />
+                <Image source={{ uri: 'https://i.ibb.co/gbSQjznt/coconut-fruit.png' }} style={{ width: 22, height: 22, resizeMode: 'contain' }} />
               </View>
               <Text className="text-slate-500 text-[10px] font-medium mb-1">Expected Yield</Text>
               <Text className="text-slate-800 font-extrabold text-xl mb-0.5">{totalExpectedYield.toLocaleString()}</Text>
@@ -441,7 +432,7 @@ export default function YieldDashboardScreen() {
             {/* Card 3 */}
             <View className="flex-[1.1] bg-white rounded-3xl p-3 shadow-sm items-start" style={{ shadowColor: '#12211C', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.06, shadowRadius: 25, elevation: 5 }}>
               <View className="w-9 h-9 rounded-xl bg-purple-50 items-center justify-center mb-4">
-                <Image source={require('../../../../assets/icons/wifi.png')} style={{ width: 20, height: 20, resizeMode: 'contain' }} />
+                <Image source={{ uri: 'https://i.ibb.co/KcPMjjBz/wifi.png' }} style={{ width: 20, height: 20, resizeMode: 'contain' }} />
               </View>
               <Text className="text-slate-500 text-[10px] font-medium mb-1">Active Devices</Text>
               <Text className="text-slate-800 font-extrabold text-[15px] leading-tight mb-2">{globalActiveCount} Online{"\n"}/ {globalTotalDevices - globalActiveCount} Offline</Text>
@@ -601,7 +592,7 @@ export default function YieldDashboardScreen() {
                     {/* Top Row: Name, Location, Badge */}
                     <View className="flex-row items-start justify-between mb-4">
                       <View className="flex-row flex-1 pr-2 items-center gap-3">
-                        <Image source={require('../../../../assets/icons/farm-image.png')} style={{width: 50, height: 50, borderRadius: 25}} defaultSource={{width: 50, height: 50}} />
+                        <Image source={{ uri: 'https://i.ibb.co/hxXPYgww/farm-image.png' }} style={{width: 50, height: 50, borderRadius: 25}} defaultSource={{width: 50, height: 50}} />
                         <View>
                           <Text className="text-[17px] font-bold text-slate-800">{farm.name}</Text>
                           <View className="flex-row items-center gap-1 mt-1">
@@ -618,14 +609,14 @@ export default function YieldDashboardScreen() {
                     {/* Stats Row */}
                     <View className="flex-row gap-6 px-2 mb-4">
                       <View className="flex-row items-center gap-2">
-                        <Image source={require('../../../../assets/icons/coconut-tree-3d.png')} style={{ width: 20, height: 20, resizeMode: 'contain' }} />
+                        <Image source={{ uri: 'https://i.ibb.co/xKSGghy9/coconut-tree-3d.png' }} style={{ width: 20, height: 20, resizeMode: 'contain' }} />
                         <View>
                           <Text className="text-sm font-bold text-slate-800">{farm.totalTrees}</Text>
                           <Text className="text-[10px] text-slate-500 font-medium">Trees Count</Text>
                         </View>
                       </View>
                       <View className="flex-row items-center gap-2">
-                        <Image source={require('../../../../assets/icons/coconut-fruit.png')} style={{ width: 20, height: 20, resizeMode: 'contain' }} />
+                        <Image source={{ uri: 'https://i.ibb.co/gbSQjznt/coconut-fruit.png' }} style={{ width: 20, height: 20, resizeMode: 'contain' }} />
                         <View>
                           <Text className="text-sm font-bold text-slate-800">{farm.lastHarvestYield ? farm.lastHarvestYield : (farm.totalTrees * 6)}</Text>
                           <Text className="text-[10px] text-slate-500 font-medium">Predicted Nuts</Text>

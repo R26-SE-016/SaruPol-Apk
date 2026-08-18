@@ -1,10 +1,23 @@
-import { useRouter, useLocalSearchParams } from "expo-router";
 import { Stack } from 'expo-router';
+import { View, ActivityIndicator } from 'react-native';
+import { useYieldApp } from '@/store-yield/YieldAppContext';
+import { AuthScreen } from '@/components/yield/AuthScreen';
 
 export default function YieldLayout() {
-  const router = useRouter();
-  const params = useLocalSearchParams();
-  const farmId = params.id as string;
+  const { user, authReady } = useYieldApp();
+
+  if (!authReady) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#0C3B2E', justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#86efac" />
+      </View>
+    );
+  }
+
+  if (!user) {
+    return <AuthScreen />;
+  }
+
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />

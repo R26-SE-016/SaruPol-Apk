@@ -1,4 +1,3 @@
-import Head from 'expo-router/head';
 import "../../yield.css";
 import React, { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
@@ -21,25 +20,10 @@ export default function RootLayout() {
   useEffect(() => {
     async function prepare() {
       try {
-        await Promise.race([
-          (async () => {
-            // Initialize i18n translations
-            await initI18n();
-            // Load offline persisted app data
-            await loadPersistedData();
-          })(),
-          new Promise(resolve => setTimeout(resolve, 1500))
-        ]);
-
-        if (!i18nInstance.isInitialized) {
-          await i18nInstance.use(initReactI18next).init({
-            resources: { en: {}, si: {} },
-            lng: 'en',
-            fallbackLng: 'en',
-            compatibilityJSON: 'v3',
-            interpolation: { escapeValue: false }
-          } as any);
-        }
+        // Initialize i18n translations
+        await initI18n();
+        // Load offline persisted app data
+        await loadPersistedData();
       } catch (e) {
         console.warn('Initialization warning:', e);
       } finally {
@@ -71,9 +55,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <StatusBar style="light" />
       <YieldAppProvider>
-      <Head>
-        <script src={`https://maps.googleapis.com/maps/api/js?key=${process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}></script>
-      </Head>
+      
 
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" />
@@ -83,8 +65,7 @@ export default function RootLayout() {
           <Stack.Screen name="(screens)/soil-result" />
           <Stack.Screen name="(screens)/guest-info" />
           <Stack.Screen name="(screens)/history" />
-          <Stack.Screen name="(screens)/yield" />
-        </Stack>
+          </Stack>
       </YieldAppProvider>
     </SafeAreaProvider>
   );

@@ -24,7 +24,9 @@ type SamplePoint = {
   temp: number;
 };
 
-const BASE_URL = 'http://127.0.0.1:8000/api/v1/analysis';
+import Constants from 'expo-constants';
+const ip = Constants.expoConfig?.hostUri?.split(':')[0] || '192.168.1.7';
+const BASE_URL = `http://${ip}:8000/api/v1/analysis`;
 
 export default function CheckNewTreeScreen() {
   const router = useRouter();

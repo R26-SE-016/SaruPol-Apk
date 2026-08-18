@@ -103,7 +103,7 @@ export default function MapperScreen() {
         {/* Background Image for Studio View */}
         {viewMode === 'studio' && (
           <ImageBackground 
-            source={require('../../../../../assets/icons/3d-map-background.png')} 
+            source={{ uri: 'https://i.ibb.co/1f3VCY48/3d-map-background.png' }} 
             className="absolute inset-0 z-0"
             resizeMode="cover"
           >

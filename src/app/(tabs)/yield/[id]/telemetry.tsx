@@ -1,5 +1,6 @@
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
 import {
   Thermometer, Droplets, Waves, Sun, Cpu, Wifi, Battery, RefreshCw, AlertCircle,
@@ -32,6 +33,7 @@ function weatherColor(tailwindClass: string): string {
 }
 
 export default function telemetryScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { id: farmIdRaw } = useLocalSearchParams();
   const farmId = Array.isArray(farmIdRaw) ? farmIdRaw[0] : (farmIdRaw || null);
@@ -62,15 +64,15 @@ export default function telemetryScreen() {
   }
 
   const cards = [
-    { label: "Air Temperature", value: env.temperature, unit: "°C", icon: <Image source={require('../../../../../assets/icons/temperature-gauge.png')} style={{ width: 40, height: 40, resizeMode: 'contain' }} />, color: "#f97316", bg: "bg-orange-50", text: "text-orange-600" },
-    { label: "Air Humidity", value: env.humidity, unit: "%", icon: <Image source={require('../../../../../assets/icons/raindrop-percentage.png')} style={{ width: 40, height: 40, resizeMode: 'contain' }} />, color: "#0ea5e9", bg: "bg-sky-50", text: "text-sky-600" },
+    { label: "Air Temperature", value: env.temperature, unit: "°C", icon: <Image source={{ uri: 'https://i.ibb.co/zTH989xR/temperature-gauge.png' }} style={{ width: 40, height: 40, resizeMode: 'contain' }} />, color: "#f97316", bg: "bg-orange-50", text: "text-orange-600" },
+    { label: "Air Humidity", value: env.humidity, unit: "%", icon: <Image source={{ uri: 'https://i.ibb.co/whDGSFxM/raindrop-percentage.png' }} style={{ width: 40, height: 40, resizeMode: 'contain' }} />, color: "#0ea5e9", bg: "bg-sky-50", text: "text-sky-600" },
     { label: "Wind Speed", value: env.windSpeed, unit: "km/h", icon: <Wind size={40} color="#0d9488" />, color: "#14b8a6", bg: "bg-teal-50", text: "text-teal-600" },
-    { label: "Precipitation", value: env.precipitation, unit: "mm", icon: <Image source={require('../../../../../assets/icons/cloud-rain.png')} style={{ width: 40, height: 40, resizeMode: 'contain' }} />, color: "#3b82f6", bg: "bg-blue-50", text: "text-blue-600" },
+    { label: "Precipitation", value: env.precipitation, unit: "mm", icon: <Image source={{ uri: 'https://i.ibb.co/B2NrzxH3/cloud-rain.png' }} style={{ width: 40, height: 40, resizeMode: 'contain' }} />, color: "#3b82f6", bg: "bg-blue-50", text: "text-blue-600" },
   ];
 
   // IoT-only cards (only shown when device is live)
   const iotCards = [
-    { label: "Soil Moisture", value: env.soilMoisture, unit: "%", icon: <Image source={require('../../../../../assets/icons/soil-moisture.png')} style={{ width: 40, height: 40, resizeMode: 'contain' }} />, color: "#10b981", bg: "bg-emerald-50", text: "text-emerald-600" },
+    { label: t("yield.soilMoisture"), value: env.soilMoisture, unit: "%", icon: <Image source={{ uri: 'https://i.ibb.co/zHfw1qrH/soil-moisture.png' }} style={{ width: 40, height: 40, resizeMode: 'contain' }} />, color: "#10b981", bg: "bg-emerald-50", text: "text-emerald-600" },
     { label: "Light Intensity", value: env.lightIntensity, unit: "Lux", icon: <Sun size={40} color="#d97706" />, color: "#f59e0b", bg: "bg-amber-50", text: "text-amber-600" },
   ];
 
@@ -164,9 +166,9 @@ export default function telemetryScreen() {
               {env.soilMoisture != null && (
                 <View className="mt-2 bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex-row items-center justify-between">
                   <View className="flex-row items-center gap-3">
-                    <Image source={require('../../../../../assets/icons/soil-moisture.png')} style={{ width: 40, height: 40, resizeMode: 'contain' }} />
+                    <Image source={{ uri: 'https://i.ibb.co/zHfw1qrH/soil-moisture.png' }} style={{ width: 40, height: 40, resizeMode: 'contain' }} />
                     <View>
-                      <Text className="text-sm font-bold text-slate-800">Soil Moisture</Text>
+                      <Text className="text-sm font-bold text-slate-800">{t("yield.soilMoisture")}</Text>
                       <Text className="text-xs text-slate-500">Live reading from root zone</Text>
                     </View>
                   </View>

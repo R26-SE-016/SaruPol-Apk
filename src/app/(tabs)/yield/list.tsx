@@ -70,7 +70,7 @@ export default function YieldFarmsListScreen() {
               <View key={farm.id} className="bg-white rounded-[24px] p-4 border border-slate-100 mb-2" style={{ shadowColor: '#12211C', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.06, shadowRadius: 25, elevation: 5 }}>
                 <View className="flex-row items-start justify-between mb-4">
                   <View className="flex-row flex-1 pr-2 items-center gap-3">
-                    <Image source={require('../../../../assets/icons/farm-image.png')} style={{width: 50, height: 50, borderRadius: 25}} defaultSource={{width: 50, height: 50}} />
+                    <Image source={{ uri: 'https://i.ibb.co/hxXPYgww/farm-image.png' }} style={{width: 50, height: 50, borderRadius: 25}} defaultSource={{width: 50, height: 50}} />
                     <View>
                       <Text className="text-[17px] font-bold text-slate-800">{farm.name}</Text>
                       <View className="flex-row items-center gap-1 mt-1">

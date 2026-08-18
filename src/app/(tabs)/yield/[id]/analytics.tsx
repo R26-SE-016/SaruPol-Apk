@@ -1,5 +1,7 @@
+import { predictDashboardYield, logHarvestPrediction } from "@/services/yieldService";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Platform, TextInput, Image, Modal, Share } from "react-native";
 import { ArrowLeft, AlertCircle, Sprout, CheckCircle2, BarChart3, Clock, MessageSquare, Save, Calendar, Droplets, Trophy, Plus, Edit3, Share2, Download, ChevronRight } from "lucide-react-native";
 import { YieldScreenHeader } from "@/components/yield/YieldScreenHeader";
@@ -15,6 +17,7 @@ import * as Sharing from 'expo-sharing';
 
 
 export default function analyticsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { id: farmIdRaw } = useLocalSearchParams();
   const farmId = Array.isArray(farmIdRaw) ? farmIdRaw[0] : (farmIdRaw || null);
@@ -92,10 +95,7 @@ export default function analyticsScreen() {
         setPastLogs(logs);
 
         // 3. Hit Proxy for ML Prediction
-        let apiHost = 'localhost';
-        if (Platform.OS === 'android') {
-          apiHost = '10.0.2.2';
-        }
+        
         
         const reqBody = {
           uid: user.uid,
@@ -106,14 +106,9 @@ export default function analyticsScreen() {
           actual_harvest_logs: logs
         };
 
-        const res = await fetch(`http://${apiHost}:5000/api/predict`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(reqBody)
-        });
+        const data = await predictDashboardYield(reqBody);
 
-        if (res.ok) {
-          const data = await res.json();
+        if (data) {
           setPrediction(data);
         } else {
           Alert.alert("Error", "Failed to fetch prediction.");
@@ -131,10 +126,7 @@ export default function analyticsScreen() {
   const handleSaveLog = async () => {
     if (!actualNuts || !user || !farmId || !farm) return;
     setSavingLog(true);
-    let apiHost = 'localhost';
-    if (Platform.OS === 'android') {
-      apiHost = '10.0.2.2';
-    }
+    
     
     try {
       if (!editingLogId) {
@@ -147,11 +139,7 @@ export default function analyticsScreen() {
           harvest_date: new Date().toISOString()
         };
         
-        await fetch(`http://${apiHost}:5000/api/predict/log`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        }).catch(err => console.warn("Predict API log save failed", err));
+        await logHarvestPrediction(payload).catch(err => console.warn("Predict API log save failed", err));
       }
       
       if (editingLogId) {
@@ -429,7 +417,7 @@ export default function analyticsScreen() {
         {/* Main Highlight Banner (Next Harvest Forecast) */}
         <View className="rounded-2xl shadow-lg border border-emerald-800 mb-4 overflow-hidden relative min-h-[170px] bg-emerald-900">
           <Image 
-             source={require('../../../../../assets/icons/yield-banner.png')}
+             source={{ uri: 'https://i.ibb.co/p65Q4LsL/yield-banner.png' }}
              style={{ position: 'absolute', width: '100%', height: '100%' }}
              resizeMode="cover"
           />
@@ -569,21 +557,21 @@ export default function analyticsScreen() {
             <View className="flex-row gap-3">
               <View className="flex-1">
                 <View className="items-center mb-2 h-10 justify-end">
-                  <Image source={require('../../../../../assets/icons/coconut.png')} style={{width: 32, height: 32}} resizeMode="contain" />
+                  <Image source={{ uri: 'https://i.ibb.co/HTMzGrqF/coconut.png' }} style={{width: 32, height: 32}} resizeMode="contain" />
                 </View>
                 <Text className="text-xs font-bold text-slate-700 mb-2 tracking-wide text-center uppercase">Large</Text>
                 <TextInput placeholder="0" keyboardType="numeric" value={largeNuts} onChangeText={setLargeNuts} className="bg-white border border-slate-200 rounded-xl px-3 py-3 text-sm text-center text-slate-900 font-bold" />
               </View>
               <View className="flex-1">
                 <View className="items-center mb-2 h-10 justify-end">
-                  <Image source={require('../../../../../assets/icons/coconut.png')} style={{width: 24, height: 24}} resizeMode="contain" />
+                  <Image source={{ uri: 'https://i.ibb.co/HTMzGrqF/coconut.png' }} style={{width: 24, height: 24}} resizeMode="contain" />
                 </View>
                 <Text className="text-xs font-bold text-slate-700 mb-2 tracking-wide text-center uppercase">Medium</Text>
                 <TextInput placeholder="0" keyboardType="numeric" value={mediumNuts} onChangeText={setMediumNuts} className="bg-white border border-slate-200 rounded-xl px-3 py-3 text-sm text-center text-slate-900 font-bold" />
               </View>
               <View className="flex-1">
                 <View className="items-center mb-2 h-10 justify-end">
-                  <Image source={require('../../../../../assets/icons/coconut.png')} style={{width: 16, height: 16}} resizeMode="contain" />
+                  <Image source={{ uri: 'https://i.ibb.co/HTMzGrqF/coconut.png' }} style={{width: 16, height: 16}} resizeMode="contain" />
                 </View>
                 <Text className="text-xs font-bold text-slate-700 mb-2 tracking-wide text-center uppercase">Small</Text>
                 <TextInput placeholder="0" keyboardType="numeric" value={smallNuts} onChangeText={setSmallNuts} className="bg-white border border-slate-200 rounded-xl px-3 py-3 text-sm text-center text-slate-900 font-bold" />
@@ -610,7 +598,7 @@ export default function analyticsScreen() {
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center gap-3">
                 <View className="w-10 h-10 rounded-full bg-emerald-50 items-center justify-center">
-                  <Image source={require('../../../../../assets/icons/coconut-fruit.png')} style={{width: 24, height: 24}} resizeMode="contain" />
+                  <Image source={{ uri: 'https://i.ibb.co/gbSQjznt/coconut-fruit.png' }} style={{width: 24, height: 24}} resizeMode="contain" />
                 </View>
                 <Text className="text-xs text-slate-500 font-semibold tracking-wide">Predicted Yield</Text>
               </View>
@@ -619,7 +607,7 @@ export default function analyticsScreen() {
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center gap-3">
                 <View className="w-10 h-10 rounded-full bg-emerald-50 items-center justify-center">
-                  <Image source={require('../../../../../assets/icons/coconut-tree.png')} style={{width: 24, height: 24}} resizeMode="contain" />
+                  <Image source={{ uri: 'https://i.ibb.co/hR8NHX1c/coconut-tree.png' }} style={{width: 24, height: 24}} resizeMode="contain" />
                 </View>
                 <Text className="text-xs text-slate-500 font-semibold tracking-wide">Total Trees</Text>
               </View>
@@ -628,7 +616,7 @@ export default function analyticsScreen() {
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center gap-3">
                 <View className="w-10 h-10 rounded-full bg-emerald-50 items-center justify-center">
-                  <Image source={require('../../../../../assets/icons/coconut.png')} style={{width: 24, height: 24}} resizeMode="contain" />
+                  <Image source={{ uri: 'https://i.ibb.co/HTMzGrqF/coconut.png' }} style={{width: 24, height: 24}} resizeMode="contain" />
                 </View>
                 <Text className="text-xs text-slate-500 font-semibold tracking-wide">Average per Tree</Text>
               </View>
@@ -637,7 +625,7 @@ export default function analyticsScreen() {
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center gap-3">
                 <View className="w-10 h-10 rounded-full bg-emerald-50 items-center justify-center">
-                  <Image source={require('../../../../../assets/icons/rupee.png')} style={{width: 24, height: 24}} resizeMode="contain" />
+                  <Image source={{ uri: 'https://i.ibb.co/nqg19nYx/rupee.png' }} style={{width: 24, height: 24}} resizeMode="contain" />
                 </View>
                 <Text className="text-xs text-slate-500 font-semibold tracking-wide">Annual Yield (Est.)</Text>
               </View>

@@ -1,5 +1,6 @@
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { View, Text, TouchableOpacity, TextInput, ScrollView, Modal, ActivityIndicator, TouchableWithoutFeedback, Image, Platform } from "react-native";
 import { ref, push, set, update, remove, onValue, serverTimestamp } from "firebase/database";
 import {
@@ -18,6 +19,7 @@ import type { HarvestLog } from "@/types/yield";
 const inputCls = "w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-800 bg-white";
 
 export default function logsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { id: farmIdRaw } = useLocalSearchParams();
   const farmId = Array.isArray(farmIdRaw) ? farmIdRaw[0] : (farmIdRaw || null);
@@ -83,7 +85,7 @@ export default function logsScreen() {
     let mounted = true;
     const fetchMarketPrices = async () => {
       try {
-        const apiUrl = Platform.OS === 'android' ? 'http://10.0.2.2:5000/api/cda-rates' : 'http://localhost:5000/api/cda-rates';
+        const apiUrl = 'http://' + (Constants.expoConfig?.hostUri?.split(':')[0] || '192.168.1.7') + ':5000/api/cda-rates';
         const response = await fetch(apiUrl);
         if (response.ok) {
           const data = await response.json();
@@ -230,7 +232,7 @@ export default function logsScreen() {
     <View className="flex-1 bg-[#0b6441]">
       {/* Main Header with Blurred Background */}
       <ImageBackground 
-        source={require('../../../../../assets/icons/farm-logs.png')} 
+        source={{ uri: 'https://i.ibb.co/35TvdXdK/farm-logs.png' }} 
         className="pt-14 pb-12 px-6 flex-row items-start justify-between relative overflow-hidden"
       >
         <View className="absolute inset-0 bg-[#0b6441]/20" />
@@ -254,21 +256,21 @@ export default function logsScreen() {
           {/* Top Cards (3 columns) */}
           <View className="flex-row justify-between gap-3 mb-5 mt-2">
             <View className="bg-white rounded-2xl p-4 flex-1 border border-slate-100 shadow-sm items-center">
-              <Image source={require('../../../../../assets/icons/coconut-fruit.png')} style={{ width: 44, height: 44, resizeMode: 'contain' }} />
+              <Image source={{ uri: 'https://i.ibb.co/gbSQjznt/coconut-fruit.png' }} style={{ width: 44, height: 44, resizeMode: 'contain' }} />
               <Text className="text-[9px] text-emerald-600 font-bold mt-3 text-center">Monthly Nuts</Text>
               <Text className="text-[22px] font-black text-slate-800 mt-0.5">{monthlyStats.nuts.toLocaleString()}</Text>
               <Text className="text-[9px] text-slate-400 mt-1">This Month</Text>
             </View>
             
             <View className="bg-white rounded-2xl p-4 flex-1 border border-orange-50 shadow-sm items-center" style={{ backgroundColor: "#FDFBF7" }}>
-              <Image source={require('../../../../../assets/icons/rupee.png')} style={{ width: 44, height: 44, resizeMode: 'contain' }} />
+              <Image source={{ uri: 'https://i.ibb.co/nqg19nYx/rupee.png' }} style={{ width: 44, height: 44, resizeMode: 'contain' }} />
               <Text className="text-[9px] text-orange-500 font-bold mt-3 text-center">Monthly Revenue</Text>
               <Text className="text-lg font-black text-slate-800 mt-1 whitespace-nowrap">LKR {monthlyStats.rev.toLocaleString()}</Text>
               <Text className="text-[9px] text-slate-400 mt-1">This Month</Text>
             </View>
             
             <View className="bg-white rounded-2xl p-4 flex-1 border border-blue-50 shadow-sm items-center" style={{ backgroundColor: "#F7F9FD" }}>
-              <Image source={require('../../../../../assets/icons/ai-analysis.png')} style={{ width: 44, height: 44, resizeMode: 'contain' }} />
+              <Image source={{ uri: 'https://i.ibb.co/GffY8kpj/ai-analysis.png' }} style={{ width: 44, height: 44, resizeMode: 'contain' }} />
               <Text className="text-[9px] text-blue-600 font-bold mt-3 text-center">Avg Price / Nut</Text>
               <Text className="text-lg font-black text-slate-800 mt-1">LKR {monthlyStats.avgPrice.toFixed(1)}</Text>
               <Text className="text-[9px] text-slate-400 mt-1">Average Rate</Text>
@@ -401,13 +403,13 @@ export default function logsScreen() {
 
               <View className="mb-6">
                 <Text className="text-xs font-bold text-slate-700 mb-4 flex-row items-center gap-2">
-                  <Image source={require('../../../../../assets/icons/coconut-fruit.png')} style={{ width: 14, height: 14, tintColor: "#1e7550" }} /> Nut Quality / Grade Breakdown
+                  <Image source={{ uri: 'https://i.ibb.co/gbSQjznt/coconut-fruit.png' }} style={{ width: 14, height: 14, tintColor: "#1e7550" }} /> Nut Quality / Grade Breakdown
                 </Text>
                 
                 <View className="gap-5">
                   <View className="flex-row items-center justify-between">
                     <View className="flex-row items-center gap-3">
-                      <Image source={require('../../../../../assets/icons/coconut.png')} style={{ width: 44, height: 44, resizeMode: 'contain', tintColor: '#22c55e' }} />
+                      <Image source={{ uri: 'https://i.ibb.co/HTMzGrqF/coconut.png' }} style={{ width: 44, height: 44, resizeMode: 'contain', tintColor: '#22c55e' }} />
                       <View>
                         <Text className="text-sm font-black text-slate-800">A-Grade</Text>
                         <Text className="text-[10px] text-slate-400 font-medium">Large Nuts</Text>
@@ -429,7 +431,7 @@ export default function logsScreen() {
 
                   <View className="flex-row items-center justify-between">
                     <View className="flex-row items-center gap-3">
-                      <Image source={require('../../../../../assets/icons/coconut.png')} style={{ width: 34, height: 34, resizeMode: 'contain', tintColor: '#f59e0b' }} />
+                      <Image source={{ uri: 'https://i.ibb.co/HTMzGrqF/coconut.png' }} style={{ width: 34, height: 34, resizeMode: 'contain', tintColor: '#f59e0b' }} />
                       <View>
                         <Text className="text-sm font-black text-slate-800">B-Grade</Text>
                         <Text className="text-[10px] text-slate-400 font-medium">Medium Nuts</Text>
@@ -451,7 +453,7 @@ export default function logsScreen() {
 
                   <View className="flex-row items-center justify-between">
                     <View className="flex-row items-center gap-3">
-                      <Image source={require('../../../../../assets/icons/coconut.png')} style={{ width: 26, height: 26, resizeMode: 'contain', tintColor: '#94a3b8' }} />
+                      <Image source={{ uri: 'https://i.ibb.co/HTMzGrqF/coconut.png' }} style={{ width: 26, height: 26, resizeMode: 'contain', tintColor: '#94a3b8' }} />
                       <View>
                         <Text className="text-sm font-black text-slate-800">C-Grade</Text>
                         <Text className="text-[10px] text-slate-400 font-medium">Small & Rejected</Text>
@@ -483,7 +485,7 @@ export default function logsScreen() {
                   </View>
                 </View>
                 {/* Decorative image/icon placeholder for basket */}
-                <Image source={require('../../../../../assets/icons/coconut-fruit.png')} style={{ width: 80, height: 80, resizeMode: 'contain', position: 'absolute', right: -10, bottom: -10, opacity: 0.1, tintColor: '#10b981' }} />
+                <Image source={{ uri: 'https://i.ibb.co/gbSQjznt/coconut-fruit.png' }} style={{ width: 80, height: 80, resizeMode: 'contain', position: 'absolute', right: -10, bottom: -10, opacity: 0.1, tintColor: '#10b981' }} />
               </View>
 
               <View className="mb-6">
@@ -516,7 +518,7 @@ export default function logsScreen() {
                 <Text className="text-[22px] font-black text-white">LKR {totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</Text>
                 <Text className="text-[9px] text-emerald-200 mt-1">Calculated based on entered values</Text>
                 {/* Decorative image/icon placeholder for coins */}
-                <Image source={require('../../../../../assets/icons/rupee.png')} style={{ width: 100, height: 100, resizeMode: 'contain', position: 'absolute', right: -20, bottom: -20, opacity: 0.1, tintColor: '#fff' }} />
+                <Image source={{ uri: 'https://i.ibb.co/nqg19nYx/rupee.png' }} style={{ width: 100, height: 100, resizeMode: 'contain', position: 'absolute', right: -20, bottom: -20, opacity: 0.1, tintColor: '#fff' }} />
               </View>
 
               <View className="mb-6">

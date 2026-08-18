@@ -1,6 +1,7 @@
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { View, Text, TouchableOpacity, ScrollView, Platform, ActivityIndicator, Image, Alert } from "react-native";
 import {
   ArrowLeft, Palmtree, Plus, Layers, Pencil, Trash2, Cpu, Brain,
@@ -11,6 +12,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { useYieldApp } from "@/store-yield/YieldAppContext";
 import { subscribeTrees, deleteZone } from "@/services/yieldFarmDb";
+import { predictDashboardYield } from "@/services/yieldService";
 import { buildFarmData, aggregateHealth, healthColor } from "@/utils/yieldTreeFactory";
 import { generateAdvisories, generateWeatherSeries, latestWeather, hasHealthRecords, allTreesHealthy } from "@/utils/yieldAnalytics";
 import { useYieldHybridTelemetry, resolveEnvValues } from "@/hooks/useYieldHybridTelemetry";
@@ -30,6 +32,7 @@ const WEATHER_HEX: Record<string, string> = {
 
 
 export default function FarmDetailScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   
   const { id: farmIdRaw } = useLocalSearchParams();
@@ -68,9 +71,6 @@ export default function FarmDetailScreen() {
     const fetchPrediction = async () => {
       setIsPredicting(true);
       try {
-        let apiHost = 'localhost';
-        if (Platform.OS === 'android') apiHost = '10.0.2.2';
-        
         const logsRef = ref(rtdb, `users/${user.uid}/harvests/${farm.id}`);
         const snap = await get(logsRef);
         let logs: any[] = [];
@@ -97,14 +97,10 @@ export default function FarmDetailScreen() {
           actual_harvest_logs: logs
         };
 
-        const res = await fetch(`http://${apiHost}:5000/api/predict`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(reqBody)
-        });
+        const data = await predictDashboardYield(reqBody);
 
-        if (res.ok) {
-          const data = await res.json();
+        if (data) { //
+          
           setDashboardPrediction(data);
         }
       } catch (e) {
@@ -193,7 +189,7 @@ export default function FarmDetailScreen() {
         <View className="flex-row flex-wrap justify-between gap-y-3">
           <View className="w-[48%]">
             <MetricCard 
-              icon={<Image source={require('../../../../../assets/icons/coconut-fruit.png')} style={{ width: 32, height: 32, resizeMode: 'contain' }} />} 
+              icon={<Image source={{ uri: 'https://i.ibb.co/gbSQjznt/coconut-fruit.png' }} style={{ width: 32, height: 32, resizeMode: 'contain' }} />} 
               label="PREDICTED YIELD" 
               value={dashboardPrediction ? dashboardPrediction.predicted_next_pick_yield_nuts?.toLocaleString() : (isPredicting ? "..." : "—")} 
               unit="Nuts" 
@@ -208,7 +204,7 @@ export default function FarmDetailScreen() {
           </View>
           <View className="w-[48%]">
             <MetricCard 
-              icon={<Image source={require('../../../../../assets/icons/plant-health.png')} style={{ width: 32, height: 32, resizeMode: 'contain' }} />} 
+              icon={<Image source={{ uri: 'https://i.ibb.co/PZHx0gxN/plant-health.png' }} style={{ width: 32, height: 32, resizeMode: 'contain' }} />} 
               label="FARM HEALTH" 
               value={`${Math.round(pct)}%`} 
               unit={health} 
@@ -222,7 +218,7 @@ export default function FarmDetailScreen() {
           </View>
           <View className="w-[48%]">
             <MetricCard 
-              icon={<Image source={require('../../../../../assets/icons/coconut-tree-3d.png')} style={{ width: 32, height: 32, resizeMode: 'contain' }} />} 
+              icon={<Image source={{ uri: 'https://i.ibb.co/xKSGghy9/coconut-tree-3d.png' }} style={{ width: 32, height: 32, resizeMode: 'contain' }} />} 
               label="TOTAL TREES" 
               value={String(farm.totalTrees)} 
               unit="trees" 
@@ -230,7 +226,7 @@ export default function FarmDetailScreen() {
           </View>
           <View className="w-[48%]">
             <MetricCard 
-              icon={<Image source={require('../../../../../assets/icons/farmland.png')} style={{ width: 32, height: 32, resizeMode: 'contain' }} />} 
+              icon={<Image source={{ uri: 'https://i.ibb.co/b050Cjy/farmland.png' }} style={{ width: 32, height: 32, resizeMode: 'contain' }} />} 
               label="AREA SIZE" 
               value={String(farm.perches)} 
               unit="perches" 
@@ -239,16 +235,16 @@ export default function FarmDetailScreen() {
         </View>
 
         <TouchableOpacity onPress={() => router.push(`/yield/${farm.id}/mapper`)} className="bg-white rounded-2xl border border-slate-100 p-4 items-center justify-center flex-row gap-3 shadow-sm">
-          <Image source={require('../../../../../assets/icons/3d-map.png')} style={{ width: 32, height: 32, resizeMode: 'contain' }} />
+          <Image source={{ uri: 'https://i.ibb.co/gL251tyR/3d-map.png' }} style={{ width: 32, height: 32, resizeMode: 'contain' }} />
           <Text className="text-sm font-bold text-slate-800">Interactive 3D Map View</Text>
         </TouchableOpacity>
 
         {/* Feature Shortcuts */}
         <View className="flex-row gap-2">
-          <Shortcut icon={<Image source={require('../../../../../assets/icons/iot-sensor.png')} style={{ width: 42, height: 42, resizeMode: 'contain' }} />} label="Telemetry" onPress={() => router.push(`/yield/${farm.id}/telemetry`)} />
-          <Shortcut icon={<Image source={require('../../../../../assets/icons/coconut-fruit.png')} style={{ width: 42, height: 42, resizeMode: 'contain' }} />} label="Yield" onPress={() => router.push(`/yield/${farm.id}/analytics`)} />
-          <Shortcut icon={<Image source={require('../../../../../assets/icons/log-harvest.png')} style={{ width: 42, height: 42, resizeMode: 'contain' }} />} label="Logs" onPress={() => router.push(`/yield/${farm.id}/logs`)} />
-          <Shortcut icon={<Image source={require('../../../../../assets/icons/ai-analysis.png')} style={{ width: 42, height: 42, resizeMode: 'contain' }} />} label="Analytics" onPress={() => router.push(`/yield/${farm.id}/analytics`)} />
+          <Shortcut icon={<Image source={{ uri: 'https://i.ibb.co/21Yzy5fW/iot-sensor.png' }} style={{ width: 42, height: 42, resizeMode: 'contain' }} />} label={t("yield.telemetry")} onPress={() => router.push(`/yield/${farm.id}/telemetry`)} />
+          <Shortcut icon={<Image source={{ uri: 'https://i.ibb.co/gbSQjznt/coconut-fruit.png' }} style={{ width: 42, height: 42, resizeMode: 'contain' }} />} label="Yield" onPress={() => router.push(`/yield/${farm.id}/analytics`)} />
+          <Shortcut icon={<Image source={{ uri: 'https://i.ibb.co/wFK2YRww/log-harvest.png' }} style={{ width: 42, height: 42, resizeMode: 'contain' }} />} label={t("yield.logs")} onPress={() => router.push(`/yield/${farm.id}/logs`)} />
+          <Shortcut icon={<Image source={{ uri: 'https://i.ibb.co/GffY8kpj/ai-analysis.png' }} style={{ width: 42, height: 42, resizeMode: 'contain' }} />} label={t("yield.analytics")} onPress={() => router.push(`/yield/${farm.id}/analytics`)} />
         </View>
 
         {/* Section B: Live Environment Grid */}
@@ -262,12 +258,12 @@ export default function FarmDetailScreen() {
             </View>
           </View>
           <View className="flex-row flex-wrap gap-3">
-            <EnvWidget icon={<Image source={require('../../../../../assets/icons/temperature-gauge.png')} style={{ width: 40, height: 40, resizeMode: 'contain' }} />} label="Air Temp" value={env.temperature != null ? `${Math.round(env.temperature)}°` : "—"} />
-            <EnvWidget icon={<Image source={require('../../../../../assets/icons/raindrop-percentage.png')} style={{ width: 40, height: 40, resizeMode: 'contain' }} />} label="Humidity" value={env.humidity != null ? `${Math.round(env.humidity)}%` : "—"} />
-            <EnvWidget icon={<Image source={require('../../../../../assets/icons/cloud-rain.png')} style={{ width: 40, height: 40, resizeMode: 'contain' }} />} label="Rainfall" value={env.precipitation != null ? `${env.precipitation}mm` : "—"} />
-            <EnvWidget icon={<Wind size={40} color="#0d9488" />} label="Wind" value={env.windSpeed != null ? `${env.windSpeed}` : "—"} />
-            <EnvWidget icon={<Image source={require('../../../../../assets/icons/soil-moisture.png')} style={{ width: 40, height: 40, resizeMode: 'contain' }} />} label="Soil Moisture" value={env.soilMoisture != null ? `${Math.round(env.soilMoisture)}%` : "—"} />
-            {(() => { const W = weatherInfo(env.weatherCode ?? -1); const WIcon = W.icon; return <EnvWidget icon={<Ionicons name={WIcon as any} size={40} color={WEATHER_HEX[W.color] ?? "#64748b"} />} label="Weather" value={env.weatherCode != null ? W.label : "—"} />; })()}
+            <EnvWidget icon={<Image source={{ uri: 'https://i.ibb.co/zTH989xR/temperature-gauge.png' }} style={{ width: 40, height: 40, resizeMode: 'contain' }} />} label={t("yield.airTemp")} value={env.temperature != null ? `${Math.round(env.temperature)}°` : "—"} />
+            <EnvWidget icon={<Image source={{ uri: 'https://i.ibb.co/whDGSFxM/raindrop-percentage.png' }} style={{ width: 40, height: 40, resizeMode: 'contain' }} />} label={t("yield.humidity")} value={env.humidity != null ? `${Math.round(env.humidity)}%` : "—"} />
+            <EnvWidget icon={<Image source={{ uri: 'https://i.ibb.co/B2NrzxH3/cloud-rain.png' }} style={{ width: 40, height: 40, resizeMode: 'contain' }} />} label={t("yield.rainfall")} value={env.precipitation != null ? `${env.precipitation}mm` : "—"} />
+            <EnvWidget icon={<Wind size={40} color="#0d9488" />} label={t("yield.wind")} value={env.windSpeed != null ? `${env.windSpeed}` : "—"} />
+            <EnvWidget icon={<Image source={{ uri: 'https://i.ibb.co/zHfw1qrH/soil-moisture.png' }} style={{ width: 40, height: 40, resizeMode: 'contain' }} />} label={t("yield.soilMoisture")} value={env.soilMoisture != null ? `${Math.round(env.soilMoisture)}%` : "—"} />
+            {(() => { const W = weatherInfo(env.weatherCode ?? -1); const WIcon = W.icon; return <EnvWidget icon={<Ionicons name={WIcon as any} size={40} color={WEATHER_HEX[W.color] ?? "#64748b"} />} label={t("yield.weather")} value={env.weatherCode != null ? W.label : "—"} />; })()}
           </View>
           {usedFallbackCoords && <Text className="text-[11px] text-amber-600 mt-3 text-center">Using fallback location (Colombo) for weather. Edit farm to save coordinates.</Text>}
         </View>
@@ -299,7 +295,7 @@ export default function FarmDetailScreen() {
 
         {/* Section E: Export Report Bar & 7-Day Forecast */}
         <TouchableOpacity onPress={handleExportReport} className="flex-row items-center justify-center gap-2 bg-forest-700 rounded-2xl py-4 shadow-sm">
-          <Image source={require('../../../../../assets/icons/pdf.png')} style={{ width: 24, height: 24, resizeMode: 'contain' }} />
+          <Image source={{ uri: 'https://i.ibb.co/LXpmH7qk/pdf.png' }} style={{ width: 24, height: 24, resizeMode: 'contain' }} />
           <Text className="text-white text-sm font-bold">Export Telemetry & Yield Report (PDF)</Text>
         </TouchableOpacity>
 
@@ -387,7 +383,7 @@ export default function FarmDetailScreen() {
               );
             }) : (
               <View className="py-6 items-center justify-center bg-white rounded-xl border border-slate-100 border-dashed shadow-sm">
-                <Text className="text-sm text-slate-400 font-semibold text-center mb-2">No zones defined yet.</Text>
+                <Text className="text-sm text-slate-400 font-semibold text-center mb-2">{t("yield.noZones")}</Text>
                 <TouchableOpacity onPress={() => router.push(`/yield/${farm.id}/add-zone`)} className="bg-emerald-50 border border-emerald-200 px-4 py-2 rounded-lg shadow-sm">
                   <Text className="text-xs font-bold text-emerald-700">Create First Zone</Text>
                 </TouchableOpacity>
@@ -531,7 +527,7 @@ function Shortcut({ icon, label, onPress }: { icon: React.ReactNode; label: stri
       onPress={onPress}
       style={{ flex: 1, elevation: 2, shadowColor: '#000', shadowOffset: {width: 0, height: 1}, shadowOpacity: 0.05, shadowRadius: 3 }}
     >
-      <LinearGradient colors={['#F0FDF4', '#FFFFFF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} className="rounded-2xl p-3 border border-green-50 items-center h-full">
+      <LinearGradient colors={['#F0FDF4', '#FFFFFF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} className="rounded-2xl p-3 border border-green-50 items-center">
         <View className="items-center justify-center mb-3">
           {icon}
         </View>
