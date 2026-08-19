@@ -169,7 +169,7 @@ export default function HomeScreen() {
 
           <TouchableOpacity
             style={styles.gridBtn}
-            onPress={() => router.push('/(tabs)/predict')}
+            onPress={() => router.push('/(tabs)/yield')}
           >
             <View style={[styles.iconContainer, { backgroundColor: 'rgba(255,143,0,0.15)' }]}>
               <Ionicons name="trending-up" size={28} color={COLORS.accent} />

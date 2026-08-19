@@ -1,3 +1,4 @@
+import "../../yield.css";
 import React, { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -5,8 +6,11 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import NetInfo from '@react-native-community/netinfo';
 import { initI18n } from '../utils/i18n';
+import i18nInstance from '../utils/i18n';
+import { initReactI18next } from 'react-i18next';
 import { useAppStore } from '../store/appStore';
 import { COLORS } from '../constants/theme';
+import { YieldAppProvider } from '../store-yield/YieldAppContext';
 
 export default function RootLayout() {
   const [initialized, setInitialized] = useState(false);
@@ -50,15 +54,19 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="(screens)/scan-result" />
-        <Stack.Screen name="(screens)/predict-result" />
-        <Stack.Screen name="(screens)/soil-result" />
-        <Stack.Screen name="(screens)/guest-info" />
-        <Stack.Screen name="(screens)/history" />
-      </Stack>
+      <YieldAppProvider>
+      
+
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="(screens)/scan-result" />
+          <Stack.Screen name="(screens)/predict-result" />
+          <Stack.Screen name="(screens)/soil-result" />
+          <Stack.Screen name="(screens)/guest-info" />
+          <Stack.Screen name="(screens)/history" />
+          </Stack>
+      </YieldAppProvider>
     </SafeAreaProvider>
   );
 }

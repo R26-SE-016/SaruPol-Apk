@@ -6,6 +6,8 @@ export interface WeatherData {
   windSpeed: number;
   precipitation: number;
   condition: string;
+  weatherCode?: number;
+  daily?: any[];
 }
 
 export const getLiveWeather = async (latitude: number, longitude: number): Promise<WeatherData> => {
@@ -54,4 +56,37 @@ export const getLiveWeather = async (latitude: number, longitude: number): Promi
       condition: 'Tropical Sunny'
     };
   }
+};
+
+export const fetchWeather = getLiveWeather;
+
+export const resolveCoords = async (lat: number, lng: number): Promise<string> => {
+  return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+};
+
+export interface OpenMeteoCurrent {
+  temperature_2m: number;
+  relative_humidity_2m: number;
+  wind_speed_10m: number;
+  precipitation: number;
+}
+
+export const weatherInfo = (condition: string | number): { icon: string, color: string, label: string } => {
+  const condStr = String(condition);
+  if (condStr.includes('Sunny') || condStr.includes('Clear')) return { icon: 'sunny', color: '#FFB300', label: 'Sunny' };
+  if (condStr.includes('Rain') || condStr.includes('Precipitation')) return { icon: 'rainy', color: '#1E88E5', label: 'Rainy' };
+  if (condStr.includes('Cloud')) return { icon: 'partly-sunny', color: '#78909C', label: 'Cloudy' };
+  if (condStr.includes('Wind')) return { icon: 'water', color: '#81D4FA', label: 'Windy' };
+  return { icon: 'cloud', color: '#B0BEC5', label: 'Overcast' };
+};
+
+export const shortDayName = (dateStr: string): string => {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-US', { weekday: 'short' });
+};
+
+export const isToday = (dateStr: string): boolean => {
+  const d = new Date(dateStr);
+  const today = new Date();
+  return d.toDateString() === today.toDateString();
 };
