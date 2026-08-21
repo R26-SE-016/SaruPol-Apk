@@ -11,7 +11,7 @@ import {
 } from "lucide-react-native";
 import Svg, { Polyline, Circle as SvgCircle, G, Line, Text as SvgText } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
-import { useYieldApp } from "@/store-yield/YieldAppContext";
+import { useYieldApp } from "@/store/YieldAppContext";
 import { deleteFarm, subscribeTrees } from "@/services/yieldFarmDb";
 import { predictDashboardYield } from "@/services/yieldService";
 import { buildFarmData, aggregateHealth, healthColor } from "@/utils/yieldTreeFactory";

@@ -2,7 +2,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { useState, useEffect, useRef, createElement } from "react";
 import { View, Text, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Alert, Platform } from "react-native";
 import { ArrowLeft, TreePine, Ruler, MapPin, Building2, Save, AlertCircle, Map as MapIcon, Crosshair, Calendar, Hash, Plus, Minus } from "lucide-react-native";
-import { useYieldApp } from "@/store-yield/YieldAppContext";
+import { useYieldApp } from "@/store/YieldAppContext";
 import { createFarm, updateFarm, getFarm } from "@/services/yieldFarmDb";
 import { generateTreeLayout } from "@/utils/yieldTreeFactory";
 import type { Farm } from "@/types/yield";
@@ -24,7 +24,7 @@ export default function AddFarmScreen() {
   const { id } = useLocalSearchParams();
   const farmId = id ? id.toString() : undefined;
   const onBack = () => router.back();
-  const onSaved = () => router.back();
+  const onSaved = (savedId?: string) => router.back();
   const { user } = useYieldApp();
   const [name, setName] = useState("");
   const [totalTrees, setTotalTrees] = useState("");

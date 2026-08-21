@@ -2,7 +2,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { useState, useMemo } from "react";
 import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Platform } from "react-native";
 import { Search, X, MapPin, ChevronRight, Activity, ArrowLeft } from "lucide-react-native";
-import { useYieldApp } from "@/store-yield/YieldAppContext";
+import { useYieldApp } from "@/store/YieldAppContext";
 import { buildFarmData } from "@/utils/yieldTreeFactory";
 import { LinearGradient } from "expo-linear-gradient";
 
@@ -14,7 +14,7 @@ interface YieldFarmsListScreenProps {
 export default function YieldFarmsListScreen() {
   const router = useRouter();
   const onBack = () => router.back();
-  const onSelectFarm = (id: string) => router.push('/(tabs)/yield/' + id);
+  const onSelectFarm = (id: string) => router.push(('(/tabs)/yield/' + id) as any);
   const { farms } = useYieldApp();
   const [searchQuery, setSearchQuery] = useState("");
 
