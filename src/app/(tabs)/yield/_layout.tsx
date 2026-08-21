@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
-import { useYieldApp } from '@/store-yield/YieldAppContext';
-import { AuthScreen } from '@/components/yield/AuthScreen';
+import { useYieldApp } from '@/store/YieldAppContext';
+import YieldAuthScreen from '@/components/yield/YieldAuthScreen';
 
 export default function YieldLayout() {
   const { user, authReady } = useYieldApp();
@@ -15,7 +15,7 @@ export default function YieldLayout() {
   }
 
   if (!user) {
-    return <AuthScreen />;
+    return <YieldAuthScreen />;
   }
 
   return (
