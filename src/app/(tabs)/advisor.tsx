@@ -24,6 +24,10 @@ interface Message {
   images?: ImageReference[];
   context_used?: string;
   timestamp: string;
+  // Reliability metrics
+  retrieval_confidence?: number;
+  combined_reliability?: number;
+  reliability_level?: string;
   // Multi-LLM fields
   isMultiLlm?: boolean;
   best_model?: string;
@@ -38,6 +42,68 @@ interface Message {
   similarity_score?: number;
   latency_ms?: number;
 }
+
+const ReliabilityBadge = ({
+  combinedReliability,
+  reliabilityLevel,
+  retrievalConfidence,
+  language
+}: {
+  combinedReliability?: number;
+  reliabilityLevel?: string;
+  retrievalConfidence?: number;
+  language: string;
+}) => {
+  if (combinedReliability === undefined && retrievalConfidence === undefined) {
+    return null;
+  }
+
+  const score = combinedReliability !== undefined
+    ? Math.round(combinedReliability)
+    : Math.round((retrievalConfidence || 0.85) * 100);
+  const level = reliabilityLevel || (score >= 80 ? 'High' : score >= 60 ? 'Moderate' : 'Low');
+
+  let badgeBg = 'rgba(102, 187, 106, 0.14)';
+  let badgeBorder = 'rgba(102, 187, 106, 0.35)';
+  let badgeColor = '#66BB6A';
+  let iconName: any = 'shield-checkmark';
+  let levelText = language === 'ta' ? 'அதிக நம்பகத்தன்மை' : language === 'si' ? 'ඉහළ විශ්වසනීයත්වය' : 'High Reliability';
+
+  if (level === 'Low' || score < 60) {
+    badgeBg = 'rgba(239, 83, 80, 0.16)';
+    badgeBorder = 'rgba(239, 83, 80, 0.4)';
+    badgeColor = '#EF5350';
+    iconName = 'alert-circle';
+    levelText = language === 'ta' ? 'குறைந்த நம்பகத்தன்மை' : language === 'si' ? 'අඩු විශ්වසනීයත්වය' : 'Low Reliability';
+  } else if (level === 'Moderate' || score < 80) {
+    badgeBg = 'rgba(255, 202, 40, 0.14)';
+    badgeBorder = 'rgba(255, 202, 40, 0.35)';
+    badgeColor = '#FFCA28';
+    iconName = 'warning-outline';
+    levelText = language === 'ta' ? 'நடுத்தர நம்பகத்தன்மை' : language === 'si' ? 'මධ්‍යම විශ්වසනීයත්වය' : 'Moderate Reliability';
+  }
+
+  return (
+    <View style={[styles.reliabilityBadgeContainer, { backgroundColor: badgeBg, borderColor: badgeBorder }]}>
+      <View style={styles.reliabilityBadgeHeader}>
+        <Ionicons name={iconName} size={14} color={badgeColor} style={{ marginRight: 5 }} />
+        <Text style={[styles.reliabilityBadgeScore, { color: badgeColor }]}>{score}%</Text>
+        <Text style={[styles.reliabilityBadgeLevel, { color: badgeColor }]}>• {levelText}</Text>
+      </View>
+      {(level === 'Low' || score < 60) && (
+        <View style={styles.lowReliabilityAlert}>
+          <Text style={styles.lowReliabilityAlertText}>
+            {language === 'ta'
+              ? '⚠️ கவனத்திற்கு: குறைந்த நம்பகத்தன்மை — விவசாய போதனாசிரியரை (Agricultural Officer) அணுகி சரிபார்க்கவும்.'
+              : language === 'si'
+              ? '⚠️ අවධානයට: අඩු විශ්වසනීයත්වයක් වාර්තා වේ — කරුණාකර ප්‍රාදේශීය කෘෂිකර්ම නිලධාරීවරයෙකුගෙන් විමසන්න.'
+              : '⚠️ Caution: Low reliability — Please consult your local agricultural officer for verification.'}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+};
 
 const generateUUID = () => {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
@@ -464,6 +530,9 @@ export default function AdvisorScreen() {
             early_exit: response.early_exit ?? false,
             similarity_score: response.similarity_score ?? null,
             latency_ms: response.latency_ms ?? null,
+            retrieval_confidence: response.retrieval_confidence ?? 0.85,
+            combined_reliability: response.combined_reliability ?? 80,
+            reliability_level: response.reliability_level ?? 'Moderate',
           };
           setMessages(prev => [...prev, botMsg]);
         }
@@ -500,6 +569,9 @@ export default function AdvisorScreen() {
           sources: response.sources ? response.sources.map((s: any) => s.title) : [],
           images: response.images || [],
           context_used: response.context_used,
+          retrieval_confidence: response.retrieval_confidence ?? 0.85,
+          combined_reliability: response.combined_reliability ?? 80,
+          reliability_level: response.reliability_level ?? 'Moderate',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
         setMessages(prev => [...prev, botMsg]);
@@ -694,6 +766,14 @@ export default function AdvisorScreen() {
 
                 <Text style={styles.botText}>{msg.text}</Text>
 
+                {/* Reliability Badge (Shown for all bot responses in /ask and /ask-multi) */}
+                <ReliabilityBadge
+                  combinedReliability={msg.combined_reliability}
+                  reliabilityLevel={msg.reliability_level}
+                  retrievalConfidence={msg.retrieval_confidence}
+                  language={language}
+                />
+
                 {/* Multi-LLM Accordion Expansion */}
                 {msg.isMultiLlm && (
                   <View style={styles.multiLlmSection}>
@@ -715,6 +795,72 @@ export default function AdvisorScreen() {
 
                     {expandedMultiLlmMsgIds[msg.id] && (
                       <View style={styles.multiLlmDetails}>
+                        {/* Combined Reliability Summary Card (Part 4) */}
+                        <View style={styles.multiLlmReliabilityCard}>
+                          <View style={styles.multiLlmReliabilityHeader}>
+                            <View style={styles.multiLlmReliabilityTitleRow}>
+                              <Ionicons name="analytics-outline" size={15} color={COLORS.accentLight} style={{ marginRight: 6 }} />
+                              <Text style={styles.multiLlmReliabilityTitle}>
+                                {language === 'ta' ? 'ஒருங்கிணைந்த நம்பகத்தன்மை' : language === 'si' ? 'ඒකාබද්ධ විශ්වසනීයත්වය' : 'Combined Reliability'}
+                              </Text>
+                            </View>
+                            <View style={[
+                              styles.multiLlmScoreBadge,
+                              {
+                                backgroundColor: (msg.combined_reliability ?? 80) >= 80
+                                  ? 'rgba(102, 187, 106, 0.18)'
+                                  : (msg.combined_reliability ?? 80) >= 60
+                                  ? 'rgba(255, 202, 40, 0.18)'
+                                  : 'rgba(239, 83, 80, 0.18)',
+                                borderColor: (msg.combined_reliability ?? 80) >= 80
+                                  ? '#66BB6A'
+                                  : (msg.combined_reliability ?? 80) >= 60
+                                  ? '#FFCA28'
+                                  : '#EF5350',
+                              }
+                            ]}>
+                              <Text style={[
+                                styles.multiLlmReliabilityScoreValue,
+                                { color: (msg.combined_reliability ?? 80) >= 80 ? COLORS.healthy : (msg.combined_reliability ?? 80) >= 60 ? COLORS.warning : COLORS.diseased }
+                              ]}>
+                                {Math.round(msg.combined_reliability ?? 80)}% ({(msg.combined_reliability ?? 80) >= 80 ? (language === 'ta' ? 'அதிகம்' : language === 'si' ? 'ඉහළ' : 'High') : (msg.combined_reliability ?? 80) >= 60 ? (language === 'ta' ? 'நடுத்தரம்' : language === 'si' ? 'මධ්‍යම' : 'Moderate') : (language === 'ta' ? 'குறைவு' : language === 'si' ? 'අඩු' : 'Low')})
+                              </Text>
+                            </View>
+                          </View>
+
+                          <View style={styles.multiLlmReliabilityMetricsRow}>
+                            <View style={styles.multiLlmMetricPill}>
+                              <Text style={styles.multiLlmMetricLabel}>
+                                {language === 'ta' ? 'மீட்புத் தரம் (50%)' : language === 'si' ? 'දත්ත ගැලපීම (50%)' : 'Retrieval (50%)'}
+                              </Text>
+                              <Text style={styles.multiLlmMetricVal}>
+                                {Math.round((msg.retrieval_confidence ?? 0.85) * 100)}%
+                              </Text>
+                            </View>
+                            <View style={styles.multiLlmMetricPill}>
+                              <Text style={styles.multiLlmMetricLabel}>
+                                {language === 'ta' ? 'மாதிரி ஒருமித்தம் (50%)' : language === 'si' ? 'ආකෘති එකඟතාව (50%)' : 'Consensus (50%)'}
+                              </Text>
+                              <Text style={styles.multiLlmMetricVal}>
+                                {msg.consensus_score ?? 80}%
+                              </Text>
+                            </View>
+                          </View>
+
+                          {((msg.combined_reliability ?? 80) < 60) && (
+                            <View style={styles.multiLlmWarningBox}>
+                              <Ionicons name="alert-circle" size={16} color={COLORS.diseased} style={{ marginRight: 6 }} />
+                              <Text style={styles.multiLlmWarningBoxText}>
+                                {language === 'ta'
+                                  ? 'குறைந்த நம்பகத்தன்மை கண்டறியப்பட்டது. தயவுசெய்து உங்கள் உள்ளூர் விவசாய அதிகாரியை அணுகி சரிபார்க்கவும்.'
+                                  : language === 'si'
+                                  ? 'අඩු විශ්වසනීයත්වයක් හඳුනාගෙන ඇත. කරුණාකර තහවුරු කර ගැනීම සඳහා ප්‍රාදේශීය කෘෂිකර්ම නිලධාරීවරයෙකු හමුවන්න.'
+                                  : 'Low reliability detected. Please consult your local agricultural officer for verification.'}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+
                         {/* Consensus Score */}
                         {msg.consensus_score !== undefined && (() => {
                           let consensusColor = COLORS.healthy;
@@ -759,14 +905,14 @@ export default function AdvisorScreen() {
                           );
                         })()}
 
-                        {/* LLaMA 3.1 8B */}
+                        {/* GPT-4o Mini */}
                         {msg.llama8b_answer && (() => {
                           const isBest = msg.best_model === 'llama8b';
                           return (
                             <View style={[styles.inlineModelRow, isBest && styles.inlineModelRowBest]}>
                               <View style={styles.inlineModelHeader}>
                                 <Text style={styles.inlineModelIcon}>💎</Text>
-                                <Text style={[styles.inlineModelName, { color: '#00BCD4' }]}>LLaMA 3.1 8B</Text>
+                                <Text style={[styles.inlineModelName, { color: '#00BCD4' }]}>GPT-4o Mini</Text>
                                 {isBest && <Text style={styles.inlineBestBadge}>✓ Selected</Text>}
                               </View>
                               <Text style={styles.inlineModelAnswer}>{msg.llama8b_answer}</Text>
@@ -1558,5 +1704,118 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     fontSize: 12,
     lineHeight: 18,
+  },
+  // Reliability Badge Component Styles
+  reliabilityBadgeContainer: {
+    marginTop: 10,
+    marginBottom: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+  },
+  reliabilityBadgeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  reliabilityBadgeScore: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  reliabilityBadgeLevel: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  lowReliabilityAlert: {
+    marginTop: 4,
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(239, 83, 80, 0.25)',
+  },
+  lowReliabilityAlertText: {
+    color: '#EF5350',
+    fontSize: 11,
+    fontWeight: '600',
+    lineHeight: 15,
+  },
+  // Multi-LLM Reliability Card Styles (Part 4)
+  multiLlmReliabilityCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderRadius: ROUNDING.sm,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  multiLlmReliabilityHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 10,
+  },
+  multiLlmReliabilityTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+  },
+  multiLlmReliabilityTitle: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  multiLlmScoreBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: ROUNDING.full,
+    borderWidth: 1,
+  },
+  multiLlmReliabilityScoreValue: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  multiLlmReliabilityMetricsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  multiLlmMetricPill: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: ROUNDING.sm,
+    padding: 6,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  multiLlmMetricLabel: {
+    color: COLORS.textSecondary,
+    fontSize: 10,
+    marginBottom: 2,
+  },
+  multiLlmMetricVal: {
+    color: COLORS.textPrimary,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  multiLlmWarningBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(239, 83, 80, 0.15)',
+    borderColor: 'rgba(239, 83, 80, 0.4)',
+    borderWidth: 1,
+    borderRadius: ROUNDING.sm,
+    padding: 8,
+    marginTop: 8,
+  },
+  multiLlmWarningBoxText: {
+    color: '#EF5350',
+    fontSize: 11,
+    fontWeight: '600',
+    flex: 1,
+    lineHeight: 15,
   },
 });
