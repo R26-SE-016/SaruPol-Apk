@@ -21,14 +21,24 @@ export default function ImageCard({ image, baseUrl, style }: ImageCardProps) {
   const [error, setError] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
 
-  // Construct full image URL
-  const serverBaseUrl = baseUrl || api.defaults.baseURL || 'http://localhost:8000';
-  let fullUrl = image.url;
-  if (!fullUrl.startsWith('http://') && !fullUrl.startsWith('https://')) {
+  // Construct full image URL with dynamic backend host resolution
+  const getBaseHost = () => {
+    if (baseUrl) return baseUrl.replace(/\/api(?:\/v1)?\/?$/, '');
+    if (api.defaults.baseURL) {
+      return api.defaults.baseURL.replace(/\/api(?:\/v1)?\/?$/, '');
+    }
+    return 'http://localhost:8000';
+  };
+  const baseHost = getBaseHost();
+
+  let fullUrl = image.url || '';
+  if (fullUrl.startsWith('http://localhost:8000') || fullUrl.startsWith('http://127.0.0.1:8000')) {
+    fullUrl = fullUrl.replace(/^http:\/\/(?:localhost|127\.0\.0\.1):8000/, baseHost);
+  } else if (!fullUrl.startsWith('http://') && !fullUrl.startsWith('https://')) {
     const cleanPath = fullUrl.startsWith('/') ? fullUrl : `/${fullUrl}`;
     // Encode space and special chars in filename while preserving slashes
     const encodedPath = cleanPath.split('/').map(segment => encodeURIComponent(segment)).join('/');
-    fullUrl = `${serverBaseUrl}${encodedPath}`;
+    fullUrl = `${baseHost}${encodedPath}`;
   }
 
   return (
