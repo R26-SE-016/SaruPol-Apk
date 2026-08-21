@@ -13,6 +13,7 @@ import { useYieldApp } from "@/store/YieldAppContext";
 import { ImageBackground } from "react-native";
 import { DatePickerField } from "@/components/yield/DatePicker";
 import type { HarvestLog } from "@/types/yield";
+import { fetchCDARates } from "@/services/yieldService";
 
 
 
@@ -85,25 +86,14 @@ export default function logsScreen() {
     let mounted = true;
     const fetchMarketPrices = async () => {
       try {
-        const apiUrl = 'http://' + (Constants.expoConfig?.hostUri?.split(':')[0] || '192.168.1.7') + ':5000/api/cda-rates';
-        const response = await fetch(apiUrl);
-        if (response.ok) {
-          const data = await response.json();
-          if (mounted) {
-            setPriceA((prev) => prev || String(data.a_grade_price ?? 155));
-            setPriceB((prev) => prev || String(data.b_grade_price ?? 120));
-            setPriceC((prev) => prev || String(data.c_grade_price ?? 95));
-          }
-        } else {
-          throw new Error('Failed to fetch');
+        const data = await fetchCDARates();
+        if (data && mounted) {
+          setPriceA((prev) => prev || String(data.a_grade_price ?? 155));
+          setPriceB((prev) => prev || String(data.b_grade_price ?? 120));
+          setPriceC((prev) => prev || String(data.c_grade_price ?? 95));
         }
       } catch (error) {
-        if (mounted) {
-          // Fallback if backend is not reachable
-          setPriceA((prev) => prev || "155");
-          setPriceB((prev) => prev || "120");
-          setPriceC((prev) => prev || "95");
-        }
+        console.warn('Failed to fetch CDA prices, using defaults:', error);
       }
     };
     fetchMarketPrices();
