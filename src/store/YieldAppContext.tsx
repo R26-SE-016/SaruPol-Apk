@@ -2,13 +2,14 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from "
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth, rtdb } from "@/services/firebase";
 import { ref, onValue } from "firebase/database";
-import type { AppUser, Farm, Zone } from "@/types";
+import type { AppUser, Farm, Zone } from "@/types/yield";
 import { subscribeFarms, subscribeZones } from "@/services/yieldFarmDb";
 
 interface YieldAppContextValue {
   user: AppUser | null;
   authReady: boolean;
   farms: Farm[];
+  currentFarmId: string | null;
   currentFarm: Farm | null;
   currentZones: Zone[];
   setCurrentFarmId: (farmId: string | null) => void;
@@ -25,11 +26,19 @@ export function YieldAppProvider({ children }: { children: ReactNode }) {
 
   // --- auth ---
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (fbUser) => {
-      setFirebaseUser(fbUser);
+    try {
+      if (auth && typeof onAuthStateChanged === "function") {
+        const unsub = onAuthStateChanged(auth, (fbUser) => {
+          setFirebaseUser(fbUser);
+          setAuthReady(true);
+        });
+        return unsub;
+      } else {
+        setAuthReady(true);
+      }
+    } catch {
       setAuthReady(true);
-    });
-    return unsub;
+    }
   }, []);
 
   const user = firebaseUser ? {
@@ -44,8 +53,12 @@ export function YieldAppProvider({ children }: { children: ReactNode }) {
       setFarms([]);
       return;
     }
-    const unsub = subscribeFarms(user.uid, setFarms);
-    return unsub;
+    try {
+      const unsub = subscribeFarms(user.uid, setFarms);
+      return unsub;
+    } catch (e) {
+      console.warn("[YieldAppContext] Failed to subscribe to farms:", e);
+    }
   }, [user]);
 
   // --- zones subscription for the currently-open farm ---
@@ -54,8 +67,12 @@ export function YieldAppProvider({ children }: { children: ReactNode }) {
       setCurrentZones([]);
       return;
     }
-    const unsub = subscribeZones(user.uid, currentFarmId, setCurrentZones);
-    return unsub;
+    try {
+      const unsub = subscribeZones(user.uid, currentFarmId, setCurrentZones);
+      return unsub;
+    } catch (e) {
+      console.warn("[YieldAppContext] Failed to subscribe to zones:", e);
+    }
   }, [user, currentFarmId]);
 
   // --- telemetry device id live presence (for "ESP32 LIVE" badge) ---
@@ -64,10 +81,16 @@ export function YieldAppProvider({ children }: { children: ReactNode }) {
     if (!currentFarmId) return;
     const farm = farms.find((f) => f.id === currentFarmId);
     if (!farm || !farm.deviceId) return;
-    const unsub = onValue(ref(rtdb, `/devices/${farm.deviceId}/latest`), (snap) => {
-      setDeviceLive(!!snap.val());
-    });
-    return unsub;
+    try {
+      if (rtdb && rtdb.app) {
+        const unsub = onValue(ref(rtdb, `/devices/${farm.deviceId}/latest`), (snap) => {
+          setDeviceLive(!!snap.val());
+        });
+        return unsub;
+      }
+    } catch (e) {
+      console.warn("[YieldAppContext] Failed to subscribe to device telemetry:", e);
+    }
   }, [currentFarmId, farms]);
 
   const currentFarm = currentFarmId ? farms.find((f) => f.id === currentFarmId) ?? null : null;
@@ -78,6 +101,7 @@ export function YieldAppProvider({ children }: { children: ReactNode }) {
         user,
         authReady,
         farms,
+        currentFarmId,
         currentFarm,
         currentZones,
         setCurrentFarmId,
