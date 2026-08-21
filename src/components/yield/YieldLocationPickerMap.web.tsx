@@ -37,11 +37,11 @@ export const YieldLocationPickerMap = forwardRef<any, YieldLocationPickerMapProp
         }
       };
 
-      if (typeof window !== 'undefined' && window.google) {
+      if (typeof window !== 'undefined' && (window as any).google) {
         initMap();
       } else {
         const interval = setInterval(() => {
-          if (typeof window !== 'undefined' && window.google) {
+          if (typeof window !== 'undefined' && (window as any).google) {
             clearInterval(interval);
             initMap();
           }
