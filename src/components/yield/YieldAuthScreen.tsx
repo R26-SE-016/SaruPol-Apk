@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
-import { TreePine, Mail, Lock, ArrowRight, User, Chrome, AlertCircle } from "lucide-react-native";
+import { TreePine, Mail, Lock, ArrowRight, User, AlertCircle, Globe } from "lucide-react-native";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -177,7 +177,7 @@ export default function YieldAuthScreen() {
             activeOpacity={0.9}
             className="w-full flex-row items-center justify-center gap-2 bg-white border border-slate-200 active:scale-[0.99] py-3.5 rounded-xl shadow-sm disabled:opacity-60"
           >
-            <Chrome size={18} color="#334155" />
+            <Globe size={18} color="#334155" />
             <Text className="text-slate-700 font-semibold">Continue with Google</Text>
           </TouchableOpacity>
         </View>
