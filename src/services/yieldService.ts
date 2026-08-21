@@ -1,5 +1,4 @@
 import api from './api';
-import aiApi from './aiApi';
 
 export interface YieldPredictionInput {
   Rainfall_mm: number;
@@ -24,7 +23,7 @@ export interface YieldPredictionInput {
 }
 
 export const predictYieldAnnual = async (input: YieldPredictionInput) => {
-  const response = await aiApi.post('/predict-dashboard', input);
+  const response = await api.post('/predict', input);
   return response.data;
 };
 
@@ -52,21 +51,21 @@ export const predictYield45Day = async (input: Partial<YieldPredictionInput>) =>
     intercropping: input.intercropping ?? 0,
   };
   
-  const response = await aiApi.post('/predict/45day', mappedInput);
+  const response = await api.post('/predict/45day', mappedInput);
   return response.data;
 };
 
 export const predictDashboardYield = async (input: any) => {
-  const response = await aiApi.post('/predict', input);
+  const response = await api.post('/predict', input);
   return response.data;
 };
 
 export const logHarvestPrediction = async (input: any) => {
-  const response = await aiApi.post('/predict/log', input);
+  const response = await api.post('/predict/log', input);
   return response.data;
 };
 
 export const fetchCDARates = async () => {
-  const response = await aiApi.get('/cda-rates');
+  const response = await api.get('/cda-rates');
   return response.data;
 };
