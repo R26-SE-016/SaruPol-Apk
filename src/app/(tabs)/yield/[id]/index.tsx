@@ -10,7 +10,7 @@ import {
   CloudRain, CalendarDays, Map as MapIcon
 } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useYieldApp } from "@/store-yield/YieldAppContext";
+import { useYieldApp } from "@/store/YieldAppContext";
 import { subscribeTrees, deleteZone } from "@/services/yieldFarmDb";
 import { predictDashboardYield } from "@/services/yieldService";
 import { buildFarmData, aggregateHealth, healthColor } from "@/utils/yieldTreeFactory";

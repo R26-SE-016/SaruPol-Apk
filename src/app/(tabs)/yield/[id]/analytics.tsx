@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Platform, TextInput, Image, Modal, Share } from "react-native";
 import { ArrowLeft, AlertCircle, Sprout, CheckCircle2, BarChart3, Clock, MessageSquare, Save, Calendar, Droplets, Trophy, Plus, Edit3, Share2, Download, ChevronRight } from "lucide-react-native";
 import { YieldScreenHeader } from "@/components/yield/YieldScreenHeader";
-import { useYieldApp } from "@/store-yield/YieldAppContext";
+import { useYieldApp } from "@/store/YieldAppContext";
 import { getFarm, updateFarm } from "@/services/yieldFarmDb";
 import Svg, { Polyline, Circle } from "react-native-svg";
 import { ref, get, push, update, remove } from "firebase/database";

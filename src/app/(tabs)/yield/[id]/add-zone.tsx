@@ -2,7 +2,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, TextInput, ScrollView, ActivityIndicator } from "react-native";
 import { ArrowLeft, Palette, TreePine, FileText, Save, AlertCircle, Check } from "lucide-react-native";
-import { useYieldApp } from "@/store-yield/YieldAppContext";
+import { useYieldApp } from "@/store/YieldAppContext";
 import { createZone, updateZone, deleteZone, getClaimedTreeNumbers } from "@/services/yieldFarmDb";
 import type { Zone } from "@/types/yield";
 
