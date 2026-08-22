@@ -8,7 +8,10 @@
     "scheme": "sarupolapk",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "SaruPol AI needs microphone access to accept voice questions from farmers"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -17,6 +20,9 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
+      "permissions": [
+        "RECORD_AUDIO"
+      ],
       "predictiveBackGestureEnabled": false
     },
     "web": {
