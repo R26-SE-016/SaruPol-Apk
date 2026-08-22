@@ -27,6 +27,15 @@ export function YieldFarmMap({
   const centerLng = farmInfo?.lng ?? 80.6337;
 
   useEffect(() => {
+    const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+    if (typeof document !== 'undefined' && apiKey && !(window as any).google && !document.getElementById('google-maps-script')) {
+      const s = document.createElement('script');
+      s.id = 'google-maps-script';
+      s.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+      s.async = true;
+      document.head.appendChild(s);
+    }
+
     // @ts-ignore
     if (typeof window !== 'undefined' && window.google && window.google.maps && mapRef.current && !googleMapRef.current) {
       // @ts-ignore

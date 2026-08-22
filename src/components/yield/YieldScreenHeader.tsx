@@ -11,7 +11,7 @@ interface YieldScreenHeaderProps {
 
 export function YieldScreenHeader({ title, subtitle, onBack, right }: YieldScreenHeaderProps) {
   return (
-    <View className="bg-white px-3 pt-4 pb-3.5 shadow-sm flex-row items-center gap-2">
+    <View className="bg-white px-3 pt-14 pb-3.5 shadow-sm flex-row items-center gap-2">
       {onBack && (
         <TouchableOpacity
           onPress={onBack}

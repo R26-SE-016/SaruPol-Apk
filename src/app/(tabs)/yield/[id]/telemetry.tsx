@@ -8,7 +8,7 @@ import {
 } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "react-native";
-import { useYieldApp } from "@/store-yield/YieldAppContext";
+import { useYieldApp } from "@/store/YieldAppContext";
 import { YieldScreenHeader } from "@/components/yield/YieldScreenHeader";
 import { useYieldHybridTelemetry, resolveEnvValues } from "@/hooks/useYieldHybridTelemetry";
 import { weatherInfo, shortDayName, isToday } from "@/services/weatherService";

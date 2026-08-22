@@ -1,10 +1,9 @@
 import { Stack } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
-import { useYieldApp } from '@/store-yield/YieldAppContext';
-import { AuthScreen } from '@/components/yield/AuthScreen';
+import { useYieldApp } from '@/store/YieldAppContext';
 
 export default function YieldLayout() {
-  const { user, authReady } = useYieldApp();
+  const { authReady } = useYieldApp();
 
   if (!authReady) {
     return (
@@ -12,10 +11,6 @@ export default function YieldLayout() {
         <ActivityIndicator size="large" color="#86efac" />
       </View>
     );
-  }
-
-  if (!user) {
-    return <AuthScreen />;
   }
 
   return (

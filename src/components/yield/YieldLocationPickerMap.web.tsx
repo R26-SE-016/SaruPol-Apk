@@ -20,6 +20,15 @@ export const YieldLocationPickerMap = forwardRef<any, YieldLocationPickerMapProp
     const markerRef = useRef<any>(null);
 
     useEffect(() => {
+      const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+      if (typeof document !== 'undefined' && apiKey && !(window as any).google && !document.getElementById('google-maps-script')) {
+        const s = document.createElement('script');
+        s.id = 'google-maps-script';
+        s.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+        s.async = true;
+        document.head.appendChild(s);
+      }
+
       const initMap = () => {
         // @ts-ignore
         if (typeof window !== 'undefined' && window.google && window.google.maps && mapRef.current && !googleMapRef.current) {
@@ -37,11 +46,11 @@ export const YieldLocationPickerMap = forwardRef<any, YieldLocationPickerMapProp
         }
       };
 
-      if (typeof window !== 'undefined' && window.google) {
+      if (typeof window !== 'undefined' && (window as any).google) {
         initMap();
       } else {
         const interval = setInterval(() => {
-          if (typeof window !== 'undefined' && window.google) {
+          if (typeof window !== 'undefined' && (window as any).google) {
             clearInterval(interval);
             initMap();
           }

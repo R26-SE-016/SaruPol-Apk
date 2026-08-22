@@ -5,7 +5,7 @@ import { Palmtree, ArrowLeft, Info, Activity, Zap, TrendingUp, AlertTriangle } f
 import { YieldFarmMap } from "@/components/yield/YieldFarmMap";
 import { Studio3D } from "@/components/yield/Studio3D";
 import { TreeModal } from "@/components/yield/TreeModal";
-import { useYieldApp } from "@/store-yield/YieldAppContext";
+import { useYieldApp } from "@/store/YieldAppContext";
 import { subscribeTrees, updateTreeData } from "@/services/yieldFarmDb";
 import { buildFarmData } from "@/utils/yieldTreeFactory";
 import type { Tree } from "@/types/yield";

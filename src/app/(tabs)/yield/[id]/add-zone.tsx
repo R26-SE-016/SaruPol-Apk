@@ -2,7 +2,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, TextInput, ScrollView, ActivityIndicator } from "react-native";
 import { ArrowLeft, Palette, TreePine, FileText, Save, AlertCircle, Check } from "lucide-react-native";
-import { useYieldApp } from "@/store-yield/YieldAppContext";
+import { useYieldApp } from "@/store/YieldAppContext";
 import { createZone, updateZone, deleteZone, getClaimedTreeNumbers } from "@/services/yieldFarmDb";
 import type { Zone } from "@/types/yield";
 
@@ -143,7 +143,7 @@ export default function AddZoneScreen() {
                 <View className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
                 <Text className="text-xs font-medium text-slate-600">Zone Color</Text>
               </View>
-              <View className="flex-row flex-wrap gap-2">
+              <View className="flex-row flex-wrap gap-2" style={{ flexGrow: 1, paddingBottom: 10 }}>
                 {PRESET_COLORS.map((c) => (
                   <TouchableOpacity
                     key={c}

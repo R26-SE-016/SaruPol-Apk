@@ -1,4 +1,4 @@
-import "../../yield.css";
+import '../global.css';
 import React, { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -10,7 +10,7 @@ import i18nInstance from '../utils/i18n';
 import { initReactI18next } from 'react-i18next';
 import { useAppStore } from '../store/appStore';
 import { COLORS } from '../constants/theme';
-import { YieldAppProvider } from '../store-yield/YieldAppContext';
+import { YieldAppProvider } from '../store/YieldAppContext';
 
 export default function RootLayout() {
   const [initialized, setInitialized] = useState(false);
