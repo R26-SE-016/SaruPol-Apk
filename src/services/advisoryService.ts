@@ -47,3 +47,44 @@ export const sendMultiLLMQuery = async (question: string, latitude: number | und
   });
   return response.data;
 };
+
+export interface TranscribeResponse {
+  success: boolean;
+  transcribed_text: string;
+  detected_language: string;
+  duration_ms: number;
+  error?: string;
+}
+
+export const transcribeAudio = async (
+  audioUri: string,
+  language: string = 'auto'
+): Promise<TranscribeResponse> => {
+  const formData = new FormData();
+  
+  const uriParts = audioUri.split('/');
+  const fileName = uriParts[uriParts.length - 1] || 'recording.m4a';
+  const fileType = fileName.endsWith('.wav') 
+    ? 'audio/wav' 
+    : fileName.endsWith('.mp3') 
+    ? 'audio/mpeg' 
+    : 'audio/m4a';
+
+  formData.append('audio', {
+    uri: audioUri,
+    name: fileName,
+    type: fileType,
+  } as any);
+  
+  formData.append('language', language || 'auto');
+
+  const response = await api.post('/transcribe', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+    timeout: 45000,
+  });
+
+  return response.data;
+};
+
