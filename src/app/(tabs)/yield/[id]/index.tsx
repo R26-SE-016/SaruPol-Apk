@@ -13,6 +13,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useYieldApp } from "@/store/YieldAppContext";
 import { subscribeTrees, deleteZone } from "@/services/yieldFarmDb";
 import { predictDashboardYield } from "@/services/yieldService";
+import { useUnifiedFarmYield } from "@/hooks/useUnifiedFarmYield";
 import { buildFarmData, aggregateHealth, healthColor } from "@/utils/yieldTreeFactory";
 import { generateAdvisories, generateWeatherSeries, latestWeather, hasHealthRecords, allTreesHealthy } from "@/utils/yieldAnalytics";
 import { useYieldHybridTelemetry, resolveEnvValues } from "@/hooks/useYieldHybridTelemetry";
@@ -49,13 +50,15 @@ export default function FarmDetailScreen() {
   
   const farm = currentFarmId === farmId ? currentFarm : (farms.find((f) => f.id === farmId) ?? null);
 
+  // Unified yield — aggregates individual tree predictions with weather-based base
+  const { unifiedYields, isPredicting } = useUnifiedFarmYield(user?.uid, farm ? [farm] : []);
+  const displayPredictedYield = farm ? (unifiedYields[farm.id] || 0) : 0;
+
   // Hybrid Telemetry & Weather
   const { telemetry, weather, source, deviceLive, usedFallbackCoords, loading, refresh } = useYieldHybridTelemetry(farm);
   const env = useMemo(() => resolveEnvValues(telemetry, weather, source), [telemetry, weather, source]);
 
   // AI Prediction state
-  const [dashboardPrediction, setDashboardPrediction] = useState<any>(null);
-  const [isPredicting, setIsPredicting] = useState(false);
 
   useEffect(() => {
     if (!user || !farm) return;
@@ -63,60 +66,17 @@ export default function FarmDetailScreen() {
     return unsub;
   }, [user, farm]);
 
-  useEffect(() => {
-    if (!user || !farm) {
-      setDashboardPrediction(null);
-      return;
-    }
-    const fetchPrediction = async () => {
-      setIsPredicting(true);
-      try {
-        const logsRef = ref(rtdb, `users/${user.uid}/harvests/${farm.id}`);
-        const snap = await get(logsRef);
-        let logs: any[] = [];
-        if (snap.exists()) {
-          const vals = snap.val();
-          logs = Object.entries(vals).map(([id, l]: [string, any]) => ({
-            id,
-            date: l.date || l.timestamp,
-            actual_yield_nuts: l.nutCount || l.actual_yield_nuts || (l.gradeA || 0) + (l.gradeB || 0) + (l.gradeC || 0) || 0,
-            large: l.large || l.gradeA || 0,
-            medium: l.medium || l.gradeB || 0,
-            small: l.small || l.gradeC || 0,
-            predicted_yield_nuts: l.predicted_yield_nuts || 0 
-          }));
-          logs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        }
-
-        const reqBody = {
-          uid: user.uid,
-          farm_id: farm.id,
-          estate: farm.locationName || "Makandura",
-          trees_count: farm.totalTrees || 40,
-          last_harvest_yield: farm.lastHarvestYield || null,
-          actual_harvest_logs: logs
-        };
-
-        const data = await predictDashboardYield(reqBody);
-
-        if (data) { //
-          
-          setDashboardPrediction(data);
-        }
-      } catch (e) {
-        console.error("Failed to fetch prediction", e);
-      } finally {
-        setIsPredicting(false);
-      }
-    };
-    fetchPrediction();
-  }, [farm, user]);
 
   const treeZoneMap = useMemo(() => {
     const m = new Map<number, Zone>();
     currentZones.forEach((z) => z.treeNumbers.forEach((n) => m.set(n, z)));
     return m;
   }, [currentZones]);
+
+  
+  
+  
+  
 
   const farmData = useMemo(() => {
     if (!farm) return null;
@@ -149,7 +109,7 @@ export default function FarmDetailScreen() {
         soilMoisture: env.soilMoisture ?? null,
         weatherCode: env.weatherCode ?? null
       },
-      predictedYield: dashboardPrediction?.predicted_next_pick_yield_nuts ?? 0
+      predictedYield: displayPredictedYield
     });
   };
 
@@ -164,7 +124,7 @@ export default function FarmDetailScreen() {
   return (
     <View className="flex-1 bg-slate-50">
       {/* 1. New Header Banner */}
-      <View className="bg-forest-800 px-4 py-4 flex-row items-center justify-between rounded-b-2xl shadow-sm z-10">
+      <View className="bg-forest-800 px-4 pt-14 pb-4 flex-row items-center justify-between rounded-b-2xl shadow-sm z-10">
         <TouchableOpacity onPress={() => router.push('/yield')} className="mr-3">
           <ArrowLeft size={24} color="#fff" />
         </TouchableOpacity>
@@ -191,15 +151,9 @@ export default function FarmDetailScreen() {
             <MetricCard 
               icon={<Image source={{ uri: 'https://i.ibb.co/gbSQjznt/coconut-fruit.png' }} style={{ width: 32, height: 32, resizeMode: 'contain' }} />} 
               label="PREDICTED YIELD" 
-              value={dashboardPrediction ? dashboardPrediction.predicted_next_pick_yield_nuts?.toLocaleString() : (isPredicting ? "..." : "—")} 
+              value={displayPredictedYield > 0 ? displayPredictedYield.toLocaleString() : (isPredicting ? "..." : "—")} 
               unit="Nuts" 
-              badge={
-                dashboardPrediction?.confidence_percentage ? (
-                  <View className="px-2 py-0.5 rounded-full bg-green-50/50 flex-row items-center">
-                    <Text className="text-[9px] text-green-700 font-bold">{dashboardPrediction.confidence_percentage}% Confidence</Text>
-                  </View>
-                ) : null
-              }
+              badge={null}
             />
           </View>
           <View className="w-[48%]">
@@ -269,7 +223,7 @@ export default function FarmDetailScreen() {
         </View>
 
         {/* Section C: Live CDA Market Intelligence Card */}
-        <MarketRevenueCard locationName={farm.locationName || "Colombo"} predictedNuts={dashboardPrediction?.predicted_next_pick_yield_nuts || 0} />
+        <MarketRevenueCard locationName={farm.locationName || "Colombo"} predictedNuts={displayPredictedYield} />
 
         {/* Section D: Environmental Stress Monitor Warning */}
         <View className="bg-white rounded-2xl p-4 border border-slate-100">

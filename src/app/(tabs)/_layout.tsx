@@ -78,6 +78,13 @@ export default function TabLayout() {
           ),
         }}
       />
+    
+      <Tabs.Screen
+        name="predict"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

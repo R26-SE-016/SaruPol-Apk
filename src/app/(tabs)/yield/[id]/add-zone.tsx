@@ -143,7 +143,7 @@ export default function AddZoneScreen() {
                 <View className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
                 <Text className="text-xs font-medium text-slate-600">Zone Color</Text>
               </View>
-              <View className="flex-row flex-wrap gap-2">
+              <View className="flex-row flex-wrap gap-2" style={{ flexGrow: 1, paddingBottom: 10 }}>
                 {PRESET_COLORS.map((c) => (
                   <TouchableOpacity
                     key={c}

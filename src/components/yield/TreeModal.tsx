@@ -1,7 +1,6 @@
-import { useState } from "react";
-import { View, Text, TouchableOpacity, Modal, ScrollView, TextInput, TouchableWithoutFeedback } from "react-native";
-import { X, Plus, Trash2, Calendar, Hash, HeartPulse, FileText, Save, Loader2, TrendingUp, Sprout } from "lucide-react-native";
-import type { Tree, TreeStatus, TreeHealth, YieldRecord } from "@/types/yield";
+import { View, Text, TouchableOpacity, Modal, ScrollView, TouchableWithoutFeedback } from "react-native";
+import { X, Calendar, Hash, HeartPulse, Sprout, TrendingUp } from "lucide-react-native";
+import type { Tree } from "@/types/yield";
 import { statusColor, healthColor, statusLabel } from "@/utils/yieldTreeFactory";
 import { lastHarvest } from "@/utils/yieldAnalytics";
 import { LineChart } from "./YieldCharts";
@@ -10,62 +9,22 @@ interface TreeModalProps {
   tree: Tree;
   farmId: string;
   onClose: () => void;
-  onSaveTree: (tree: Tree) => Promise<void>;
+  onSaveTree?: (tree: Tree) => Promise<void>; // Keep as optional to prevent prop errors in mapper
 }
 
-const STATUS_OPTIONS: TreeStatus[] = ["Young", "Bearing", "Diseased", "NonBearing"];
-
-export function TreeModal({ tree, onClose, onSaveTree }: TreeModalProps) {
-  const [status, setStatus] = useState<TreeStatus>(tree.status);
-  const [health, setHealth] = useState<TreeHealth>(tree.health ?? "Good");
-  const [notes, setNotes] = useState(tree.notes ?? "");
-  const [yieldHistory, setYieldHistory] = useState<YieldRecord[]>(tree.yieldHistory ?? []);
-  const [newMonth, setNewMonth] = useState("");
-  const [newNuts, setNewNuts] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [tab, setTab] = useState<"details" | "history">("details");
-
+export function TreeModal({ tree, onClose }: TreeModalProps) {
   const num = String(tree.number).padStart(2, "0");
   const zoneColor = (tree as Tree & { zoneColor?: string | null }).zoneColor;
   const latest = lastHarvest(tree);
+  const yieldHistory = tree.yieldHistory ?? [];
 
   const chartData = [...yieldHistory]
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(-12)
     .map((y) => ({ label: y.date.slice(5), value: y.nuts }));
 
-  const addYield = () => {
-    const n = parseInt(newNuts, 10);
-    if (!newMonth || !Number.isFinite(n) || n < 0) return;
-    const rec: YieldRecord = {
-      id: `y-${Date.now()}`,
-      date: newMonth,
-      nuts: n,
-      createdAt: Date.now(),
-    };
-    setYieldHistory((prev) => [...prev, rec]);
-    setNewMonth("");
-    setNewNuts("");
-  };
-
-  const removeYield = (id: string) =>
-    setYieldHistory((prev) => prev.filter((y) => y.id !== id));
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await onSaveTree({
-        ...tree,
-        status,
-        health,
-        notes,
-        yieldHistory,
-      });
-      onClose();
-    } finally {
-      setSaving(false);
-    }
-  };
+  const status = tree.status || "Bearing";
+  const health = tree.health || "Good";
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
@@ -88,162 +47,63 @@ export function TreeModal({ tree, onClose, onSaveTree }: TreeModalProps) {
                 </TouchableOpacity>
               </View>
 
-              {/* tabs */}
-              <View className="flex-row border-b border-slate-100">
-                {(["details", "history"] as const).map((t) => (
-                  <TouchableOpacity
-                    key={t}
-                    onPress={() => setTab(t)}
-                    className={`flex-1 py-2.5 items-center ${tab === t ? "border-b-2 border-forest-600" : ""}`}
-                  >
-                    <Text className={`text-xs font-semibold ${tab === t ? "text-forest-700" : "text-slate-400"}`}>
-                      {t === "details" ? "Details & Health" : "Yield History"}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
               {/* body */}
               <ScrollView className="px-5 py-4 flex-shrink">
-                {tab === "details" ? (
-                  <View className="space-y-3.5">
-                    <Row icon={<Hash size={14} color="#94a3b8" />} label="Tag Number">
-                      <Text className="font-bold text-slate-800">#{num}</Text>
-                    </Row>
+                <View className="space-y-4">
+                  
+                  {/* Basic Details */}
+                  <Row icon={<Hash size={14} color="#94a3b8" />} label="Tag Number">
+                    <Text className="font-bold text-slate-800">#{num}</Text>
+                  </Row>
 
-                    <View>
-                      <Text className="flex-row items-center gap-2 text-xs font-medium text-slate-600 mb-1.5">
-                        <Sprout size={14} color="#1e7550" /> Tree Status
-                      </Text>
-                      <View className="flex-row flex-wrap gap-2">
-                        {STATUS_OPTIONS.map((s) => {
-                          const active = status === s;
-                          return (
-                            <TouchableOpacity
-                              key={s}
-                              onPress={() => { setStatus(s); setHealth(statusToHealth(s)); }}
-                              className={`py-2 px-3 rounded-lg text-xs font-bold border ${active ? "text-white border-transparent" : "bg-white text-slate-500 border-slate-200"}`}
-                              style={active ? { backgroundColor: statusColor(s) } : undefined}
-                            >
-                              <Text style={active ? { color: "#fff" } : { color: "#64748b" }}>{statusLabel(s)}</Text>
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </View>
+                  <Row icon={<Sprout size={14} color="#1e7550" />} label="Tree Status">
+                    <View className="py-1 px-2.5 rounded-lg items-center" style={{ backgroundColor: statusColor(status) }}>
+                      <Text className="text-white text-xs font-bold">{statusLabel(status)}</Text>
                     </View>
-
-                    <Row icon={<TrendingUp size={14} color="#94a3b8" />} label="Last Harvest Yield">
-                      {latest ? (
-                        <Text className="font-bold text-slate-800">{latest.nuts} nuts <Text className="text-slate-400 font-normal text-[10px]">({latest.date})</Text></Text>
-                      ) : (
-                        <Text className="text-slate-400 text-xs">No records yet</Text>
-                      )}
-                    </Row>
-
-                    <View>
-                      <Text className="text-xs font-medium text-slate-600 mb-1.5">Health Rating</Text>
-                      <View className="flex-row gap-2">
-                        {(["Good", "Average", "Weak"] as TreeHealth[]).map((h) => (
-                          <TouchableOpacity
-                            key={h}
-                            onPress={() => setHealth(h)}
-                            className={`flex-1 py-2 rounded-lg items-center ${health === h ? "" : "bg-slate-100"}`}
-                            style={health === h ? { backgroundColor: healthColor(h) } : undefined}
-                          >
-                            <Text style={health === h ? { color: "#fff" } : { color: "#64748b" }} className="text-xs font-bold">{h}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
+                  </Row>
+                  
+                  <Row icon={<HeartPulse size={14} color="#e11d48" />} label="Health Rating">
+                    <View className="py-1 px-2.5 rounded-lg items-center" style={{ backgroundColor: healthColor(health) }}>
+                      <Text className="text-white text-xs font-bold">{health}</Text>
                     </View>
+                  </Row>
 
-                    <View className="bg-slate-50 rounded-xl p-3 space-y-2">
-                      <Text className="text-xs font-semibold text-slate-600">Add New Harvest Yield (Nuts)</Text>
-                      <View className="flex-row gap-2">
-                        <TextInput
-                          value={newMonth}
-                          onChangeText={setNewMonth}
-                          placeholder="YYYY-MM"
-                          placeholderTextColor="#cbd5e1"
-                          className="flex-1 rounded-lg border border-slate-200 px-2.5 py-2 text-xs text-slate-800"
-                        />
-                        <TextInput
-                          value={newNuts}
-                          onChangeText={setNewNuts}
-                          placeholder="Nuts"
-                          placeholderTextColor="#cbd5e1"
-                          keyboardType="numeric"
-                          className="w-20 rounded-lg border border-slate-200 px-2.5 py-2 text-xs text-slate-800"
-                        />
-                        <TouchableOpacity
-                          onPress={addYield}
-                          className="w-9 h-9 rounded-lg bg-forest-600 items-center justify-center flex-shrink-0"
-                        >
-                          <Plus size={16} color="#fff" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
+                  <Row icon={<TrendingUp size={14} color="#94a3b8" />} label="Last Harvest Yield">
+                    {latest ? (
+                      <Text className="font-bold text-slate-800">{latest.nuts} nuts <Text className="text-slate-400 font-normal text-[10px]">({latest.date})</Text></Text>
+                    ) : (
+                      <Text className="text-slate-400 text-xs">No records yet</Text>
+                    )}
+                  </Row>
 
+                  {/* Notes */}
+                  {tree.notes ? (
                     <View>
                       <Text className="text-xs font-medium text-slate-600 mb-1.5">Special Notes</Text>
-                      <TextInput
-                        value={notes}
-                        onChangeText={setNotes}
-                        placeholder="Fertilizer date, observed anomalies…"
-                        placeholderTextColor="#cbd5e1"
-                        multiline
-                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-800 min-h-[60px]"
-                      />
+                      <View className="w-full rounded-lg bg-slate-50 border border-slate-100 px-3 py-2 min-h-[60px]">
+                        <Text className="text-xs text-slate-700">{tree.notes}</Text>
+                      </View>
                     </View>
-                  </View>
-                ) : (
-                  <View className="space-y-3">
-                    <View className="bg-slate-50 rounded-xl p-3">
-                      <Text className="text-xs font-semibold text-slate-600 mb-1">Individual Yield Progress</Text>
+                  ) : null}
+
+                  {/* Chart */}
+                  {yieldHistory.length > 0 && (
+                    <View className="bg-slate-50 rounded-xl p-3 mt-4">
+                      <Text className="text-xs font-semibold text-slate-600 mb-2">Individual Yield Progress</Text>
                       <LineChart data={chartData} color="#15803d" unit="" />
                     </View>
+                  )}
 
-                    {yieldHistory.length === 0 ? (
-                      <View className="items-center py-8">
-                        <Calendar size={24} color="#cbd5e1" />
-                        <Text className="text-xs text-slate-400 mt-2">No harvest records yet.</Text>
-                      </View>
-                    ) : (
-                      <View className="space-y-2">
-                        {[...yieldHistory].sort((a, b) => b.date.localeCompare(a.date)).map((y) => (
-                          <View key={y.id} className="flex-row items-center gap-3 p-2.5 rounded-lg bg-slate-50">
-                            <View className="w-9 h-9 rounded-lg bg-forest-100 items-center justify-center flex-shrink-0">
-                              <Calendar size={14} color="#1e7550" />
-                            </View>
-                            <View className="flex-1 min-w-0">
-                              <Text className="text-xs font-bold text-slate-800">{y.nuts} nuts</Text>
-                              <Text className="text-[10px] text-slate-400">{y.date}</Text>
-                            </View>
-                            <TouchableOpacity onPress={() => removeYield(y.id)}>
-                              <Trash2 size={14} color="#cbd5e1" />
-                            </TouchableOpacity>
-                          </View>
-                        ))}
-                      </View>
-                    )}
-                  </View>
-                )}
+                </View>
               </ScrollView>
 
               {/* actions */}
-              <View className="flex-row gap-3 px-5 py-4 border-t border-slate-100">
+              <View className="px-5 py-4 border-t border-slate-100 pb-8">
                 <TouchableOpacity
                   onPress={onClose}
-                  className="flex-1 py-2.5 rounded-xl items-center bg-slate-100"
+                  className="w-full py-3 rounded-xl items-center bg-slate-100"
                 >
-                  <Text className="text-sm font-bold text-slate-600">Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={handleSave}
-                  disabled={saving}
-                  className="flex-1 py-2.5 rounded-xl items-center bg-forest-600 flex-row justify-center gap-2"
-                >
-                  {saving ? <Loader2 size={16} color="#fff" /> : <Save size={15} color="#fff" />}
-                  <Text className="text-sm font-bold text-white">{saving ? "Saving…" : "Save"}</Text>
+                  <Text className="text-sm font-bold text-slate-600">Close</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -252,12 +112,6 @@ export function TreeModal({ tree, onClose, onSaveTree }: TreeModalProps) {
       </TouchableWithoutFeedback>
     </Modal>
   );
-}
-
-function statusToHealth(s: TreeStatus): TreeHealth {
-  if (s === "Bearing") return "Good";
-  if (s === "Young") return "Average";
-  return "Weak";
 }
 
 function Row({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
