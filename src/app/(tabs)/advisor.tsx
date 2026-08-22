@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import GlassCard from '../../components/common/GlassCard';
 import ImageCard, { ImageReference } from '../../components/ImageCard';
+import VoiceInputButton from '../../components/VoiceInputButton';
 import { COLORS, ROUNDING } from '../../constants/theme';
 import { getTtsUrl, sendAdvisoryMessage, sendMultiLLMQuery, translateMessagesBatch } from '../../services/advisoryService';
 import { useAppStore } from '../../store/appStore';
@@ -337,6 +338,32 @@ export default function AdvisorScreen() {
     }));
   }, [language]);
   const [inputText, setInputText] = useState('');
+  const [isTranscribedFromVoice, setIsTranscribedFromVoice] = useState(false);
+  const [highlightTranscribedText, setHighlightTranscribedText] = useState(false);
+
+  const handleTranscriptionComplete = (transcribedText: string) => {
+    if (!transcribedText.trim()) return;
+
+    setInputText(transcribedText);
+    setIsTranscribedFromVoice(true);
+    setHighlightTranscribedText(true);
+
+    setTimeout(() => {
+      textInputRef.current?.focus();
+    }, 50);
+
+    setTimeout(() => {
+      setHighlightTranscribedText(false);
+    }, 2000);
+  };
+
+  const handleInputChange = (text: string) => {
+    setInputText(text);
+    if (isTranscribedFromVoice) {
+      setIsTranscribedFromVoice(false);
+    }
+  };
+
   const [chatMode, setChatMode] = useState<'standard' | 'multi'>('standard');
   const [userCoords, setUserCoords] = useState<{ lat: number; lon: number } | null>(null);
   const [expandedMultiLlmMsgIds, setExpandedMultiLlmMsgIds] = useState<Record<string, boolean>>({});
@@ -396,7 +423,11 @@ export default function AdvisorScreen() {
 
       const { sound } = await Audio.Sound.createAsync(
         { uri: url },
-        { shouldPlay: true },
+        { 
+          shouldPlay: true,
+          rate: language === 'si' ? 1.25 : 1.0,
+          shouldCorrectPitch: true,
+        },
         onPlaybackStatusUpdate
       );
 
@@ -462,6 +493,9 @@ export default function AdvisorScreen() {
   ];
 
   const handleSend = async (textToSend: string) => {
+    setIsTranscribedFromVoice(false);
+    setHighlightTranscribedText(false);
+
     const trimmed = textToSend.trim();
     if (!trimmed) return;
 
@@ -1070,20 +1104,41 @@ export default function AdvisorScreen() {
             </View>
           );
         })()}
-        <View style={styles.inputContainer}>
+        <View style={[
+          styles.inputContainer,
+          highlightTranscribedText && styles.inputContainerHighlighted
+        ]}>
+          <VoiceInputButton
+            language={language}
+            onTranscriptionComplete={handleTranscriptionComplete}
+            disabled={loading}
+            size={36}
+          />
           <TextInput
             ref={textInputRef}
             style={styles.textInput}
             value={inputText}
-            onChangeText={setInputText}
+            onChangeText={handleInputChange}
             placeholder={t('advisor.placeholder')}
             placeholderTextColor={COLORS.textMuted}
             onSubmitEditing={() => handleSend(inputText)}
           />
-          <TouchableOpacity onPress={() => handleSend(inputText)} style={styles.sendButton}>
+          <TouchableOpacity onPress={() => handleSend(inputText)} style={styles.sendButton} disabled={loading}>
             <Ionicons name={editingMsgId ? "checkmark" : "send"} size={20} color={COLORS.textPrimary} />
           </TouchableOpacity>
         </View>
+        {isTranscribedFromVoice && (
+          <View style={styles.transcribedHintRow}>
+            <Ionicons name="mic-outline" size={12} color={COLORS.healthy} />
+            <Text style={styles.transcribedHintText}>
+              {language === 'si'
+                ? 'හඬින් පරිවර්තනය විය — යැවීමට තට්ටු කරන්න හෝ සංස්කරණය කරන්න'
+                : language === 'ta'
+                ? 'குரலிலிருந்து பெறப்பட்டது — அனுப்ப தட்டவும் அல்லது திருத்தவும்'
+                : 'Transcribed from voice — tap send or edit'}
+            </Text>
+          </View>
+        )}
       </View>
     </KeyboardAvoidingView>
   );
@@ -1424,14 +1479,24 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(76, 175, 80, 0.25)',
     borderWidth: 1,
     borderRadius: ROUNDING.full,
-    paddingHorizontal: 16,
-    height: 48,
+    paddingHorizontal: 8,
+    height: 50,
+  },
+  inputContainerHighlighted: {
+    borderColor: COLORS.healthy,
+    backgroundColor: 'rgba(76, 175, 80, 0.18)',
+    shadowColor: COLORS.healthy,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 4,
   },
   textInput: {
     flex: 1,
     color: COLORS.textPrimary,
     fontSize: 15,
     height: '100%',
+    paddingHorizontal: 10,
   },
   sendButton: {
     backgroundColor: COLORS.primaryLight,
@@ -1440,7 +1505,19 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 8,
+    marginLeft: 4,
+  },
+  transcribedHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    marginTop: 6,
+  },
+  transcribedHintText: {
+    color: COLORS.textSecondary,
+    fontSize: 11,
+    fontStyle: 'italic',
   },
   contextBanner: {
     flexDirection: 'row',
