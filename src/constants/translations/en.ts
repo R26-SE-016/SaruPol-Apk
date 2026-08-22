@@ -71,7 +71,7 @@ export default {
     noRecentActivity: "No recent scans or predictions found."
   },
   pathology: {
-    title: "Pathology Scanner",
+    title: "Scan Diseases",
     instruction: "Choose which part of the coconut palm you are scanning, then take a photo.",
     partSelectorTitle: "Select Coconut Part",
     captureBtn: "Take Photo",
