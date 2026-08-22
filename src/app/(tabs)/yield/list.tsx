@@ -1,50 +1,94 @@
-import { useRouter, useLocalSearchParams } from "expo-router";
-import { useState, useMemo } from "react";
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Platform } from "react-native";
-import { Search, X, MapPin, ChevronRight, Activity, ArrowLeft } from "lucide-react-native";
+import { useRouter } from "expo-router";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Platform, ActivityIndicator } from "react-native";
+import { Search, X, MapPin, ChevronRight, ArrowLeft } from "lucide-react-native";
 import { useYieldApp } from "@/store/YieldAppContext";
-import { buildFarmData } from "@/utils/yieldTreeFactory";
 import { LinearGradient } from "expo-linear-gradient";
-
-interface YieldFarmsListScreenProps {
-  onBack: () => void;
-  onSelectFarm: (id: string) => void;
-}
+import { predictDashboardYield } from "@/services/yieldService";
+import { get, ref } from "firebase/database";
+import { rtdb } from "@/services/firebase";
+import type { Farm } from "@/types/yield";
 
 export default function YieldFarmsListScreen() {
   const router = useRouter();
   const onBack = () => router.back();
-  const onSelectFarm = (id: string) => router.push(('(/tabs)/yield/' + id) as any);
-  const { farms } = useYieldApp();
+  const onSelectFarm = (id: string) => router.push(('/(tabs)/yield/' + id) as any);
+  const { farms, user } = useYieldApp();
   const [searchQuery, setSearchQuery] = useState("");
+  const [farmPredictions, setFarmPredictions] = useState<Record<string, number>>({});
+  const [loadingPredictions, setLoadingPredictions] = useState<Record<string, boolean>>({});
 
   const filteredFarms = useMemo(() => {
-    return farms.filter(f => 
-      f.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    return farms.filter(f =>
+      f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (f.locationName && f.locationName.toLowerCase().includes(searchQuery.toLowerCase()))
     );
   }, [farms, searchQuery]);
 
+  const getDaysLeft = useCallback((farm: Farm) => {
+    // If no harvest date, assume it was created date or just default to 45 days
+    const lastStr = farm.lastHarvestDate || farm.createdAt;
+    if (!lastStr) return 45; // fallback
+    const last = new Date(lastStr).getTime();
+    if (isNaN(last)) return 45; // fallback for invalid dates
+    const nextPick = last + (45 * 24 * 60 * 60 * 1000);
+    const daysLeft = Math.ceil((nextPick - Date.now()) / (24 * 60 * 60 * 1000));
+    return daysLeft > 45 ? 45 : daysLeft;
+  }, []);
+
+  useEffect(() => {
+    if (!user || farms.length === 0) return;
+    farms.forEach(async (farm) => {
+      if (farmPredictions[farm.id] !== undefined) return;
+      setLoadingPredictions(prev => ({ ...prev, [farm.id]: true }));
+      try {
+        const logsRef = ref(rtdb, `users/${user.uid}/harvests/${farm.id}`);
+        const snap = await get(logsRef);
+        let logs: any[] = [];
+        if (snap.exists()) {
+          const vals = snap.val();
+          logs = Object.entries(vals).map(([id, l]: [string, any]) => ({
+            id,
+            date: l.date || l.timestamp,
+            actual_yield_nuts: l.nutCount || 0,
+            predicted_yield_nuts: l.predicted_yield_nuts || 0
+          }));
+          logs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        }
+        const result = await predictDashboardYield({
+          uid: user.uid,
+          farm_id: farm.id,
+          estate: farm.locationName || "Makandura",
+          trees_count: farm.totalTrees || 40,
+          last_harvest_yield: farm.lastHarvestYield || null,
+          actual_harvest_logs: logs
+        });
+        if (result && result.predicted_next_pick_yield_nuts !== undefined) {
+          setFarmPredictions(prev => ({ ...prev, [farm.id]: result.predicted_next_pick_yield_nuts }));
+        }
+      } catch (e) {
+        console.error("Prediction failed for farm", farm.id, e);
+      } finally {
+        setLoadingPredictions(prev => ({ ...prev, [farm.id]: false }));
+      }
+    });
+  }, [farms, user]);
+
   return (
     <View className="flex-1 bg-slate-50">
-      {/* Header */}
       <View className="bg-[#114B3A] pt-14 pb-8 px-5 relative z-10" style={{ borderBottomLeftRadius: 30, borderBottomRightRadius: 30 }}>
         <View className="flex-row items-center justify-between mb-2">
           <TouchableOpacity onPress={onBack} className="w-10 h-10 items-center justify-center -ml-2">
             <ArrowLeft size={24} color="#fff" />
           </TouchableOpacity>
           <Text className="text-[19px] font-bold text-white flex-1 text-center mr-2">Your Farms</Text>
-          <TouchableOpacity className="w-10 h-10 items-center justify-center">
-            <Search size={22} color="#fff" />
-          </TouchableOpacity>
+          <View className="w-10 h-10" />
         </View>
-
-        {/* Search Bar overlaps bottom edge */}
         <View className="absolute -bottom-6 left-5 right-5 bg-white rounded-full flex-row items-center px-4 py-3 shadow-sm border border-slate-100 z-20" style={{ elevation: 4, shadowColor: '#12211C', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12 }}>
           <Search size={18} color="#94a3b8" />
-          <TextInput 
+          <TextInput
             style={Platform.OS === 'web' ? { outline: 'none' } as any : {}}
-            className="flex-1 ml-3 text-[14px] font-medium text-slate-700 h-6"
+            className="flex-1 ml-3 text-[14px] font-medium text-slate-700 py-0 min-h-[28px]"
             placeholder="Search farms by name or location..."
             placeholderTextColor="#94a3b8"
             value={searchQuery}
@@ -58,19 +102,19 @@ export default function YieldFarmsListScreen() {
         </View>
       </View>
 
-      <ScrollView className="flex-1 px-4 pt-10" contentContainerStyle={{ paddingBottom: 40 }}>
-
-        {/* List */}
+      <ScrollView className="flex-1 px-4 pt-14" contentContainerStyle={{ paddingBottom: 40 }}>
         <View className="gap-4">
           {filteredFarms.map((farm) => {
-            const fd = buildFarmData(farm.perches, farm.totalTrees, farm.treeLayout, {});
             const isOnline = farm.deviceIds && farm.deviceIds.length > 0;
-            
+            const daysLeft = getDaysLeft(farm);
+            const predictedNuts = farmPredictions[farm.id];
+            const isPredicting = loadingPredictions[farm.id];
+
             return (
               <View key={farm.id} className="bg-white rounded-[24px] p-4 border border-slate-100 mb-2" style={{ shadowColor: '#12211C', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.06, shadowRadius: 25, elevation: 5 }}>
                 <View className="flex-row items-start justify-between mb-4">
                   <View className="flex-row flex-1 pr-2 items-center gap-3">
-                    <Image source={{ uri: 'https://i.ibb.co/hxXPYgww/farm-image.png' }} style={{width: 50, height: 50, borderRadius: 25}} defaultSource={{width: 50, height: 50}} />
+                    <Image source={{ uri: 'https://i.ibb.co/hxXPYgww/farm-image.png' }} style={{width: 50, height: 50, borderRadius: 25}} />
                     <View>
                       <Text className="text-[17px] font-bold text-slate-800">{farm.name}</Text>
                       <View className="flex-row items-center gap-1 mt-1">
@@ -79,21 +123,36 @@ export default function YieldFarmsListScreen() {
                       </View>
                     </View>
                   </View>
-                  <View className="bg-[#fef3c7] px-3 py-1.5 rounded-[20px]">
-                    <Text className="text-[10px] font-bold text-amber-700">12 Days Left</Text>
-                  </View>
+                  {daysLeft !== null ? (
+                    <View className={`px-3 py-1.5 rounded-[20px] ${daysLeft < 0 ? 'bg-red-100' : daysLeft <= 7 ? 'bg-amber-100' : 'bg-emerald-100'}`}>
+                      <Text className={`text-[10px] font-bold ${daysLeft < 0 ? 'text-red-700' : daysLeft <= 7 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                        {daysLeft < 0 ? `${Math.abs(daysLeft)}d Overdue` : `${daysLeft} Days Left`}
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
 
                 <View className="flex-row items-center justify-between bg-slate-50 rounded-[16px] p-3 mb-4">
-                  <View className="flex-row gap-6">
+                  <View className="flex-row gap-5">
                     <View>
                       <Text className="text-sm font-bold text-slate-800">{farm.totalTrees}</Text>
                       <Text className="text-[10px] text-slate-500 font-medium">Total Trees</Text>
                     </View>
                     <View className="h-full w-[1px] bg-slate-200" />
                     <View>
-                      <Text className="text-sm font-bold text-slate-800">{farm.lastHarvestYield ? farm.lastHarvestYield : (farm.totalTrees * 6)}</Text>
+                      {isPredicting ? (
+                        <ActivityIndicator size="small" color="#16a34a" />
+                      ) : (
+                        <Text className="text-sm font-bold text-slate-800">
+                          {predictedNuts != null ? predictedNuts.toLocaleString() : (farm.lastHarvestYield?.toLocaleString() || '—')}
+                        </Text>
+                      )}
                       <Text className="text-[10px] text-slate-500 font-medium">Predicted Nuts</Text>
+                    </View>
+                    <View className="h-full w-[1px] bg-slate-200" />
+                    <View>
+                      <Text className="text-sm font-bold text-slate-800">{farm.perches}</Text>
+                      <Text className="text-[10px] text-slate-500 font-medium">Perches</Text>
                     </View>
                   </View>
                 </View>
@@ -106,12 +165,12 @@ export default function YieldFarmsListScreen() {
                   </Text>
                 </View>
 
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => onSelectFarm(farm.id)}
                   className="bg-[#114B3A] rounded-[14px] flex-row items-center justify-center py-3.5"
                 >
                   <Text className="text-white font-bold text-[13px]">Open Farm Dashboard</Text>
-                  <ChevronRight size={16} color="#fff" className="ml-1" />
+                  <ChevronRight size={16} color="#fff" />
                 </TouchableOpacity>
               </View>
             );

@@ -70,16 +70,19 @@ export default function logsScreen() {
   }, [gradeA, gradeB, gradeC, priceA, priceB, priceC]);
 
   const monthlyStats = useMemo(() => {
-    const currentMonth = new Date().toISOString().slice(0, 7);
-    let nuts = 0;
-    let rev = 0;
-    remoteLogs.forEach(log => {
-      if (log.date.startsWith(currentMonth)) {
-        nuts += log.nutCount;
-        rev += log.revenue;
-      }
-    });
-    return { nuts, rev, avgPrice: nuts > 0 ? (rev / nuts) : 0 };
+    if (remoteLogs.length === 0) return { nuts: 0, rev: 0, avgPrice: 0, label: '' };
+    const sorted = [...remoteLogs].sort((a, b) => a.date.localeCompare(b.date));
+    const fmt = (d: string) => {
+      const [y, m] = d.slice(0, 7).split('-');
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return months[parseInt(m)-1] + ' ' + y;
+    };
+    const firstLabel = fmt(sorted[0].date);
+    const lastLabel = fmt(sorted[sorted.length - 1].date);
+    const label = firstLabel === lastLabel ? firstLabel : firstLabel + ' – ' + lastLabel;
+    let nuts = 0, rev = 0;
+    remoteLogs.forEach(log => { nuts += log.nutCount; rev += log.revenue; });
+    return { nuts, rev, avgPrice: nuts > 0 ? (rev / nuts) : 0, label };
   }, [remoteLogs]);
 
   useEffect(() => {
@@ -247,22 +250,22 @@ export default function logsScreen() {
           <View className="flex-row justify-between gap-3 mb-5 mt-2">
             <View className="bg-white rounded-2xl p-4 flex-1 border border-slate-100 shadow-sm items-center">
               <Image source={{ uri: 'https://i.ibb.co/gbSQjznt/coconut-fruit.png' }} style={{ width: 44, height: 44, resizeMode: 'contain' }} />
-              <Text className="text-[9px] text-emerald-600 font-bold mt-3 text-center">Monthly Nuts</Text>
+              <Text className="text-[9px] text-emerald-600 font-bold mt-3 text-center">Total Nuts</Text>
               <Text className="text-[22px] font-black text-slate-800 mt-0.5">{monthlyStats.nuts.toLocaleString()}</Text>
-              <Text className="text-[9px] text-slate-400 mt-1">This Month</Text>
+              <Text className="text-[9px] text-slate-400 mt-1" numberOfLines={1}>{monthlyStats.label}</Text>
             </View>
             
             <View className="bg-white rounded-2xl p-4 flex-1 border border-orange-50 shadow-sm items-center" style={{ backgroundColor: "#FDFBF7" }}>
               <Image source={{ uri: 'https://i.ibb.co/nqg19nYx/rupee.png' }} style={{ width: 44, height: 44, resizeMode: 'contain' }} />
-              <Text className="text-[9px] text-orange-500 font-bold mt-3 text-center">Monthly Revenue</Text>
-              <Text className="text-lg font-black text-slate-800 mt-1 whitespace-nowrap">LKR {monthlyStats.rev.toLocaleString()}</Text>
-              <Text className="text-[9px] text-slate-400 mt-1">This Month</Text>
+              <Text className="text-[9px] text-orange-500 font-bold mt-3 text-center">Total Revenue</Text>
+              <Text className="text-lg font-black text-slate-800 mt-1" numberOfLines={1} adjustsFontSizeToFit>LKR {monthlyStats.rev.toLocaleString()}</Text>
+              <Text className="text-[9px] text-slate-400 mt-1" numberOfLines={1}>{monthlyStats.label}</Text>
             </View>
             
             <View className="bg-white rounded-2xl p-4 flex-1 border border-blue-50 shadow-sm items-center" style={{ backgroundColor: "#F7F9FD" }}>
               <Image source={{ uri: 'https://i.ibb.co/GffY8kpj/ai-analysis.png' }} style={{ width: 44, height: 44, resizeMode: 'contain' }} />
               <Text className="text-[9px] text-blue-600 font-bold mt-3 text-center">Avg Price / Nut</Text>
-              <Text className="text-lg font-black text-slate-800 mt-1">LKR {monthlyStats.avgPrice.toFixed(1)}</Text>
+              <Text className="text-lg font-black text-slate-800 mt-1" numberOfLines={1} adjustsFontSizeToFit>LKR {monthlyStats.avgPrice.toFixed(1)}</Text>
               <Text className="text-[9px] text-slate-400 mt-1">Average Rate</Text>
             </View>
           </View>
@@ -280,6 +283,70 @@ export default function logsScreen() {
             </View>
             <ChevronRight size={24} color="#fff" />
           </TouchableOpacity>
+
+          {/* Monthly Harvest Chart */}
+          {remoteLogs.length > 0 && (() => {
+            // Group logs by month, sum nuts per month (Large/Medium/Small)
+            const monthMap: Record<string, {large: number, medium: number, small: number}> = {};
+            remoteLogs.forEach(log => {
+              const key = log.date.slice(0, 7);
+              if (!monthMap[key]) monthMap[key] = { large: 0, medium: 0, small: 0 };
+              monthMap[key].large += log.gradeA || 0;
+              monthMap[key].medium += log.gradeB || 0;
+              monthMap[key].small += log.gradeC || 0;
+            });
+            const months = Object.keys(monthMap).sort();
+            const maxTotal = Math.max(...months.map(m => monthMap[m].large + monthMap[m].medium + monthMap[m].small), 1);
+            const BAR_HEIGHT = 120;
+            const fmt = (m: string) => {
+              const [, mo] = m.split('-');
+              return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(mo)-1];
+            };
+            return (
+              <View className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm mb-6">
+                <View className="flex-row items-center gap-2 mb-4">
+                  <View className="w-8 h-8 rounded-full bg-emerald-50 items-center justify-center">
+                    <Image source={{ uri: 'https://i.ibb.co/gbSQjznt/coconut-fruit.png' }} style={{ width: 18, height: 18, resizeMode: 'contain' }} />
+                  </View>
+                  <Text className="text-sm font-black text-slate-800 tracking-wide">Monthly Harvest Breakdown</Text>
+                </View>
+                <View className="flex-row items-end justify-around" style={{ height: BAR_HEIGHT + 30 }}>
+                  {months.map(m => {
+                    const d = monthMap[m];
+                    const total = d.large + d.medium + d.small;
+                    const largeH = total > 0 ? (d.large / maxTotal) * BAR_HEIGHT : 0;
+                    const medH = total > 0 ? (d.medium / maxTotal) * BAR_HEIGHT : 0;
+                    const smlH = total > 0 ? (d.small / maxTotal) * BAR_HEIGHT : 0;
+                    return (
+                      <View key={m} className="items-center flex-1 mx-0.5">
+                        <Text className="text-[8px] font-black text-slate-500 mb-1">{total}</Text>
+                        <View style={{ height: BAR_HEIGHT, justifyContent: 'flex-end', width: '80%' }}>
+                          {smlH > 0 && <View style={{ height: smlH, backgroundColor: '#fb923c', borderRadius: 3 }} />}
+                          {medH > 0 && <View style={{ height: medH, backgroundColor: '#facc15', borderRadius: 3, marginTop: 1 }} />}
+                          {largeH > 0 && <View style={{ height: largeH, backgroundColor: '#34d399', borderRadius: 3, marginTop: 1 }} />}
+                        </View>
+                        <Text className="text-[8px] font-bold text-slate-400 mt-1">{fmt(m)}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+                <View className="flex-row justify-center gap-4 mt-3 pt-3 border-t border-slate-100">
+                  <View className="flex-row items-center gap-1">
+                    <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: '#34d399' }} />
+                    <Text className="text-[9px] font-bold text-slate-500">Large</Text>
+                  </View>
+                  <View className="flex-row items-center gap-1">
+                    <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: '#facc15' }} />
+                    <Text className="text-[9px] font-bold text-slate-500">Medium</Text>
+                  </View>
+                  <View className="flex-row items-center gap-1">
+                    <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: '#fb923c' }} />
+                    <Text className="text-[9px] font-bold text-slate-500">Small</Text>
+                  </View>
+                </View>
+              </View>
+            );
+          })()}
 
           {/* Harvest History List */}
           <View className="flex-row items-center justify-between mb-4">
@@ -325,10 +392,10 @@ export default function logsScreen() {
                         </View>
                       </View>
                       
-                      <View className="flex-row items-center gap-2 mt-3">
-                        <GradeChip label="A" value={log.gradeA} bg="#dcfce7" textColor="#166534" />
-                        <GradeChip label="B" value={log.gradeB} bg="#ffedd5" textColor="#9a3412" />
-                        <GradeChip label="C" value={log.gradeC} bg="#f1f5f9" textColor="#475569" />
+                      <View className="flex-row items-center gap-2 mt-4 ml-1">
+                        <GradeChip type="LARGE" value={log.gradeA} />
+                        <GradeChip type="MEDIUM" value={log.gradeB} />
+                        <GradeChip type="SMALL" value={log.gradeC} />
                       </View>
                     </View>
                   </View>
@@ -393,16 +460,16 @@ export default function logsScreen() {
 
               <View className="mb-6">
                 <Text className="text-xs font-bold text-slate-700 mb-4 flex-row items-center gap-2">
-                  <Image source={{ uri: 'https://i.ibb.co/gbSQjznt/coconut-fruit.png' }} style={{ width: 14, height: 14, tintColor: "#1e7550" }} /> Nut Quality / Grade Breakdown
+                  <Image source={{ uri: 'https://i.ibb.co/HTMzGrqF/coconut.png' }} style={{ width: 14, height: 14, tintColor: "#1e7550" }} /> Nut Quality / Grade Breakdown
                 </Text>
                 
                 <View className="gap-5">
                   <View className="flex-row items-center justify-between">
                     <View className="flex-row items-center gap-3">
-                      <Image source={{ uri: 'https://i.ibb.co/HTMzGrqF/coconut.png' }} style={{ width: 44, height: 44, resizeMode: 'contain', tintColor: '#22c55e' }} />
+                      <Image source={{ uri: 'https://i.ibb.co/gbSQjznt/coconut-fruit.png' }} style={{ width: 44, height: 44, resizeMode: 'contain' }} />
                       <View>
-                        <Text className="text-sm font-black text-slate-800">A-Grade</Text>
-                        <Text className="text-[10px] text-slate-400 font-medium">Large Nuts</Text>
+                        <Text className="text-sm font-black text-slate-800 uppercase tracking-widest">Large</Text>
+                        <Text className="text-[10px] text-slate-400 font-medium">Premium Grade</Text>
                       </View>
                     </View>
                     <View className="flex-row items-center gap-2">
@@ -410,7 +477,7 @@ export default function logsScreen() {
                         <Minus size={16} color="#64748b" />
                       </TouchableOpacity>
                       <View className="items-center">
-                        <TextInput value={gradeA} onChangeText={setGradeA} keyboardType="numeric" className="w-14 h-9 border border-slate-200 rounded-lg text-center font-bold text-slate-800 bg-white shadow-sm" />
+                        <TextInput value={gradeA} onChangeText={setGradeA} keyboardType="numeric" className="w-14 h-10 border border-slate-200 rounded-lg text-center font-bold text-slate-800 bg-white shadow-sm pb-1 pt-1" />
                         <Text className="text-[8px] text-slate-400 mt-1 absolute -bottom-4">e.g. 80</Text>
                       </View>
                       <TouchableOpacity onPress={() => setGradeA(String((parseInt(gradeA)||0)+1))} className="w-9 h-9 rounded-lg bg-emerald-50 items-center justify-center border border-emerald-100">
@@ -421,10 +488,10 @@ export default function logsScreen() {
 
                   <View className="flex-row items-center justify-between">
                     <View className="flex-row items-center gap-3">
-                      <Image source={{ uri: 'https://i.ibb.co/HTMzGrqF/coconut.png' }} style={{ width: 34, height: 34, resizeMode: 'contain', tintColor: '#f59e0b' }} />
+                      <Image source={{ uri: 'https://i.ibb.co/gbSQjznt/coconut-fruit.png' }} style={{ width: 34, height: 34, resizeMode: 'contain' }} />
                       <View>
-                        <Text className="text-sm font-black text-slate-800">B-Grade</Text>
-                        <Text className="text-[10px] text-slate-400 font-medium">Medium Nuts</Text>
+                        <Text className="text-sm font-black text-slate-800 uppercase tracking-widest">Medium</Text>
+                        <Text className="text-[10px] text-slate-400 font-medium">Standard Grade</Text>
                       </View>
                     </View>
                     <View className="flex-row items-center gap-2">
@@ -432,7 +499,7 @@ export default function logsScreen() {
                         <Minus size={16} color="#64748b" />
                       </TouchableOpacity>
                       <View className="items-center">
-                        <TextInput value={gradeB} onChangeText={setGradeB} keyboardType="numeric" className="w-14 h-9 border border-slate-200 rounded-lg text-center font-bold text-slate-800 bg-white shadow-sm" />
+                        <TextInput value={gradeB} onChangeText={setGradeB} keyboardType="numeric" className="w-14 h-10 border border-slate-200 rounded-lg text-center font-bold text-slate-800 bg-white shadow-sm pb-1 pt-1" />
                         <Text className="text-[8px] text-slate-400 mt-1 absolute -bottom-4">e.g. 45</Text>
                       </View>
                       <TouchableOpacity onPress={() => setGradeB(String((parseInt(gradeB)||0)+1))} className="w-9 h-9 rounded-lg bg-emerald-50 items-center justify-center border border-emerald-100">
@@ -443,10 +510,10 @@ export default function logsScreen() {
 
                   <View className="flex-row items-center justify-between">
                     <View className="flex-row items-center gap-3">
-                      <Image source={{ uri: 'https://i.ibb.co/HTMzGrqF/coconut.png' }} style={{ width: 26, height: 26, resizeMode: 'contain', tintColor: '#94a3b8' }} />
+                      <Image source={{ uri: 'https://i.ibb.co/gbSQjznt/coconut-fruit.png' }} style={{ width: 24, height: 24, resizeMode: 'contain' }} />
                       <View>
-                        <Text className="text-sm font-black text-slate-800">C-Grade</Text>
-                        <Text className="text-[10px] text-slate-400 font-medium">Small & Rejected</Text>
+                        <Text className="text-sm font-black text-slate-800 uppercase tracking-widest">Small</Text>
+                        <Text className="text-[10px] text-slate-400 font-medium">Small & Rejects</Text>
                       </View>
                     </View>
                     <View className="flex-row items-center gap-2">
@@ -454,7 +521,7 @@ export default function logsScreen() {
                         <Minus size={16} color="#64748b" />
                       </TouchableOpacity>
                       <View className="items-center">
-                        <TextInput value={gradeC} onChangeText={setGradeC} keyboardType="numeric" className="w-14 h-9 border border-slate-200 rounded-lg text-center font-bold text-slate-800 bg-white shadow-sm" />
+                        <TextInput value={gradeC} onChangeText={setGradeC} keyboardType="numeric" className="w-14 h-10 border border-slate-200 rounded-lg text-center font-bold text-slate-800 bg-white shadow-sm pb-1 pt-1" />
                         <Text className="text-[8px] text-slate-400 mt-1 absolute -bottom-4">e.g. 130</Text>
                       </View>
                       <TouchableOpacity onPress={() => setGradeC(String((parseInt(gradeC)||0)+1))} className="w-9 h-9 rounded-lg bg-emerald-50 items-center justify-center border border-emerald-100">
@@ -475,24 +542,24 @@ export default function logsScreen() {
                   </View>
                 </View>
                 {/* Decorative image/icon placeholder for basket */}
-                <Image source={{ uri: 'https://i.ibb.co/gbSQjznt/coconut-fruit.png' }} style={{ width: 80, height: 80, resizeMode: 'contain', position: 'absolute', right: -10, bottom: -10, opacity: 0.1, tintColor: '#10b981' }} />
+                <Image source={{ uri: 'https://i.ibb.co/HTMzGrqF/coconut.png' }} style={{ width: 80, height: 80, resizeMode: 'contain', position: 'absolute', right: -10, bottom: -10, opacity: 0.1, tintColor: '#10b981' }} />
               </View>
 
               <View className="mb-6">
                 <Text className="text-xs font-bold text-slate-700 mb-3 flex-row items-center gap-2">
-                  <Hash size={14} color="#64748b" /> Unit Price per Grade (LKR)
+                  <Coins size={14} color="#64748b" /> Unit Price per Grade (LKR)
                 </Text>
                 <View className="gap-3">
                   <View>
-                    <Text className="text-[10px] font-black text-slate-700 mb-1">A-Grade Price</Text>
+                    <Text className="text-[10px] font-black text-slate-700 mb-1">Large Nuts Price <Text className="text-slate-400 font-normal">(A-Grade)</Text></Text>
                     <TextInput value={priceA} onChangeText={setPriceA} keyboardType="numeric" className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 shadow-sm" />
                   </View>
                   <View>
-                    <Text className="text-[10px] font-black text-slate-700 mb-1">B-Grade Price</Text>
+                    <Text className="text-[10px] font-black text-slate-700 mb-1">Medium Nuts Price <Text className="text-slate-400 font-normal">(B-Grade)</Text></Text>
                     <TextInput value={priceB} onChangeText={setPriceB} keyboardType="numeric" className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 shadow-sm" />
                   </View>
                   <View>
-                    <Text className="text-[10px] font-black text-slate-700 mb-1">C-Grade Price</Text>
+                    <Text className="text-[10px] font-black text-slate-700 mb-1">Small Nuts Price <Text className="text-slate-400 font-normal">(C-Grade)</Text></Text>
                     <TextInput value={priceC} onChangeText={setPriceC} keyboardType="numeric" className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 shadow-sm" />
                   </View>
                 </View>
@@ -651,15 +718,16 @@ function GradeInput({ label, value, onChange, color, placeholder }: {
   );
 }
 
-function GradeChip({ label, value, bg, textColor }: {
-  label: string;
+function GradeChip({ type, value }: {
+  type: 'LARGE' | 'MEDIUM' | 'SMALL';
   value: number;
-  bg: string;
-  textColor: string;
 }) {
+  const size = type === 'LARGE' ? 22 : type === 'MEDIUM' ? 18 : 14;
   return (
-    <View className="flex-row items-center gap-0.5 px-1.5 py-0.5 rounded-full" style={{ backgroundColor: bg }}>
-      <Text className="text-[10px] font-bold" style={{ color: textColor }}>{label}: {value.toLocaleString()}</Text>
+    <View className="items-center bg-slate-50 rounded-xl py-1.5 px-2.5 border border-slate-100" style={{ minWidth: 62 }}>
+      <Image source={{ uri: 'https://i.ibb.co/gbSQjznt/coconut-fruit.png' }} style={{ width: size, height: size, resizeMode: 'contain' }} />
+      <Text className="text-[8px] font-bold text-slate-400 mt-1" numberOfLines={1}>{type}</Text>
+      <Text className="text-[13px] font-black text-slate-700">{value.toLocaleString()}</Text>
     </View>
   );
 }

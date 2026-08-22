@@ -8,6 +8,14 @@ export interface YieldRecord {
   createdAt: number;
 }
 
+export interface TreeSensorData {
+  n: number;        // Nitrogen
+  p: number;        // Phosphorus
+  k: number;        // Potassium
+  ph: number;       // Soil pH
+  soilMoisture: number; // Soil moisture %
+}
+
 export interface Tree {
   id: string;
   number: number;
@@ -19,6 +27,7 @@ export interface Tree {
   zoneId: string | null;
   yieldHistory: YieldRecord[];
   notes: string;
+  sensorData?: TreeSensorData;
 }
 
 export interface FarmData {

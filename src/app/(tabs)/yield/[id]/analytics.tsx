@@ -3,7 +3,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Platform, TextInput, Image, Modal, Share } from "react-native";
-import { ArrowLeft, AlertCircle, Sprout, CheckCircle2, BarChart3, Clock, MessageSquare, Save, Calendar, Droplets, Trophy, Plus, Edit3, Share2, Download, ChevronRight } from "lucide-react-native";
+import { ArrowLeft, ClipboardList, AlertCircle, Sprout, CheckCircle2, BarChart3, Clock, MessageSquare, Save, Calendar, Droplets, Trophy, Plus, Edit3, Share2, Download, ChevronRight } from "lucide-react-native";
 import { YieldScreenHeader } from "@/components/yield/YieldScreenHeader";
 import { useYieldApp } from "@/store/YieldAppContext";
 import { getFarm, updateFarm } from "@/services/yieldFarmDb";
@@ -42,8 +42,8 @@ export default function analyticsScreen() {
   const [savingLog, setSavingLog] = useState(false);
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
-  const [isPastModalVisible, setIsPastModalVisible] = useState(false);
-  const [pastNuts, setPastNuts] = useState("");
+  
+  
   const [pastMonth, setPastMonth] = useState(String(new Date().getMonth() + 1));
   const [pastYear, setPastYear] = useState(String(new Date().getFullYear()));
 
@@ -434,7 +434,7 @@ export default function analyticsScreen() {
                 <Text className="text-emerald-200 font-bold text-sm tracking-widest uppercase">New Yield (Predicted)</Text>
               </View>
               <View className="bg-emerald-800/80 px-2 py-1 rounded border border-emerald-700/50">
-                <Text className="text-white text-[10px] font-bold">▲ 81.5% Confidence</Text>
+                <Text className="text-white text-[10px] font-bold">▲ {prediction?.confidence_percentage ? prediction.confidence_percentage.toFixed(1) : '85.0'}% Confidence</Text>
               </View>
             </View>
             
@@ -475,13 +475,13 @@ export default function analyticsScreen() {
             <View className={`h-full rounded-full ${daysRemaining <= 0 ? 'bg-red-500' : 'bg-emerald-600'}`} style={{ width: `${progressPct}%` }} />
           </View>
           
-          <TouchableOpacity 
-            className={`${daysRemaining <= 0 ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'} border py-3 mt-2 rounded-xl flex-row justify-center items-center gap-2`} 
-            onPress={() => Alert.alert("Reminder Sent", "Coconut plucker has been notified via SMS.")}
-          >
-            <MessageSquare size={18} color={daysRemaining <= 0 ? "#b91c1c" : "#065f46"} />
-            <Text className={`${daysRemaining <= 0 ? 'text-red-800' : 'text-emerald-800'} font-bold tracking-wide`}>Remind Coconut Climber / Plucker</Text>
-          </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={() => router.push(`/yield/${farmId}/trees`)} 
+              className="bg-white rounded-xl border border-slate-200 p-4 mt-2 items-center justify-center flex-row gap-3 shadow-sm"
+            >
+              <Image source={{ uri: 'https://i.ibb.co/xKSGghy9/coconut-tree-3d.png' }} style={{ width: 28, height: 28, resizeMode: 'contain' }} />
+              <Text className="text-sm font-bold text-slate-800 tracking-wide">Tree-wise Yield Prediction</Text>
+            </TouchableOpacity>
         </View>
 
         {/* Region Benchmark Badge & Chart */}
@@ -492,33 +492,53 @@ export default function analyticsScreen() {
             </View>
             <View className="flex-1 pt-0.5">
               <Text className="text-sm font-semibold text-slate-700 leading-relaxed tracking-wide">
-                Your farm's per-tree yield is <Text className="font-extrabold text-emerald-700">8% higher</Text> than average farms in {prediction.mapped_benchmark_estate || prediction.district || "Jawatta"}.
+                Your farm's per-tree yield is{' '}
+                {(() => {
+                  const perTree = (prediction?.predicted_next_pick_yield_nuts || 0) / (farm?.totalTrees || 1);
+                  const calibration = prediction?.calibration_factor || 1.0;
+                  const diffPct = Math.round((calibration - 1) * 100);
+                  const isAbove = diffPct >= 0;
+                  return (
+                    <Text className={`font-extrabold ${isAbove ? 'text-emerald-700' : 'text-red-600'}`}>
+                      {isAbove ? '+' : ''}{diffPct}%
+                    </Text>
+                  );
+                })()}{' '}
+                {prediction?.calibration_factor && prediction.calibration_factor !== 1.0 ? 'vs initial estimate' : 'on track'} for {prediction?.mapped_benchmark_estate || prediction?.district || farm?.locationName || 'your region'}.
               </Text>
             </View>
           </View>
           
           <View className="flex-row items-center justify-between">
-             {/* Mock Line Chart (SVG) */}
+             {/* Real Harvest Chart (SVG) */}
              <View className="flex-1 mr-4" style={{ height: 45 }}>
-                <Svg width="100%" height="100%" viewBox="0 0 200 45">
-                  {/* Average line (grey) */}
-                  <Polyline points="0,35 40,34 80,35 120,28 160,30 200,25" fill="none" stroke="#94a3b8" strokeWidth="2.5" />
-                  <Circle cx="0" cy="35" r="3.5" fill="#94a3b8" />
-                  <Circle cx="40" cy="34" r="3.5" fill="#94a3b8" />
-                  <Circle cx="80" cy="35" r="3.5" fill="#94a3b8" />
-                  <Circle cx="120" cy="28" r="3.5" fill="#94a3b8" />
-                  <Circle cx="160" cy="30" r="3.5" fill="#94a3b8" />
-                  <Circle cx="200" cy="25" r="3.5" fill="#94a3b8" />
-
-                  {/* Your Farm line (green) */}
-                  <Polyline points="0,25 40,20 80,22 120,10 160,15 200,8" fill="none" stroke="#059669" strokeWidth="2.5" />
-                  <Circle cx="0" cy="25" r="3.5" fill="#059669" />
-                  <Circle cx="40" cy="20" r="3.5" fill="#059669" />
-                  <Circle cx="80" cy="22" r="3.5" fill="#059669" />
-                  <Circle cx="120" cy="10" r="3.5" fill="#059669" />
-                  <Circle cx="160" cy="15" r="3.5" fill="#059669" />
-                  <Circle cx="200" cy="8" r="3.5" fill="#059669" />
-                </Svg>
+               {(() => {
+                 const svgLogs = [...pastLogs].filter(l => l.id !== 'virtual_initial').reverse().slice(-6);
+                 const predictedNext = prediction?.predicted_next_pick_yield_nuts || 0;
+                 const allPoints = [...svgLogs.map(l => l.actual_yield_nuts || 0), predictedNext];
+                 const maxVal = Math.max(...allPoints, 1);
+                 const W = 200, H = 45, pad = 5;
+                 const toY = (v) => H - pad - ((v / maxVal) * (H - 2 * pad));
+                 const n = allPoints.length;
+                 const xs = allPoints.map((_, i) => Math.round((i / Math.max(n - 1, 1)) * W));
+                 const farmPts = allPoints.map((v, i) => xs[i] + ',' + toY(v).toFixed(1)).join(' ');
+                 // Average line: flat at predicted_monthly_yield converted to 45-day scale
+                 const avgVal = prediction?.predicted_monthly_yield ? prediction.predicted_monthly_yield * 1.5 : maxVal * 0.7;
+                 const avgY = toY(avgVal).toFixed(1);
+                 const avgPts = [0, W].map(x => x + ',' + avgY).join(' ');
+                 return (
+                   <Svg width="100%" height="100%" viewBox={"0 0 " + W + " " + H}>
+                     {/* Average line (grey) */}
+                     <Polyline points={avgPts} fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeDasharray="4 3" />
+                     {/* Your Farm actual line (green) */}
+                     {allPoints.length > 1 && <Polyline points={farmPts} fill="none" stroke="#059669" strokeWidth="2.5" />}
+                     {allPoints.map((v, i) => (
+                       <Circle key={i} cx={xs[i]} cy={toY(v)} r="3.5"
+                         fill={i === allPoints.length - 1 ? "#f59e0b" : "#059669"} />
+                     ))}
+                   </Svg>
+                 );
+               })()}
              </View>
              
              {/* Legend */}
@@ -529,65 +549,13 @@ export default function analyticsScreen() {
                 </View>
                 <View className="flex-row items-center gap-1.5">
                   <View className="w-2.5 h-2.5 rounded-full bg-slate-400" />
-                  <Text className="text-[10px] font-bold text-slate-500">Average in Jawatta</Text>
+                  <Text className="text-[10px] font-bold text-slate-500">Average in {prediction?.mapped_benchmark_estate || farm?.locationName || "Region"}</Text>
                 </View>
              </View>
           </View>
         </View>
 
-        {/* Interactive Log Harvest Form */}
-        <View className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm mb-4">
-          <View className="flex-row items-center gap-2 mb-4">
-            <CheckCircle2 size={18} color="#059669" />
-            <Text className="text-sm font-bold text-slate-800 tracking-wide">Log Your Harvest & Nut Quality</Text>
-          </View>
-          
-          <View className="gap-4">
-            <View>
-              <Text className="text-xs font-bold text-slate-700 mb-2 tracking-wide uppercase">Total Actual Nuts Collected</Text>
-              <TextInput 
-                placeholder="e.g. 400" 
-                placeholderTextColor="#94a3b8"
-                keyboardType="numeric"
-                value={actualNuts}
-                onChangeText={setActualNuts}
-                className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 font-bold"
-              />
-            </View>
-            <View className="flex-row gap-3">
-              <View className="flex-1">
-                <View className="items-center mb-2 h-10 justify-end">
-                  <Image source={{ uri: 'https://i.ibb.co/HTMzGrqF/coconut.png' }} style={{width: 32, height: 32}} resizeMode="contain" />
-                </View>
-                <Text className="text-xs font-bold text-slate-700 mb-2 tracking-wide text-center uppercase">Large</Text>
-                <TextInput placeholder="0" keyboardType="numeric" value={largeNuts} onChangeText={setLargeNuts} className="bg-white border border-slate-200 rounded-xl px-3 py-3 text-sm text-center text-slate-900 font-bold" />
-              </View>
-              <View className="flex-1">
-                <View className="items-center mb-2 h-10 justify-end">
-                  <Image source={{ uri: 'https://i.ibb.co/HTMzGrqF/coconut.png' }} style={{width: 24, height: 24}} resizeMode="contain" />
-                </View>
-                <Text className="text-xs font-bold text-slate-700 mb-2 tracking-wide text-center uppercase">Medium</Text>
-                <TextInput placeholder="0" keyboardType="numeric" value={mediumNuts} onChangeText={setMediumNuts} className="bg-white border border-slate-200 rounded-xl px-3 py-3 text-sm text-center text-slate-900 font-bold" />
-              </View>
-              <View className="flex-1">
-                <View className="items-center mb-2 h-10 justify-end">
-                  <Image source={{ uri: 'https://i.ibb.co/HTMzGrqF/coconut.png' }} style={{width: 16, height: 16}} resizeMode="contain" />
-                </View>
-                <Text className="text-xs font-bold text-slate-700 mb-2 tracking-wide text-center uppercase">Small</Text>
-                <TextInput placeholder="0" keyboardType="numeric" value={smallNuts} onChangeText={setSmallNuts} className="bg-white border border-slate-200 rounded-xl px-3 py-3 text-sm text-center text-slate-900 font-bold" />
-              </View>
-            </View>
-            <TouchableOpacity 
-              onPress={handleSaveLog} 
-              disabled={savingLog}
-              className={`mt-2 rounded-xl py-3.5 flex-row items-center justify-center gap-2 ${savingLog ? 'bg-emerald-400' : 'bg-emerald-600'}`}
-            >
-              {savingLog ? <ActivityIndicator size="small" color="#fff" /> : <Save size={18} color="#fff" />}
-              <Text className="text-white font-bold text-sm tracking-wide">Save Harvest Log</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
+        
         {/* Yield Summary */}
         <View className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm mb-4">
           <View className="flex-row items-center gap-2 mb-4">
@@ -642,356 +610,22 @@ export default function analyticsScreen() {
         </View>
 
 
-        {/* Nut Quality & Weather Advisory */}
-        {latestLog && (
-          <View className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm mb-4">
-            <View className="flex-row items-center gap-2 mb-4">
-              <Droplets size={16} color="#0284c7" />
-              <Text className="text-sm font-bold text-slate-800 tracking-wide">Nut Quality & Weather Tips</Text>
+        {/* Manage Logs CTA */}
+        <TouchableOpacity onPress={() => router.push(`/yield/${farmId}/logs`)} className="bg-forest-800 rounded-2xl p-5 flex-row items-center justify-between mb-4 shadow-sm">
+          <View className="flex-row items-center gap-4">
+            <View className="w-12 h-12 rounded-full bg-white/10 items-center justify-center">
+              <ClipboardList size={24} color="#fff" />
             </View>
-            
-            <View className="mb-4">
-              <View className="flex-row items-center justify-between mb-2">
-                <Text className="text-xs font-bold text-slate-500 uppercase tracking-wide">Latest Harvest Size Breakdown</Text>
-              </View>
-              <View className="h-4 w-full bg-slate-100 rounded-full overflow-hidden flex-row">
-                <View style={{ width: `${largePct}%` }} className="h-full bg-green-500" />
-                <View style={{ width: `${medPct}%` }} className="h-full bg-yellow-400" />
-                <View style={{ width: `${smallPct}%` }} className="h-full bg-orange-500" />
-              </View>
-              <View className="flex-row justify-between mt-2">
-                <Text className="text-xs text-slate-600 font-bold tracking-wide">🟢 Large {largePct}%</Text>
-                <Text className="text-xs text-slate-600 font-bold tracking-wide">🟡 Med {medPct}%</Text>
-                <Text className="text-xs text-slate-600 font-bold tracking-wide">🟠 Small {smallPct}%</Text>
-              </View>
-            </View>
-            
-            <View className="bg-sky-50 p-4 rounded-xl border border-sky-100">
-              <Text className="text-sm text-sky-800 font-semibold leading-relaxed tracking-wide">
-                {smallPct > 25 
-                  ? "Higher proportion of small nuts detected. Consider applying organic mulching and Potassium (K) fertilizer before the next cycle to improve nut expansion." 
-                  : "Rainfall in recent months was favorable. Soil moisture levels are optimal for healthy nut expansion. Keep up the good work!"}
-              </Text>
+            <View>
+              <Text className="text-white font-bold text-base tracking-wide">Manage Harvest Logs</Text>
+              <Text className="text-emerald-100 text-xs mt-0.5">Add or edit past harvest data</Text>
             </View>
           </View>
-        )}
-
-        {/* Historical Yield Trend Chart */}
-        <View className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm mb-4">
-          <View className="flex-row items-center justify-between mb-4">
-            <View className="flex-row items-center gap-2">
-              <BarChart3 size={16} color="#059669" />
-              <Text className="text-sm font-bold text-slate-800 tracking-wide">Historical Yield Trend</Text>
-            </View>
-            <TouchableOpacity onPress={() => setIsPastModalVisible(true)} className="flex-row items-center gap-1 bg-emerald-50 rounded-lg px-2 py-1 border border-emerald-100">
-              <Plus size={12} color="#059669" />
-              <Text className="text-[10px] font-bold text-emerald-700">Add Past Data</Text>
-            </TouchableOpacity>
-          </View>
-          
-          {/* Chart Y-Axis and Bars */}
-          <View className="flex-row h-40 mt-2">
-            <View className="justify-between items-end pr-2 pb-6 border-r border-slate-100">
-              {[maxY, maxY * 0.8, maxY * 0.6, maxY * 0.4, maxY * 0.2, 0].map((val, i) => (
-                <Text key={i} className="text-[9px] font-semibold text-slate-400">{Math.round(val)}</Text>
-              ))}
-            </View>
-            
-            <View className="flex-1 flex-row items-end justify-center gap-6 px-2 pb-6 relative">
-              {/* Horizontal Grid lines */}
-              <View className="absolute left-2 right-0 bottom-6 h-full justify-between" style={{ zIndex: -1 }}>
-                <View className="w-full border-b border-slate-50 border-dashed" style={{ height: '20%' }} />
-                <View className="w-full border-b border-slate-50 border-dashed" style={{ height: '20%' }} />
-                <View className="w-full border-b border-slate-50 border-dashed" style={{ height: '20%' }} />
-                <View className="w-full border-b border-slate-50 border-dashed" style={{ height: '20%' }} />
-                <View className="w-full border-b border-slate-50 border-dashed" style={{ height: '20%' }} />
-              </View>
-              
-              {chartLogs.length > 0 ? chartLogs.map((item, idx) => (
-                <View key={idx} className="items-center w-10 h-full justify-end relative">
-                  <View className="w-5 bg-emerald-600 rounded-t-sm shadow-sm" style={{ height: `${((item.actual_yield_nuts || 0) / maxY) * 100}%` }} />
-                  <Text className="text-[9px] font-bold text-slate-500 absolute -bottom-6 text-center w-8">
-                    {new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  </Text>
-                </View>
-              )) : (
-                <View className="flex-1 items-center justify-center h-full">
-                  <Text className="text-xs text-slate-400">No harvest data yet</Text>
-                </View>
-              )}
-            </View>
-          </View>
-        </View>
-
-        {/* Recent Harvest Logs */}
-        {pastLogs.length > 0 && (
-          <View className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm mb-4">
-            <View className="flex-row items-center gap-2 mb-4">
-              <Clock size={16} color="#059669" />
-              <Text className="text-sm font-bold text-slate-800 tracking-wide">Recent Harvest Logs</Text>
-            </View>
-            <View className="gap-3">
-              {pastLogs.map((log) => (
-                <View key={log.id} className="border border-slate-100 rounded-xl p-3 flex-row items-center justify-between">
-                  <View>
-                    <Text className="text-xs font-bold text-slate-800">
-                      {new Date(log.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </Text>
-                    <Text className="text-[10px] text-slate-500 mt-1">
-                      Total: {log.actual_yield_nuts} | L: {log.large} M: {log.medium} S: {log.small}
-                    </Text>
-                  </View>
-                  <View className="flex-row items-center gap-2">
-                    <TouchableOpacity onPress={() => handleEditLog(log)} className="bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
-                      <Text className="text-xs font-semibold text-slate-700">Edit</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => handleDeleteLog(log.id)} className="bg-red-50 px-3 py-1.5 rounded-lg border border-red-100">
-                      <Text className="text-xs font-semibold text-red-600">Delete</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* Edit Modal */}
-        <Modal visible={isEditModalVisible} transparent={true} animationType="fade">
-          <View className="flex-1 bg-slate-900/60 justify-center px-4">
-            <View className="bg-white rounded-3xl p-6 shadow-xl">
-              <View className="flex-row items-center gap-2 mb-4">
-                <Text className="text-lg font-bold text-slate-800 tracking-wide">Edit Harvest Log</Text>
-              </View>
-              
-              <View className="gap-4">
-                <View>
-                  <Text className="text-xs font-bold text-slate-700 mb-2 tracking-wide uppercase">Total Actual Nuts Collected</Text>
-                  <TextInput 
-                    placeholder="e.g. 400" 
-                    placeholderTextColor="#94a3b8"
-                    keyboardType="numeric"
-                    value={actualNuts}
-                    onChangeText={setActualNuts}
-                    className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 font-bold"
-                  />
-                </View>
-                <View className="flex-row gap-3">
-                  <View className="flex-1">
-                    <Text className="text-[10px] font-bold text-slate-700 mb-2 tracking-wide text-center uppercase">Large</Text>
-                    <TextInput placeholder="0" keyboardType="numeric" value={largeNuts} onChangeText={setLargeNuts} className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 text-sm text-center text-slate-900 font-bold" />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-[10px] font-bold text-slate-700 mb-2 tracking-wide text-center uppercase">Medium</Text>
-                    <TextInput placeholder="0" keyboardType="numeric" value={mediumNuts} onChangeText={setMediumNuts} className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 text-sm text-center text-slate-900 font-bold" />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-[10px] font-bold text-slate-700 mb-2 tracking-wide text-center uppercase">Small</Text>
-                    <TextInput placeholder="0" keyboardType="numeric" value={smallNuts} onChangeText={setSmallNuts} className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 text-sm text-center text-slate-900 font-bold" />
-                  </View>
-                </View>
-
-                <View className="flex-row gap-3 mt-4">
-                  <TouchableOpacity 
-                    onPress={() => {
-                      setEditingLogId(null);
-                      setActualNuts("");
-                      setLargeNuts("");
-                      setMediumNuts("");
-                      setSmallNuts("");
-                      setIsEditModalVisible(false);
-                    }}
-                    className="flex-1 py-3.5 rounded-xl border border-slate-200 items-center justify-center bg-slate-50"
-                  >
-                    <Text className="text-slate-600 font-bold">Cancel</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity 
-                    onPress={handleSaveLog} 
-                    disabled={savingLog}
-                    className={`flex-1 py-3.5 rounded-xl flex-row items-center justify-center gap-2 ${savingLog ? 'bg-emerald-400' : 'bg-emerald-600'}`}
-                  >
-                    {savingLog ? <ActivityIndicator size="small" color="#fff" /> : <Save size={16} color="#fff" />}
-                    <Text className="text-white font-bold">Update</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Past Harvest Modal */}
-        <Modal visible={isPastModalVisible} transparent={true} animationType="fade">
-          <View className="flex-1 bg-slate-900/60 justify-center px-4">
-            <View className="bg-white rounded-3xl p-6 shadow-xl">
-              <View className="flex-row items-center gap-2 mb-4">
-                <Text className="text-lg font-bold text-slate-800 tracking-wide">Add Past Harvest Data</Text>
-              </View>
-              
-              <View className="gap-4">
-                <View>
-                  <Text className="text-xs font-bold text-slate-700 mb-2 tracking-wide uppercase">Total Yield (Nuts)</Text>
-                  <TextInput 
-                    placeholder="e.g. 500" 
-                    placeholderTextColor="#94a3b8"
-                    keyboardType="numeric"
-                    value={pastNuts}
-                    onChangeText={setPastNuts}
-                    className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 font-bold"
-                  />
-                </View>
-                <View className="flex-row gap-3">
-                  <View className="flex-1">
-                    <Text className="text-xs font-bold text-slate-700 mb-2 tracking-wide uppercase">Year</Text>
-                    <TextInput 
-                      placeholder="e.g. 2025" 
-                      placeholderTextColor="#94a3b8"
-                      keyboardType="numeric"
-                      value={pastYear}
-                      onChangeText={setPastYear}
-                      className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 font-bold"
-                    />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-xs font-bold text-slate-700 mb-2 tracking-wide uppercase">Month (1-12)</Text>
-                    <TextInput 
-                      placeholder="e.g. 5" 
-                      placeholderTextColor="#94a3b8"
-                      keyboardType="numeric"
-                      value={pastMonth}
-                      onChangeText={setPastMonth}
-                      className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 font-bold"
-                    />
-                  </View>
-                </View>
-
-                <View className="flex-row gap-3 mt-4">
-                  <TouchableOpacity 
-                    onPress={() => {
-                      setPastNuts("");
-                      setIsPastModalVisible(false);
-                    }}
-                    className="flex-1 py-3.5 rounded-xl border border-slate-200 items-center justify-center bg-slate-50"
-                  >
-                    <Text className="text-slate-600 font-bold">Cancel</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity 
-                    onPress={handleSavePastLog} 
-                    disabled={savingLog}
-                    className={`flex-1 py-3.5 rounded-xl flex-row items-center justify-center gap-2 ${savingLog ? 'bg-emerald-400' : 'bg-emerald-600'}`}
-                  >
-                    {savingLog ? <ActivityIndicator size="small" color="#fff" /> : <Save size={16} color="#fff" />}
-                    <Text className="text-white font-bold">Save Data</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Note Modal */}
-        <Modal visible={isNoteModalVisible} transparent={true} animationType="fade">
-          <View className="flex-1 bg-slate-900/60 justify-center px-4">
-            <View className="bg-white rounded-3xl p-6 shadow-xl">
-              <View className="flex-row items-center gap-2 mb-4">
-                <Text className="text-lg font-bold text-slate-800 tracking-wide">Add Note</Text>
-              </View>
-              
-              <View className="gap-4">
-                <View>
-                  <TextInput 
-                    placeholder="Type your observations here..." 
-                    placeholderTextColor="#94a3b8"
-                    value={noteText}
-                    onChangeText={setNoteText}
-                    multiline
-                    numberOfLines={4}
-                    style={{ textAlignVertical: 'top' }}
-                    className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 font-bold min-h-[100px]"
-                  />
-                </View>
-
-                <View className="flex-row gap-3 mt-4">
-                  <TouchableOpacity 
-                    onPress={() => setIsNoteModalVisible(false)}
-                    className="flex-1 py-3.5 rounded-xl border border-slate-200 items-center justify-center bg-slate-50"
-                  >
-                    <Text className="text-slate-600 font-bold">Cancel</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity 
-                    onPress={handleSaveNote} 
-                    disabled={savingNote}
-                    className={`flex-1 py-3.5 rounded-xl flex-row items-center justify-center gap-2 ${savingNote ? 'bg-emerald-400' : 'bg-emerald-600'}`}
-                  >
-                    {savingNote ? <ActivityIndicator size="small" color="#fff" /> : <Save size={16} color="#fff" />}
-                    <Text className="text-white font-bold">Save</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Quick Actions */}
-        <View className="mb-8 bg-white rounded-3xl p-5 border border-slate-100 shadow-sm mx-1">
-          <Text className="text-slate-800 font-bold text-sm tracking-wide mb-4">Quick Actions</Text>
-          
-          <View className="gap-3 mb-5">
-            <TouchableOpacity 
-              onPress={() => setIsNoteModalVisible(true)}
-              className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex-row items-center justify-between"
-            >
-              <View className="flex-row items-center gap-4">
-                <View className="w-10 h-10 rounded-xl bg-emerald-100/50 items-center justify-center">
-                  <Edit3 size={18} color="#059669" />
-                </View>
-                <View>
-                  <Text className="text-sm font-bold text-emerald-800">Add Note</Text>
-                  <Text className="text-[11px] text-slate-500 mt-0.5">Add observations or notes</Text>
-                </View>
-              </View>
-              <ChevronRight size={16} color="#94a3b8" />
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              onPress={async () => {
-                if (!prediction) {
-                  Alert.alert("Loading", "Please wait for predictions to load before sharing.");
-                  return;
-                }
-                try {
-                  await Share.share({
-                    message: `🥥 Farm Yield Prediction for ${farm?.name || 'Farm'}\n\nPredicted Monthly Yield: ${prediction.predicted_monthly_yield} nuts\nNext Harvest (45-days): ${prediction.predicted_next_pick_yield_nuts} nuts\nConfidence: ${prediction.confidence_percentage}%\n\nGenerated via CocoCast AI.`
-                  });
-                } catch (error) {
-                  console.error(error);
-                }
-              }}
-              className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex-row items-center justify-between"
-            >
-              <View className="flex-row items-center gap-4">
-                <View className="w-10 h-10 rounded-xl bg-purple-100/50 items-center justify-center">
-                  <Share2 size={18} color="#7c3aed" />
-                </View>
-                <View>
-                  <Text className="text-sm font-bold text-purple-800">Share Report</Text>
-                  <Text className="text-[11px] text-slate-500 mt-0.5">Share yield report</Text>
-                </View>
-              </View>
-              <ChevronRight size={16} color="#94a3b8" />
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity 
-            onPress={handleExportPDF}
-            className="bg-emerald-700 rounded-xl py-4 flex-row items-center justify-center gap-2"
-          >
-            <Download size={16} color="#fff" />
-            <Text className="text-white text-sm font-bold">Export Report (PDF)</Text>
-          </TouchableOpacity>
-        </View>
+          <ChevronRight size={24} color="#fff" />
+        </TouchableOpacity>
         
+        {/* Add Past Data Modal (Removed) */}
+  
       </ScrollView>
     </View>
   );

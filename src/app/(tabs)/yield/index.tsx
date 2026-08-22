@@ -1,5 +1,5 @@
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   View, Text, TouchableOpacity, ScrollView, Modal, TouchableWithoutFeedback, ActivityIndicator, Image, ImageBackground, Platform, TextInput,
 } from "react-native";
@@ -14,11 +14,12 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useYieldApp } from "@/store/YieldAppContext";
 import { deleteFarm, subscribeTrees } from "@/services/yieldFarmDb";
 import { predictDashboardYield } from "@/services/yieldService";
+import { useUnifiedFarmYield } from "@/hooks/useUnifiedFarmYield";
 import { buildFarmData, aggregateHealth, healthColor } from "@/utils/yieldTreeFactory";
 import { generateAdvisories, generateWeatherSeries, latestWeather, ensureYieldHistory, hasHealthRecords, allTreesHealthy } from "@/utils/yieldAnalytics";
 import { useYieldHybridTelemetry, resolveEnvValues } from "@/hooks/useYieldHybridTelemetry";
 import { weatherInfo, shortDayName, isToday } from "@/services/weatherService";
-import { exportReportPDF } from "@/utils/yieldReportGenerator";
+import { exportReportPDF, exportAllFarmsReportPDF } from "@/utils/yieldReportGenerator";
 import { MarketRevenueCard } from "@/components/yield/YieldDashboard/MarketRevenueCard";
 import type { Farm, AdvisoryAlert, Tree } from "@/types/yield";
 import { ref, get, onValue, update, set, remove, push } from "firebase/database";
@@ -43,6 +44,20 @@ const WEATHER_HEX: Record<string, string> = {
 };
 
 export default function YieldDashboardScreen() {
+
+  const [farmPredictions, setFarmPredictions] = useState<Record<string, number>>({});
+  const [loadingPredictions, setLoadingPredictions] = useState<Record<string, boolean>>({});
+
+  const getDaysLeft = useCallback((farm: any) => {
+    const lastStr = farm.lastHarvestDate || farm.createdAt;
+    if (!lastStr) return 45;
+    const last = new Date(lastStr).getTime();
+    if (isNaN(last)) return 45;
+    const nextPick = last + (45 * 24 * 60 * 60 * 1000);
+    const daysLeft = Math.ceil((nextPick - Date.now()) / (24 * 60 * 60 * 1000));
+    return daysLeft > 45 ? 45 : daysLeft;
+  }, []);
+
   const router = useRouter();
   const onAddFarm = () => router.push('/yield/add-farm');
   const { user, farms, currentFarm, currentZones, setCurrentFarmId } = useYieldApp();
@@ -224,6 +239,43 @@ export default function YieldDashboardScreen() {
     if (!currentFarm && farms.length > 0) setCurrentFarmId(farms[0].id);
   }, [currentFarm, farms, setCurrentFarmId]);
 
+  // Fetch ML predictions for dashboard farm cards
+  useEffect(() => {
+    if (!user || farms.length === 0) return;
+    farms.slice(0, 3).forEach(async (farm) => {
+      if (farmPredictions[farm.id] !== undefined) return;
+      setLoadingPredictions(prev => ({ ...prev, [farm.id]: true }));
+      try {
+        const logsRef = ref(rtdb, `users/${user.uid}/harvests/${farm.id}`);
+        const snap = await get(logsRef);
+        let logs = [];
+        if (snap.exists()) {
+          const vals = snap.val();
+          logs = Object.entries(vals).map(([id, l]) => ({
+            id, date: l.date || l.timestamp,
+            actual_yield_nuts: l.nutCount || l.actual_yield_nuts || 0,
+            predicted_yield_nuts: l.predicted_yield_nuts || 0
+          }));
+          logs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        }
+        const result = await predictDashboardYield({
+          uid: user.uid, farm_id: farm.id,
+          estate: farm.locationName || 'Makandura',
+          trees_count: farm.totalTrees || 40,
+          last_harvest_yield: farm.lastHarvestYield || null,
+          actual_harvest_logs: logs
+        });
+        if (result && result.predicted_next_pick_yield_nuts !== undefined) {
+          setFarmPredictions(prev => ({ ...prev, [farm.id]: result.predicted_next_pick_yield_nuts }));
+        }
+      } catch (e) {
+        console.error('Farm card prediction failed:', e);
+      } finally {
+        setLoadingPredictions(prev => ({ ...prev, [farm.id]: false }));
+      }
+    });
+  }, [farms, user]);
+
   const { telemetry, weather, source, deviceLive, usedFallbackCoords } = useYieldHybridTelemetry(currentFarm);
   const env = useMemo(() => resolveEnvValues(telemetry, weather, source), [telemetry, weather, source]);
   const [storedTrees, setStoredTrees] = useState<Record<string, Tree>>({});
@@ -352,7 +404,7 @@ export default function YieldDashboardScreen() {
             style={{ position: 'absolute', width: '100%', height: '100%' }} 
           />
           
-          <View className="px-5 pt-12 pb-24">
+          <View className="px-5 pt-20 pb-14">
             {/* Top Nav */}
             <View className="flex-row items-center justify-between mb-8">
               <View className="flex-row items-center gap-3">
@@ -370,13 +422,10 @@ export default function YieldDashboardScreen() {
                 )}
               </TouchableOpacity>
             </View>
-
-            <Text className="text-2xl font-bold text-white mb-2">Welcome back, {userName}! 👋</Text>
-            <Text className="text-white/80 text-[13px] w-4/5 leading-5 mb-4">Predict and manage your coconut harvest accurately.</Text>
           </View>
         </View>
 
-        <View className="px-4 gap-6" style={{ marginTop: -60 }}>
+        <View className="px-4 gap-6" style={{ marginTop: -35 }}>
           
           {/* Harvest Reminder Banner */}
           {currentFarm && daysRemaining <= 7 && (
@@ -447,27 +496,26 @@ export default function YieldDashboardScreen() {
           <View>
             <Text className="text-slate-800 text-[15px] font-bold tracking-tight mb-3">Quick Actions</Text>
             <View className="flex-row gap-3">
-              <TouchableOpacity onPress={onAddFarm} className="flex-[1.1] bg-[#F2F9F5] rounded-[24px] p-4 flex-row items-center justify-between">
+              <TouchableOpacity onPress={onAddFarm} className="flex-1 bg-[#F2F9F5] rounded-[24px] p-4 flex-row items-center justify-between">
                 <View className="flex-row items-center gap-3">
                   <View className="w-10 h-10 rounded-full bg-[#16a34a] items-center justify-center shadow-sm">
                     <Plus size={22} color="#fff" />
                   </View>
                   <View>
                     <Text className="font-bold text-slate-800 text-sm mb-0.5">Add New Farm</Text>
-                    <Text className="text-slate-500 text-[10px] leading-tight w-[70px]">Register a new farm</Text>
+                    <Text className="text-slate-500 text-[10px] leading-tight">Register new farm</Text>
                   </View>
                 </View>
                 <ChevronDown size={16} color="#64748b" style={{transform: [{rotate: '-90deg'}]}} />
               </TouchableOpacity>
-              
-              <TouchableOpacity onPress={() => setLinkDeviceOpen(true)} className="flex-1 bg-[#F0F5FF] rounded-[24px] p-4 flex-row items-center justify-between">
+              <TouchableOpacity onPress={() => router.push('/yield/list')} className="flex-1 bg-[#EEF2FF] rounded-[24px] p-4 flex-row items-center justify-between">
                 <View className="flex-row items-center gap-3">
-                  <View className="w-10 h-10 rounded-full bg-[#3b82f6] items-center justify-center shadow-sm">
-                    <Smartphone size={20} color="#fff" />
+                  <View className="w-10 h-10 rounded-full bg-[#6366f1] items-center justify-center shadow-sm">
+                    <BarChart3 size={20} color="#fff" />
                   </View>
                   <View>
-                    <Text className="font-bold text-slate-800 text-sm mb-0.5">Link Device</Text>
-                    <Text className="text-slate-500 text-[10px] leading-tight w-[70px]">Connect your device</Text>
+                    <Text className="font-bold text-slate-800 text-sm mb-0.5">All Farms</Text>
+                    <Text className="text-slate-500 text-[10px] leading-tight">View & compare</Text>
                   </View>
                 </View>
                 <ChevronDown size={16} color="#64748b" style={{transform: [{rotate: '-90deg'}]}} />
@@ -475,47 +523,7 @@ export default function YieldDashboardScreen() {
             </View>
           </View>
 
-          {/* MARKET PRICE TRENDS */}
-          <View>
-            <View className="flex-row items-center justify-between mb-3">
-              <Text className="text-slate-800 text-xs font-bold tracking-wider">MARKET PRICE TRENDS</Text>
-              <View className="flex-row bg-slate-200 rounded-full p-0.5">
-                <TouchableOpacity onPress={() => setMarketChartTab("Week")} className={`px-3 py-1 rounded-full ${marketChartTab === "Week" ? "bg-white shadow-sm" : ""}`}>
-                  <Text className={`text-[10px] font-bold ${marketChartTab === "Week" ? "text-forest-700" : "text-slate-500"}`}>Week</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setMarketChartTab("Month")} className={`px-3 py-1 rounded-full ${marketChartTab === "Month" ? "bg-white shadow-sm" : ""}`}>
-                  <Text className={`text-[10px] font-bold ${marketChartTab === "Month" ? "text-forest-700" : "text-slate-500"}`}>Month</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-            <View className="bg-white rounded-[20px] p-4 border border-slate-100" style={{ shadowColor: '#12211C', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.06, shadowRadius: 25, elevation: 5 }}>
-              <View className="flex-row items-center justify-between mb-4">
-                <View className="flex-row items-center gap-1.5"><View className="w-2 h-2 rounded-full bg-forest-600"/><Text className="text-[10px] font-bold text-slate-500">Fresh Nut</Text></View>
-                <View className="flex-row items-center gap-1.5"><View className="w-2 h-2 rounded-full bg-amber-500"/><Text className="text-[10px] font-bold text-slate-500">Copra</Text></View>
-                <View className="flex-row items-center gap-1.5"><View className="w-2 h-2 rounded-full bg-blue-500"/><Text className="text-[10px] font-bold text-slate-500">Oil</Text></View>
-              </View>
-              <View className="h-32 w-full flex-row">
-                <Svg height="100%" width="100%" viewBox="0 0 300 100" preserveAspectRatio="none">
-                  <Line x1="0" y1="25" x2="300" y2="25" stroke="#f1f5f9" strokeWidth="1" />
-                  <Line x1="0" y1="50" x2="300" y2="50" stroke="#f1f5f9" strokeWidth="1" />
-                  <Line x1="0" y1="75" x2="300" y2="75" stroke="#f1f5f9" strokeWidth="1" />
-                  {marketChartTab === "Month" ? (
-                    <>
-                      <Polyline points="0,80 50,60 100,65 150,40 200,45 250,20 300,10" fill="none" stroke="#114B3A" strokeWidth="3" />
-                      <Polyline points="0,90 50,85 100,70 150,75 200,60 250,55 300,40" fill="none" stroke="#DE9A2F" strokeWidth="2" strokeDasharray="4, 4" />
-                      <Polyline points="0,95 50,90 100,85 150,80 200,75 250,70 300,65" fill="none" stroke="#3b82f6" strokeWidth="2" />
-                    </>
-                  ) : (
-                    <>
-                      <Polyline points="0,40 50,30 100,35 150,20 200,25 250,15 300,5" fill="none" stroke="#114B3A" strokeWidth="3" />
-                      <Polyline points="0,60 50,55 100,40 150,45 200,30 250,25 300,20" fill="none" stroke="#DE9A2F" strokeWidth="2" strokeDasharray="4, 4" />
-                      <Polyline points="0,80 50,75 100,70 150,65 200,60 250,55 300,50" fill="none" stroke="#3b82f6" strokeWidth="2" />
-                    </>
-                  )}
-                </Svg>
-              </View>
-            </View>
-          </View>
+          
 
           {/* TODAY'S TASKS */}
           <View>
@@ -569,7 +577,7 @@ export default function YieldDashboardScreen() {
               <Search size={18} color="#94a3b8" />
               <TextInput 
                 style={Platform.OS === 'web' ? { outline: 'none' } as any : {}}
-                className="flex-1 ml-3 text-sm font-semibold text-slate-700 h-8"
+                className="flex-1 ml-3 text-sm font-semibold text-slate-700 py-0 min-h-[32px]"
                 placeholder="Search farms by name or location..."
                 placeholderTextColor="#94a3b8"
                 value={searchQuery}
@@ -601,9 +609,18 @@ export default function YieldDashboardScreen() {
                           </View>
                         </View>
                       </View>
-                      <View className="bg-[#fef3c7] px-3 py-1.5 rounded-[20px]">
-                        <Text className="text-[10px] font-bold text-amber-700">12 Days Left</Text>
-                      </View>
+                      {(() => {
+                        const daysLeft = getDaysLeft(farm);
+                        const isUrgent = daysLeft <= 7;
+                        const isOverdue = daysLeft < 0;
+                        return (
+                          <View className={`px-3 py-1.5 rounded-[20px] ${isOverdue ? 'bg-red-100' : isUrgent ? 'bg-amber-100' : 'bg-emerald-100'}`}>
+                            <Text className={`text-[10px] font-bold ${isOverdue ? 'text-red-700' : isUrgent ? 'text-amber-700' : 'text-emerald-700'}`}>
+                              {isOverdue ? `${Math.abs(daysLeft)}d Overdue` : `${daysLeft} Days Left`}
+                            </Text>
+                          </View>
+                        );
+                      })()}
                     </View>
 
                     {/* Stats Row */}
@@ -618,7 +635,13 @@ export default function YieldDashboardScreen() {
                       <View className="flex-row items-center gap-2">
                         <Image source={{ uri: 'https://i.ibb.co/gbSQjznt/coconut-fruit.png' }} style={{ width: 20, height: 20, resizeMode: 'contain' }} />
                         <View>
-                          <Text className="text-sm font-bold text-slate-800">{farm.lastHarvestYield ? farm.lastHarvestYield : (farm.totalTrees * 6)}</Text>
+                          {loadingPredictions[farm.id] ? (
+                            <ActivityIndicator size="small" color="#16a34a" />
+                          ) : (
+                            <Text className="text-sm font-bold text-slate-800">
+                              {farmPredictions[farm.id] !== undefined ? farmPredictions[farm.id] : (farm.lastHarvestYield || '—')}
+                            </Text>
+                          )}
                           <Text className="text-[10px] text-slate-500 font-medium">Predicted Nuts</Text>
                         </View>
                       </View>
@@ -666,7 +689,7 @@ export default function YieldDashboardScreen() {
           </View>
 
           {/* Global Summary PDF Export Button */}
-          <TouchableOpacity onPress={() => console.log("Exporting PDF")} className="bg-forest-700 py-4 rounded-2xl flex-row items-center justify-center gap-2 shadow-sm mb-6">
+          <TouchableOpacity onPress={() => exportAllFarmsReportPDF(farms)} className="bg-forest-700 py-4 rounded-2xl flex-row items-center justify-center gap-2 shadow-sm mb-6">
             <FileText size={18} color="#fff" />
             <Text className="text-white font-bold text-sm">Export All Farms Summary Report (PDF)</Text>
           </TouchableOpacity>
