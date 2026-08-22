@@ -1,12 +1,14 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
-import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { auth, rtdb } from "@/services/firebase";
+import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from "react";
+import { rtdb } from "@/services/firebase";
 import { ref, onValue } from "firebase/database";
 import type { AppUser, Farm, Zone } from "@/types/yield";
 import { subscribeFarms, subscribeZones } from "@/services/yieldFarmDb";
+import { useAppStore } from "@/store/appStore";
+
+const DEFAULT_DEMO_UID = process.env.EXPO_PUBLIC_DEMO_UID || "DkjGfclo7uQnopbpPbmZICE5Vt13";
 
 interface YieldAppContextValue {
-  user: AppUser | null;
+  user: AppUser;
   authReady: boolean;
   farms: Farm[];
   currentFarmId: string | null;
@@ -18,52 +20,42 @@ interface YieldAppContextValue {
 const YieldAppContext = createContext<YieldAppContextValue | null>(null);
 
 export function YieldAppProvider({ children }: { children: ReactNode }) {
-  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
-  const [authReady, setAuthReady] = useState(false);
+  const mainUser = useAppStore((state) => state.user);
+  const isGuest = useAppStore((state) => state.isGuest);
+
   const [farms, setFarms] = useState<Farm[]>([]);
   const [currentFarmId, setCurrentFarmId] = useState<string | null>(null);
   const [currentZones, setCurrentZones] = useState<Zone[]>([]);
 
-  // --- auth ---
-  useEffect(() => {
-    try {
-      if (auth && typeof onAuthStateChanged === "function") {
-        const unsub = onAuthStateChanged(auth, (fbUser) => {
-          setFirebaseUser(fbUser);
-          setAuthReady(true);
-        });
-        return unsub;
-      } else {
-        setAuthReady(true);
-      }
-    } catch {
-      setAuthReady(true);
+  // Derive active user identity directly from SaruPol session
+  const user: AppUser = useMemo(() => {
+    if (mainUser && !isGuest) {
+      return {
+        uid: `sarupol_user_${mainUser.id}`,
+        email: mainUser.email,
+        displayName: mainUser.name,
+      };
     }
-  }, []);
-
-  const user = firebaseUser ? {
-    uid: firebaseUser.uid,
-    email: firebaseUser.email,
-    displayName: firebaseUser.displayName
-  } : null;
+    return {
+      uid: DEFAULT_DEMO_UID,
+      email: "guest@sarupol.lk",
+      displayName: "Estate Manager",
+    };
+  }, [mainUser, isGuest]);
 
   // --- farms subscription ---
   useEffect(() => {
-    if (!user) {
-      setFarms([]);
-      return;
-    }
     try {
       const unsub = subscribeFarms(user.uid, setFarms);
       return unsub;
     } catch (e) {
       console.warn("[YieldAppContext] Failed to subscribe to farms:", e);
     }
-  }, [user]);
+  }, [user.uid]);
 
   // --- zones subscription for the currently-open farm ---
   useEffect(() => {
-    if (!user || !currentFarmId) {
+    if (!currentFarmId) {
       setCurrentZones([]);
       return;
     }
@@ -73,7 +65,7 @@ export function YieldAppProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       console.warn("[YieldAppContext] Failed to subscribe to zones:", e);
     }
-  }, [user, currentFarmId]);
+  }, [user.uid, currentFarmId]);
 
   // --- telemetry device id live presence (for "ESP32 LIVE" badge) ---
   const [deviceLive, setDeviceLive] = useState(false);
@@ -99,7 +91,7 @@ export function YieldAppProvider({ children }: { children: ReactNode }) {
     <YieldAppContext.Provider
       value={{
         user,
-        authReady,
+        authReady: true,
         farms,
         currentFarmId,
         currentFarm,
