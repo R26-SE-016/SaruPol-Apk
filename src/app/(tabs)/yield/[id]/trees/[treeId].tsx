@@ -12,8 +12,7 @@ import { updateTreeData } from "@/services/yieldFarmDb";
 import type { TreeStatus, TreeHealth, YieldRecord, Tree } from "@/types/yield";
 import { Plus, Trash2, Calendar } from "lucide-react-native";
 
-import { getBaseIp } from "@/services/api";
-const AI_GATEWAY_URL = `http://${getBaseIp()}:5001`;
+import api from "@/services/api";
 
 const calculateTreeHealth = (diseaseVal: string, yieldVal: number) => {
   if (diseaseVal && diseaseVal.trim().length > 0) return { status: "Diseased", health: "Weak" };
@@ -166,7 +165,7 @@ export default function SingleTreeScreen() {
     setPredicting(true);
     setSaving(true);
     try {
-      const response = await axios.post(`${AI_GATEWAY_URL}/predict`, {
+      const response = await api.post(`/yield/predict`, {
         district: farmLocation,
         year: new Date().getFullYear(),
         month: new Date().getMonth() + 1,

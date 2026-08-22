@@ -404,7 +404,7 @@ export default function YieldDashboardScreen() {
             style={{ position: 'absolute', width: '100%', height: '100%' }} 
           />
           
-          <View className="px-5 pt-12 pb-24">
+          <View className="px-5 pt-20 pb-14">
             {/* Top Nav */}
             <View className="flex-row items-center justify-between mb-8">
               <View className="flex-row items-center gap-3">
@@ -422,13 +422,10 @@ export default function YieldDashboardScreen() {
                 )}
               </TouchableOpacity>
             </View>
-
-            <Text className="text-2xl font-bold text-white mb-2">Welcome back, {userName}! 👋</Text>
-            <Text className="text-white/80 text-[13px] w-4/5 leading-5 mb-4">Predict and manage your coconut harvest accurately.</Text>
           </View>
         </View>
 
-        <View className="px-4 gap-6" style={{ marginTop: -60 }}>
+        <View className="px-4 gap-6" style={{ marginTop: -35 }}>
           
           {/* Harvest Reminder Banner */}
           {currentFarm && daysRemaining <= 7 && (

@@ -137,7 +137,7 @@ export default function FarmDetailScreen() {
           </View>
         </View>
 
-        <TouchableOpacity onPress={() => router.push(('(/tabs)/yield/add-farm?id=' + farm.id) as any)} className="flex-row items-center gap-1.5 bg-white/15 px-3 py-1.5 rounded-lg">
+        <TouchableOpacity onPress={() => router.push(`/yield/add-farm?id=${farm.id}`)} className="flex-row items-center gap-1.5 bg-white/15 px-3 py-1.5 rounded-lg">
           <Pencil size={12} color="#fff" />
           <Text className="text-white text-xs font-bold">Edit Farm Details</Text>
         </TouchableOpacity>

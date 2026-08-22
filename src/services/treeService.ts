@@ -22,9 +22,9 @@ export interface TreeHistoryRecord {
   disease: string | null;
 }
 
-export const fetchTreeData = async (farmId: string, treeId: string): Promise<TreeData | null> => {
+export const fetchTreeData = async (uid: string, farmId: string, treeId: string): Promise<TreeData | null> => {
   try {
-    const snapshot = await get(ref(rtdb, `farms/${farmId}/trees/${treeId}`));
+    const snapshot = await get(ref(rtdb, `trees/${uid}/${farmId}/${treeId}`));
     if (snapshot.exists()) {
       return snapshot.val() as TreeData;
     }
@@ -35,9 +35,9 @@ export const fetchTreeData = async (farmId: string, treeId: string): Promise<Tre
   }
 };
 
-export const fetchAllTrees = async (farmId: string): Promise<TreeData[]> => {
+export const fetchAllTrees = async (uid: string, farmId: string): Promise<TreeData[]> => {
   try {
-    const snapshot = await get(ref(rtdb, `farms/${farmId}/trees`));
+    const snapshot = await get(ref(rtdb, `trees/${uid}/${farmId}`));
     if (snapshot.exists()) {
       const treesObj = snapshot.val();
       return Object.values(treesObj) as TreeData[];
@@ -49,10 +49,10 @@ export const fetchAllTrees = async (farmId: string): Promise<TreeData[]> => {
   }
 };
 
-export const initializeFarmTrees = async (farmId: string, treeCount: number) => {
+export const initializeFarmTrees = async (uid: string, farmId: string, treeCount: number) => {
   try {
     for (let i = 1; i <= treeCount; i++) {
-      const treeRef = ref(rtdb, `farms/${farmId}/trees/${i}`);
+      const treeRef = ref(rtdb, `trees/${uid}/${farmId}/${i}`);
       const snapshot = await get(treeRef);
       if (!snapshot.exists()) {
         await set(treeRef, {
@@ -68,9 +68,9 @@ export const initializeFarmTrees = async (farmId: string, treeCount: number) => 
   }
 };
 
-export const updateTreeLatestData = async (farmId: string, treeId: string, telemetry: TelemetryData) => {
+export const updateTreeLatestData = async (uid: string, farmId: string, treeId: string, telemetry: TelemetryData) => {
   try {
-    await update(ref(rtdb, `farms/${farmId}/trees/${treeId}`), {
+    await update(ref(rtdb, `trees/${uid}/${farmId}/${treeId}`), {
       latest: telemetry
     });
   } catch (error) {
@@ -78,9 +78,9 @@ export const updateTreeLatestData = async (farmId: string, treeId: string, telem
   }
 };
 
-export const saveTreeHistory = async (farmId: string, treeId: string, record: TreeHistoryRecord) => {
+export const saveTreeHistory = async (uid: string, farmId: string, treeId: string, record: TreeHistoryRecord) => {
   try {
-    const historyRef = ref(rtdb, `farms/${farmId}/trees/${treeId}/history`);
+    const historyRef = ref(rtdb, `trees/${uid}/${farmId}/${treeId}/history`);
     const newRecordRef = push(historyRef);
     await set(newRecordRef, record);
     return newRecordRef.key;
@@ -90,9 +90,9 @@ export const saveTreeHistory = async (farmId: string, treeId: string, record: Tr
   }
 };
 
-export const updateTreeHistoryRecord = async (farmId: string, treeId: string, recordId: string, updates: Partial<TreeHistoryRecord>) => {
+export const updateTreeHistoryRecord = async (uid: string, farmId: string, treeId: string, recordId: string, updates: Partial<TreeHistoryRecord>) => {
   try {
-    await update(ref(rtdb, `farms/${farmId}/trees/${treeId}/history/${recordId}`), updates);
+    await update(ref(rtdb, `trees/${uid}/${farmId}/${treeId}/history/${recordId}`), updates);
   } catch (error) {
     console.error("Error updating tree history record:", error);
   }
