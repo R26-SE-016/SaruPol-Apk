@@ -47,7 +47,7 @@ export default function WelcomeScreen() {
     if (!validate()) return;
     setLoading(true);
 
-    const endpoint = isRegisterMode ? '/api/auth/register' : '/api/auth/login';
+    const endpoint = isRegisterMode ? '/auth/register' : '/auth/login';
     const payload = isRegisterMode ? { name, email, password } : { email, password };
 
     try {
@@ -62,11 +62,17 @@ export default function WelcomeScreen() {
       
       // Fallback/Simulation mode in case backend isn't running
       setTimeout(async () => {
-        const dummyToken = 'simulated_jwt_token_for_sarupol';
+        let hash = 0;
+        for (let i = 0; i < (email || 'guest').length; i++) {
+          hash = ((hash << 5) - hash) + (email || 'guest').charCodeAt(i);
+          hash |= 0;
+        }
+        const dummyId = Math.abs(hash) || Date.now();
+        const dummyToken = `simulated_jwt_token_${dummyId}`;
         const dummyUser = {
-          id: 101,
+          id: dummyId,
           name: name || 'Coconut Farmer',
-          email: email,
+          email: email || 'farmer@sarupol.lk',
           role: 'user'
         };
         await loginUser(dummyToken, dummyUser);
