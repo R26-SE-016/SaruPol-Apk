@@ -5,8 +5,7 @@ import { Search, X, MapPin, ChevronRight, ArrowLeft } from "lucide-react-native"
 import { useYieldApp } from "@/store/YieldAppContext";
 import { LinearGradient } from "expo-linear-gradient";
 import { predictDashboardYield } from "@/services/yieldService";
-import { get, ref } from "firebase/database";
-import { rtdb } from "@/services/firebase";
+import { fetchHarvestLogs } from "@/services/yieldFarmDb";
 import type { Farm } from "@/types/yield";
 
 export default function YieldFarmsListScreen() {
@@ -42,19 +41,15 @@ export default function YieldFarmsListScreen() {
       if (farmPredictions[farm.id] !== undefined) return;
       setLoadingPredictions(prev => ({ ...prev, [farm.id]: true }));
       try {
-        const logsRef = ref(rtdb, `users/${user.uid}/harvests/${farm.id}`);
-        const snap = await get(logsRef);
-        let logs: any[] = [];
-        if (snap.exists()) {
-          const vals = snap.val();
-          logs = Object.entries(vals).map(([id, l]: [string, any]) => ({
-            id,
-            date: l.date || l.timestamp,
-            actual_yield_nuts: l.nutCount || 0,
-            predicted_yield_nuts: l.predicted_yield_nuts || 0
-          }));
-          logs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        }
+        const rawLogs = await fetchHarvestLogs(user.uid, farm.id);
+        const logs = rawLogs.map((l: any) => ({
+          id: l.id,
+          date: l.date || l.timestamp,
+          actual_yield_nuts: l.nutCount || 0,
+          predicted_yield_nuts: l.predicted_yield_nuts || 0
+        }));
+        logs.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
         const result = await predictDashboardYield({
           uid: user.uid,
           farm_id: farm.id,
