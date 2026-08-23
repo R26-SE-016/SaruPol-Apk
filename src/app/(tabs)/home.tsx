@@ -61,7 +61,8 @@ export default function HomeScreen() {
       logoutMsg,
       [
         { text: t('common.cancel'), style: 'cancel' },
-        { text: t('auth.loginBtn'), onPress: async () => {
+        {
+          text: t('auth.loginBtn'), onPress: async () => {
             await logoutUser();
             router.replace('/');
           }
@@ -187,7 +188,7 @@ export default function HomeScreen() {
               <Ionicons name="leaf" size={28} color={COLORS.info} />
             </View>
             <Text style={styles.gridBtnText}>
-              {language === 'ta' ? 'மண் ஆரோக்கியம்' : language === 'si' ? 'පාංශු පරීක්ෂාව' : 'Soil Health'}
+              {language === 'ta' ? 'மண் ஆரோக்கியம்' : language === 'si' ? 'පෝෂණ තත්ත්ව පරීක්ෂාව' : 'Nutrition Checker'}
             </Text>
           </TouchableOpacity>
 
@@ -235,8 +236,8 @@ export default function HomeScreen() {
             {language === 'ta'
               ? 'நிலையான NPK உரத்துடன் கரிம உரத்தைச் சேர்ப்பதன் மூலம் மண்ணின் கரிம செறிவு மற்றும் ஈரப்பதத்தை தக்கவைக்கும் திறன் மேம்படும், இது ஒட்டுமொத்த விளைச்சலை 15% வரை அதிகரிக்கும்.'
               : language === 'si'
-              ? 'සාමාන්‍ය NPK පොහොර සමඟ කාබනික කොම්පෝස්ට් යෙදීමෙන් පසේ කාබන් සාන්ද්‍රණය සහ ජලය රඳවා ගැනීමේ හැකියාව වැඩි දියුණු වන අතර එමඟින් මුළු අස්වැන්න 15% කින් පමණ ඉහළ යයි.'
-              : 'Applying Organic Compost along with standard NPK doses improves soil carbon concentration and moisture holding capacity, raising overall palm yield by up to 15%.'}
+                ? 'සාමාන්‍ය NPK පොහොර සමඟ කාබනික කොම්පෝස්ට් යෙදීමෙන් පසේ කාබන් සාන්ද්‍රණය සහ ජලය රඳවා ගැනීමේ හැකියාව වැඩි දියුණු වන අතර එමඟින් මුළු අස්වැන්න 15% කින් පමණ ඉහළ යයි.'
+                : 'Applying Organic Compost along with standard NPK doses improves soil carbon concentration and moisture holding capacity, raising overall palm yield by up to 15%.'}
           </Text>
         </GlassCard>
 

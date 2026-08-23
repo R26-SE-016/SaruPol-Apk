@@ -67,7 +67,7 @@ export default {
     tipTitle: "Tip of the Day",
     statsTotalScans: "Total Scans",
     statsAvgYield: "Avg Yield",
-    statsSoilScore: "Soil Score",
+    statsSoilScore: "Nutrition Checker",
     noRecentActivity: "No recent scans or predictions found."
   },
   pathology: {
