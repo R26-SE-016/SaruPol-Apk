@@ -6,10 +6,10 @@ import {
   TouchableOpacity,
   Platform,
   ScrollView,
+  useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import SoilMapCanvas, { ZoneNode } from '../../components/SoilMapCanvas';
 
 export default function SoilDashboard() {
   const router = useRouter();
@@ -23,20 +23,11 @@ export default function SoilDashboard() {
       {/* Top Header Section */}
       <View style={styles.headerRow}>
         <View>
-          <Text style={styles.headerTitle}>Field Sense</Text>
+          <Text style={styles.headerTitle}>Nutrition Checker</Text>
           <Text style={styles.headerSubtitle}>
-            Soil monitoring · live sensor overview
+            Monitor and manage plant & soil nutrients
           </Text>
         </View>
-
-        <TouchableOpacity
-          style={styles.actionButton}
-          activeOpacity={0.85}
-          onPress={() => router.push('/(screens)/check-new-tree')}
-        >
-          <Text style={styles.actionButtonText}>Check your estate soil</Text>
-          <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
-        </TouchableOpacity>
       </View>
 
       {/* 7 Parameter Cards Row/Grid (N, P, K, pH, Conductivity, Humidity, Temperature) */}
@@ -133,21 +124,73 @@ export default function SoilDashboard() {
         />
       </View>
 
-      {/* Bottom Layout: Field Map & NPK Levels Panel */}
-      <View style={styles.bottomSection}>
-        {/* Left Card: Field Map (Rathmalagata Estate GIS Map) */}
-        <View style={styles.mapCard}>
-          <View style={styles.cardHeaderRow}>
-            <View style={styles.cardHeaderTitleGroup}>
-              <Ionicons name="location-outline" size={18} color="#2F5826" />
-              <Text style={styles.cardTitle}>Field map · Makadura Estate</Text>
+      <Text style={styles.sectionHeader}>1. Live IOT Sensors</Text>
+      <View style={styles.sectionContainer}>
+        <TouchableOpacity 
+          style={styles.nutrientBtn} 
+          activeOpacity={0.85}
+          onPress={() => router.push('/(screens)/check-new-tree')}
+        >
+          <View style={styles.nutrientBtnContent}>
+            <Ionicons name="hardware-chip-outline" size={24} color="#4A7C3B" />
+            <View style={{flex: 1}}>
+              <Text style={styles.nutrientBtnTitle}>
+                Check live sensor data
+              </Text>
+              <Text style={styles.nutrientBtnSub}>
+                View real-time IoT readings from your plantation
+              </Text>
             </View>
-            <Text style={styles.cardSubtitle}>Satellite & Coconut Tree Layer</Text>
+            <Ionicons name="chevron-forward" size={20} color="#717B6E" />
           </View>
-
-          <SoilMapCanvas />
-        </View>
+        </TouchableOpacity>
       </View>
+
+      <Text style={styles.sectionHeader}>2. Leaf Nutrient Scan</Text>
+      <View style={styles.sectionContainer}>
+        <TouchableOpacity 
+          style={styles.nutrientBtn} 
+          activeOpacity={0.85}
+          onPress={() => router.push('/(screens)/nutrient-analysis' as any)}
+        >
+          <View style={styles.nutrientBtnContent}>
+            <Ionicons name="camera-outline" size={24} color="#4A7C3B" />
+            <View style={{flex: 1}}>
+              <Text style={styles.nutrientBtnTitle}>
+                Scan Leaf for Nutrients
+              </Text>
+              <Text style={styles.nutrientBtnSub}>
+                Check for Nitrogen & Boron deficiencies via Leaf Image
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#717B6E" />
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.sectionHeader}>3. Lab Test Results</Text>
+      <View style={styles.sectionContainer}>
+        <TouchableOpacity 
+          style={styles.labBtn} 
+          activeOpacity={0.85}
+          onPress={() => router.push('/(screens)/lab-test-entry' as any)}
+        >
+          <View style={styles.nutrientBtnContent}>
+            <Ionicons name="flask-outline" size={24} color="#005A9C" />
+            <View style={{flex: 1}}>
+              <Text style={[styles.nutrientBtnTitle, { color: '#003366' }]}>
+                Enter Lab Test Results
+              </Text>
+              <Text style={styles.nutrientBtnSub}>
+                Add manual lab test results to check conditions
+              </Text>
+            </View>
+            <Ionicons name="add-circle-outline" size={20} color="#717B6E" />
+          </View>
+        </TouchableOpacity>
+      </View>
+
+
     </ScrollView>
   );
 }
@@ -174,6 +217,9 @@ function MetricCard({
   maxVal: number;
   targetText?: string;
 }) {
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
+
   const percent = Math.min(
     100,
     Math.max(0, ((currentVal - minVal) / (maxVal - minVal || 1)) * 100)
@@ -182,7 +228,7 @@ function MetricCard({
   const isOptimal = status === 'Optimal';
 
   return (
-    <View style={styles.metricCard}>
+    <View style={[styles.metricCard, { width: isMobile ? '47%' : '23%' }]}>
       <View style={styles.metricHeaderRow}>
         <View style={styles.metricTitleGroup}>
           <Ionicons name={icon} size={15} color="#5C6C57" />
@@ -278,6 +324,47 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 14,
   },
+  nutrientBtn: {
+    backgroundColor: '#F3F8F2',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#D4E8D1',
+  },
+  nutrientBtnContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  nutrientBtnTitle: {
+    color: '#1B2C1A',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  nutrientBtnSub: {
+    color: '#6E7A6B',
+    fontSize: 12,
+    marginTop: 4,
+  },
+  labBtn: {
+    backgroundColor: '#E6F0FA',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#CCE0F5',
+  },
+  sectionHeader: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1B2C1A',
+    marginTop: 10,
+    marginBottom: 12,
+  },
+  sectionContainer: {
+    marginBottom: 10,
+  },
   zonePillsContainer: {
     flexDirection: 'row',
     gap: 10,
@@ -316,9 +403,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#EAE7DF',
-    padding: 14,
-    minWidth: 150,
-    flex: 1,
+    padding: 12,
     flexGrow: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -330,6 +415,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 4,
     marginBottom: 10,
   },
   metricTitleGroup: {
@@ -362,10 +449,11 @@ const styles = StyleSheet.create({
   metricValueRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
+    flexWrap: 'wrap',
     marginBottom: 12,
   },
   metricValueText: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: '800',
     color: '#1B2C1A',
   },

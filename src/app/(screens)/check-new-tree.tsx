@@ -67,7 +67,7 @@ export default function CheckNewTreeScreen() {
       const res = await fetch(`${BASE_URL}/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tree_no: "MK-101", zone_id: "Zone A" })
+        body: JSON.stringify({ tree_no: "MK-101" })
       });
       if (!res.ok) throw new Error("Failed to start analysis session on backend.");
       const data = await res.json();
