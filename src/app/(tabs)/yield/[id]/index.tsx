@@ -21,8 +21,6 @@ import { weatherInfo, shortDayName, isToday } from "@/services/weatherService";
 import { exportReportPDF } from "@/utils/yieldReportGenerator";
 import { MarketRevenueCard } from "@/components/yield/YieldDashboard/MarketRevenueCard";
 import type { Tree, Zone, Farm, AdvisoryAlert } from "@/types/yield";
-import { ref, get } from "firebase/database";
-import { rtdb } from "@/services/firebase";
 
 const WEATHER_HEX: Record<string, string> = {
   "text-amber-500": "#f59e0b", "text-sky-500": "#0ea5e9", "text-sky-600": "#0284c7",

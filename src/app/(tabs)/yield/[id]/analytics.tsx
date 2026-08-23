@@ -6,15 +6,11 @@ import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Pla
 import { ArrowLeft, ClipboardList, AlertCircle, Sprout, CheckCircle2, BarChart3, Clock, MessageSquare, Save, Calendar, Droplets, Trophy, Plus, Edit3, Share2, Download, ChevronRight } from "lucide-react-native";
 import { YieldScreenHeader } from "@/components/yield/YieldScreenHeader";
 import { useYieldApp } from "@/store/YieldAppContext";
-import { getFarm, updateFarm } from "@/services/yieldFarmDb";
+import { getFarm, updateFarm, fetchHarvestLogs, saveHarvestLog, deleteHarvestLog } from "@/services/yieldFarmDb";
 import Svg, { Polyline, Circle } from "react-native-svg";
-import { ref, get, push, update, remove } from "firebase/database";
-import { rtdb } from "@/services/firebase";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-
-
 
 export default function analyticsScreen() {
   const { t } = useTranslation();
@@ -43,7 +39,8 @@ export default function analyticsScreen() {
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   
-  
+  const [pastNuts, setPastNuts] = useState("");
+  const [isPastModalVisible, setIsPastModalVisible] = useState(false);
   const [pastMonth, setPastMonth] = useState(String(new Date().getMonth() + 1));
   const [pastYear, setPastYear] = useState(String(new Date().getFullYear()));
 
@@ -74,29 +71,21 @@ export default function analyticsScreen() {
           return;
         }
 
-        // 2. Fetch past harvest logs
-        let logs: any[] = [];
-        const logsRef = ref(rtdb, `users/${user.uid}/harvests/${farmId}`);
-        const snap = await get(logsRef);
-        if (snap.exists()) {
-          const vals = snap.val();
-          logs = Object.entries(vals).map(([id, l]: [string, any]) => ({
-            id,
-            date: l.date || l.timestamp,
-            actual_yield_nuts: l.nutCount || l.actual_yield_nuts || (l.gradeA || 0) + (l.gradeB || 0) + (l.gradeC || 0) || 0,
-            large: l.large || l.gradeA || 0,
-            medium: l.medium || l.gradeB || 0,
-            small: l.small || l.gradeC || 0,
-            predicted_yield_nuts: l.predicted_yield_nuts || 0 
-          }));
-          // sort by date desc
-          logs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        }
+        // 2. Fetch past harvest logs via REST API
+        const rawLogs = await fetchHarvestLogs(user.uid, farmId);
+        const logs = rawLogs.map((l: any) => ({
+          id: l.id,
+          date: l.date || l.timestamp,
+          actual_yield_nuts: l.nutCount || l.actual_yield_nuts || (l.gradeA || 0) + (l.gradeB || 0) + (l.gradeC || 0) || 0,
+          large: l.large || l.gradeA || 0,
+          medium: l.medium || l.gradeB || 0,
+          small: l.small || l.gradeC || 0,
+          predicted_yield_nuts: l.predicted_yield_nuts || 0 
+        }));
+        logs.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
         setPastLogs(logs);
 
         // 3. Hit Proxy for ML Prediction
-        
-        
         const reqBody = {
           uid: user.uid,
           farm_id: (f as any)._id || f.id || farmId,
@@ -127,7 +116,6 @@ export default function analyticsScreen() {
     if (!actualNuts || !user || !farmId || !farm) return;
     setSavingLog(true);
     
-    
     try {
       if (!editingLogId) {
         const payload = {
@@ -143,17 +131,15 @@ export default function analyticsScreen() {
       }
       
       if (editingLogId) {
-        const logRef = ref(rtdb, `users/${user.uid}/harvests/${farmId}/${editingLogId}`);
-        await update(logRef, {
+        await saveHarvestLog(user.uid, farmId, {
           nutCount: parseInt(actualNuts) || 0,
           large: parseInt(largeNuts) || 0,
           medium: parseInt(mediumNuts) || 0,
           small: parseInt(smallNuts) || 0,
-        });
+        }, editingLogId);
         Alert.alert("Success", "Harvest log updated!");
       } else {
-        const logsRef = ref(rtdb, `users/${user.uid}/harvests/${farmId}`);
-        await push(logsRef, {
+        await saveHarvestLog(user.uid, farmId, {
           date: new Date().toISOString(),
           nutCount: parseInt(actualNuts) || 0,
           large: parseInt(largeNuts) || 0,
@@ -172,7 +158,7 @@ export default function analyticsScreen() {
       setIsEditModalVisible(false);
       setRefreshCount(prev => prev + 1);
     } catch (err: any) {
-      console.warn("Failed saving via API/Firebase", err);
+      console.warn("Failed saving harvest log", err);
       Alert.alert("Error", "Failed to save harvest log.");
     } finally {
       setSavingLog(false);
@@ -200,8 +186,7 @@ export default function analyticsScreen() {
           onPress: async () => {
             if (!user || !farmId) return;
             try {
-              const logRef = ref(rtdb, `users/${user.uid}/harvests/${farmId}/${logId}`);
-              await remove(logRef);
+              await deleteHarvestLog(user.uid, farmId, logId);
               Alert.alert("Success", "Harvest log deleted!");
               if (editingLogId === logId) {
                 setEditingLogId(null);
@@ -229,8 +214,7 @@ export default function analyticsScreen() {
       const formattedMonth = pastMonth.padStart(2, '0');
       const isoDate = `${pastYear}-${formattedMonth}-15T12:00:00.000Z`;
       
-      const logsRef = ref(rtdb, `users/${user.uid}/harvests/${farmId}`);
-      await push(logsRef, {
+      await saveHarvestLog(user.uid, farmId, {
         date: isoDate,
         nutCount: parseInt(pastNuts) || 0,
         large: 0,
@@ -518,7 +502,7 @@ export default function analyticsScreen() {
                  const allPoints = [...svgLogs.map(l => l.actual_yield_nuts || 0), predictedNext];
                  const maxVal = Math.max(...allPoints, 1);
                  const W = 200, H = 45, pad = 5;
-                 const toY = (v) => H - pad - ((v / maxVal) * (H - 2 * pad));
+                 const toY = (v: number) => H - pad - ((v / maxVal) * (H - 2 * pad));
                  const n = allPoints.length;
                  const xs = allPoints.map((_, i) => Math.round((i / Math.max(n - 1, 1)) * W));
                  const farmPts = allPoints.map((v, i) => xs[i] + ',' + toY(v).toFixed(1)).join(' ');
