@@ -227,7 +227,7 @@ export async function exportAllFarmsReportPDF(farms: Farm[]): Promise<void> {
       <td>${f.locationName || 'N/A'}</td>
       <td>${f.perches}</td>
       <td>${f.totalTrees}</td>
-      <td>${f.deviceConnected ? 'Yes' : 'No'}</td>
+      <td>${f.deviceId ? 'Yes' : 'No'}</td>
     </tr>`;
   });
 
