@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ref, onValue, off } from 'firebase/database';
-import { rtdb } from '@/services/firebase';
 import { predictDashboardYield } from '@/services/yieldService';
+import { fetchTrees } from '@/services/yieldFarmDb';
 import type { Farm } from '@/types/yield';
 
 export function useUnifiedFarmYield(userUid: string | undefined, farms: Farm[], logsMap?: Record<string, any[]>) {
@@ -53,19 +52,21 @@ export function useUnifiedFarmYield(userUid: string | undefined, farms: Farm[], 
 
   useEffect(() => {
     if (!userUid || farms.length === 0) return;
-    const refs: any[] = [];
-    farms.forEach(farm => {
-      const treesRef = ref(rtdb, `trees/${userUid}/${farm.id}`);
-      refs.push(treesRef);
-      onValue(treesRef, (snapshot) => {
-        if (snapshot.exists()) {
-          setFarmTrees(prev => ({ ...prev, [farm.id]: snapshot.val() }));
-        } else {
-          setFarmTrees(prev => ({ ...prev, [farm.id]: {} }));
-        }
-      });
-    });
-    return () => { refs.forEach(r => off(r)); };
+    let isMounted = true;
+
+    const loadAllTrees = async () => {
+      const loaded: Record<string, Record<string, any>> = {};
+      for (const farm of farms) {
+        const trees = await fetchTrees(userUid, farm.id);
+        loaded[farm.id] = trees;
+      }
+      if (isMounted) {
+        setFarmTrees(loaded);
+      }
+    };
+
+    loadAllTrees();
+    return () => { isMounted = false; };
   }, [userUid, farms.map(f => f.id).join(',')]);
 
   const unifiedYields = useMemo(() => {
