@@ -61,8 +61,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="soil"
         options={{
-          title: t('soil.title'),
-          tabBarLabel: t('soil.title'),
+          title: 'Nutrition Checker',
+          tabBarLabel: 'Nutrition Checker',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? "leaf" : "leaf-outline"} size={24} color={color} />
           ),
