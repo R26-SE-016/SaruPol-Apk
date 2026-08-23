@@ -12,7 +12,7 @@ import {
 import Svg, { Polyline, Circle as SvgCircle, G, Line, Text as SvgText } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
 import { useYieldApp } from "@/store/YieldAppContext";
-import { deleteFarm, subscribeTrees } from "@/services/yieldFarmDb";
+import { deleteFarm, subscribeTrees, fetchHarvestLogs } from "@/services/yieldFarmDb";
 import { predictDashboardYield } from "@/services/yieldService";
 import { useUnifiedFarmYield } from "@/hooks/useUnifiedFarmYield";
 import { buildFarmData, aggregateHealth, healthColor } from "@/utils/yieldTreeFactory";
@@ -22,8 +22,6 @@ import { weatherInfo, shortDayName, isToday } from "@/services/weatherService";
 import { exportReportPDF, exportAllFarmsReportPDF } from "@/utils/yieldReportGenerator";
 import { MarketRevenueCard } from "@/components/yield/YieldDashboard/MarketRevenueCard";
 import type { Farm, AdvisoryAlert, Tree } from "@/types/yield";
-import { ref, get, onValue, update, set, remove, push } from "firebase/database";
-import { rtdb } from "@/services/firebase";
 
 interface DashboardProps {
   onOpenFarm: (farmId: string) => void;
@@ -59,14 +57,20 @@ export default function YieldDashboardScreen() {
   }, []);
 
   const router = useRouter();
-  const onAddFarm = () => router.push('/yield/add-farm');
-  const { user, farms, currentFarm, currentZones, setCurrentFarmId } = useYieldApp();
-  const [farmMenuOpen, setFarmMenuOpen] = useState(false);
-  const [langOpen, setLangOpen] = useState(false);
+  const params = useLocalSearchParams();
+  const onAddFarm = () => router.push('/yield/add-farm' as any);
+  const { user, farms, currentFarm, currentFarmId, setCurrentFarmId, currentZones } = useYieldApp();
+
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
-  const [dashboardPrediction, setDashboardPrediction] = useState<any>(null);
-  const [isPredicting, setIsPredicting] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  // Weather & Telemetry Details Modal State
+  const [weatherDetailsOpen, setWeatherDetailsOpen] = useState(false);
+  const [activeWeatherTab, setActiveWeatherTab] = useState<'overview' | 'sensors' | 'history'>('overview');
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+
   const [searchQuery, setSearchQuery] = useState("");
   
   // Market & Task State
@@ -80,103 +84,31 @@ export default function YieldDashboardScreen() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [dbTasks, setDbTasks] = useState<any[]>([]);
   const [recentHarvestLogs, setRecentHarvestLogs] = useState<any[]>([]);
+  const [isPredicting, setIsPredicting] = useState(false);
+  const [dashboardPrediction, setDashboardPrediction] = useState<any>(null);
 
-  useEffect(() => {
-    if (!user) return;
-    // Subscribe to notifications
-    const notifRef = ref(rtdb, `users/${user.uid}/notifications`);
-    const unsubNotif = onValue(notifRef, (snap) => {
-      if (snap.exists()) {
-        const data = snap.val();
-        const arr = Object.entries(data).map(([id, val]: [string, any]) => ({ id, ...val }));
-        arr.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-        setNotifications(arr);
-      } else {
-        setNotifications([]);
-      }
-    });
-
-    // Subscribe to tasks
-    const tasksRef = ref(rtdb, `users/${user.uid}/tasks`);
-    const unsubTasks = onValue(tasksRef, (snap) => {
-      if (snap.exists()) {
-        const data = snap.val();
-        const arr = Object.entries(data).map(([id, val]: [string, any]) => ({ id, ...val }));
-        arr.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        setDbTasks(arr);
-      } else {
-        setDbTasks([]);
-      }
-    });
-
-    return () => { unsubNotif(); unsubTasks(); };
-  }, [user]);
-
-  // Subscribe to all farm devices to get real-time heartbeat
-  useEffect(() => {
-    const unsubs: (() => void)[] = [];
-    const lastSeenMap: Record<string, number> = {};
-
-    farms.forEach(farm => {
-      farm.deviceIds?.forEach(deviceId => {
-        const path = `/devices/${deviceId}/latest`;
-        const unsub = onValue(ref(rtdb, path), snap => {
-          const v = snap.val();
-          if (v) {
-            const lastSeen = v.last_seen ? new Date(v.last_seen).getTime() : (v.timestamp ? new Date(v.timestamp).getTime() : Date.now());
-            lastSeenMap[deviceId] = lastSeen;
-            setDeviceStatusMap(prev => ({ ...prev, [deviceId]: (Date.now() - lastSeen < 180000) }));
-          } else {
-            setDeviceStatusMap(prev => ({ ...prev, [deviceId]: false }));
-          }
-        });
-        unsubs.push(unsub);
-      });
-    });
-    
-    const interval = setInterval(() => {
-      setDeviceStatusMap(prev => {
-        let changed = false;
-        const next = { ...prev };
-        Object.keys(lastSeenMap).forEach(deviceId => {
-          const isLive = Date.now() - lastSeenMap[deviceId] < 180000;
-          if (next[deviceId] !== isLive) {
-            next[deviceId] = isLive;
-            changed = true;
-          }
-        });
-        return changed ? next : prev;
-      });
-    }, 10000);
-
-    return () => {
-      unsubs.forEach(u => u());
-      clearInterval(interval);
-    };
-  }, [farms]);
-  
   const toggleTask = (id: string, currentCompleted: boolean) => {
-    if (!user) return;
-    update(ref(rtdb, `users/${user.uid}/tasks/${id}`), { completed: !currentCompleted });
+    setDbTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !currentCompleted } : t));
   };
   
   const handleDeleteTask = () => {
-    if (taskToDelete && user) {
-      remove(ref(rtdb, `users/${user.uid}/tasks/${taskToDelete}`));
+    if (taskToDelete) {
+      setDbTasks(prev => prev.filter(t => t.id !== taskToDelete));
       setTaskToDelete(null);
     }
   };
 
   const handleSaveTask = () => {
-    if (!newTaskTitle || !newTaskFarmId || !user) return;
+    if (!newTaskTitle || !newTaskFarmId) return;
     const farm = farms.find(f => f.id === newTaskFarmId);
-    push(ref(rtdb, `users/${user.uid}/tasks`), {
+    setDbTasks(prev => [{
+      id: `task_${Date.now()}`,
       farmName: farm?.name || "Unknown Farm",
       title: newTaskTitle,
       priority: "medium",
       completed: false,
       createdAt: Date.now()
-    });
+    }, ...prev]);
     setNewTaskTitle("");
     setNewTaskFarmId("");
     setAddTaskModalOpen(false);
@@ -190,22 +122,17 @@ export default function YieldDashboardScreen() {
     const fetchPrediction = async () => {
       setIsPredicting(true);
       try {
-        const logsRef = ref(rtdb, `users/${user.uid}/harvests/${currentFarm.id}`);
-        const snap = await get(logsRef);
-        let logs: any[] = [];
-        if (snap.exists()) {
-          const vals = snap.val();
-          logs = Object.entries(vals).map(([id, l]: [string, any]) => ({
-            id,
-            date: l.date || l.timestamp,
-            actual_yield_nuts: l.nutCount || l.actual_yield_nuts || (l.gradeA || 0) + (l.gradeB || 0) + (l.gradeC || 0) || 0,
-            large: l.large || l.gradeA || 0,
-            medium: l.medium || l.gradeB || 0,
-            small: l.small || l.gradeC || 0,
-            predicted_yield_nuts: l.predicted_yield_nuts || 0 
-          }));
-          logs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        }
+        const rawLogs = await fetchHarvestLogs(user.uid, currentFarm.id);
+        const logs = rawLogs.map((l: any) => ({
+          id: l.id,
+          date: l.date || l.timestamp,
+          actual_yield_nuts: l.nutCount || l.actual_yield_nuts || (l.gradeA || 0) + (l.gradeB || 0) + (l.gradeC || 0) || 0,
+          large: l.large || l.gradeA || 0,
+          medium: l.medium || l.gradeB || 0,
+          small: l.small || l.gradeC || 0,
+          predicted_yield_nuts: l.predicted_yield_nuts || 0 
+        }));
+        logs.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
         setRecentHarvestLogs(logs);
 
         const reqBody = {
@@ -246,20 +173,18 @@ export default function YieldDashboardScreen() {
       if (farmPredictions[farm.id] !== undefined) return;
       setLoadingPredictions(prev => ({ ...prev, [farm.id]: true }));
       try {
-        const logsRef = ref(rtdb, `users/${user.uid}/harvests/${farm.id}`);
-        const snap = await get(logsRef);
-        let logs = [];
-        if (snap.exists()) {
-          const vals = snap.val();
-          logs = Object.entries(vals).map(([id, l]) => ({
-            id, date: l.date || l.timestamp,
-            actual_yield_nuts: l.nutCount || l.actual_yield_nuts || 0,
-            predicted_yield_nuts: l.predicted_yield_nuts || 0
-          }));
-          logs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        }
+        const rawLogs = await fetchHarvestLogs(user.uid, farm.id);
+        const logs = rawLogs.map((l: any) => ({
+          id: l.id,
+          date: l.date || l.timestamp,
+          actual_yield_nuts: l.nutCount || l.actual_yield_nuts || 0,
+          predicted_yield_nuts: l.predicted_yield_nuts || 0
+        }));
+        logs.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
         const result = await predictDashboardYield({
-          uid: user.uid, farm_id: farm.id,
+          uid: user.uid,
+          farm_id: farm.id,
           estate: farm.locationName || 'Makandura',
           trees_count: farm.totalTrees || 40,
           last_harvest_yield: farm.lastHarvestYield || null,
@@ -710,10 +635,7 @@ export default function YieldDashboardScreen() {
               <View className="flex-row items-center gap-4">
                 {unreadNotifs > 0 && (
                   <TouchableOpacity onPress={() => {
-                    if (!user) return;
-                    notifications.forEach(n => {
-                      if (!n.isRead) update(ref(rtdb, `users/${user.uid}/notifications/${n.id}`), { isRead: true });
-                    });
+                    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
                   }}>
                     <Text className="text-xs font-bold text-forest-600">Mark all as read</Text>
                   </TouchableOpacity>
@@ -741,7 +663,7 @@ export default function YieldDashboardScreen() {
                     <TouchableOpacity 
                       key={notif.id}
                       onPress={() => {
-                        if (user) update(ref(rtdb, `users/${user.uid}/notifications/${notif.id}`), { isRead: true });
+                        setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, isRead: true } : n));
                         if (notif.farmId) {
                           setNotificationsOpen(false);
                           setCurrentFarmId(notif.farmId);

@@ -2,16 +2,13 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, ActivityIndicator, TextInput, Alert, Image } from "react-native";
 import { ArrowLeft, Save, AlertTriangle, Thermometer, Droplets, FlaskConical, Info, FileDown, Search, CheckCircle2, XCircle, Zap, Edit3 } from "lucide-react-native";
 import { useState, useEffect } from "react";
-import { ref, get, set, update } from "firebase/database";
-import { rtdb } from "@/services/firebase";
 import { LinearGradient } from "expo-linear-gradient";
-import axios from 'axios';
 import { useYieldApp } from "@/store/YieldAppContext";
 import { statusColor, healthColor, statusLabel } from "@/utils/yieldTreeFactory";
-import { updateTreeData } from "@/services/yieldFarmDb";
+import { getFarm, updateTreeData } from "@/services/yieldFarmDb";
+import { fetchTreeData, saveTreeHistory, updateTreeHistoryRecord } from "@/services/treeService";
 import type { TreeStatus, TreeHealth, YieldRecord, Tree } from "@/types/yield";
 import { Plus, Trash2, Calendar } from "lucide-react-native";
-
 import api from "@/services/api";
 
 const calculateTreeHealth = (diseaseVal: string, yieldVal: number) => {
@@ -36,7 +33,7 @@ export default function SingleTreeScreen() {
   const [treeData, setTreeData] = useState<any>(null);
   const [iotLive, setIotLive] = useState(false);
 
-  // Manual Sensor Input State (defaults, will be overridden from Firebase)
+  // Manual Sensor Input State (defaults, will be overridden from database)
   const [manualN, setManualN] = useState("45");
   const [manualP, setManualP] = useState("20");
   const [manualK, setManualK] = useState("60");
@@ -60,17 +57,14 @@ export default function SingleTreeScreen() {
 
   useEffect(() => {
     loadTreeData();
-  }, [treeId]);
+  }, [treeId, user?.uid]);
 
   const loadTreeData = async () => {
+    if (!user) return;
     try {
-      const treeRef = ref(rtdb, `trees/${user?.uid}/${farmId}/${treeId}`);
-      const snapshot = await get(treeRef);
-      let tData: any = { id: treeId, latest: null, history: {} };
-      if (snapshot.exists()) {
-        tData = snapshot.val();
-      } else {
-        await set(treeRef, tData);
+      let tData: any = await fetchTreeData(user.uid, farmId, treeId);
+      if (!tData) {
+        tData = { id: treeId, latest: null, history: {} };
       }
       setTreeData(tData);
 
@@ -84,7 +78,7 @@ export default function SingleTreeScreen() {
       }
 
       // Load tree object from farm context
-      const farm = farms.find((f: any) => f.id === farmId);
+      const farm: any = farms.find((f: any) => f.id === farmId);
       if (farm) {
         const t = farm.trees?.find((x: any) => x.id === String(treeIdRaw).replace("tree-", ""));
         if (t) {
@@ -106,34 +100,17 @@ export default function SingleTreeScreen() {
   };
 
   const checkIoTAndMaybePredict = async (currentTreeData: any) => {
+    if (!user) return;
     try {
-      const farmSnap = await get(ref(rtdb, `farms/${user?.uid}/${farmId}`));
-      const fData = farmSnap.exists() ? farmSnap.val() : null;
-
-      const telRef = ref(rtdb, `farms/${user?.uid}/${farmId}/latest_telemetry`);
-      const telSnap = await get(telRef);
-
-      if (telSnap.exists()) {
-        const iot = telSnap.val();
-        setIotLive(true);
-        // Update the manual fields with live IoT values
-        setManualN(String(iot.n ?? 45));
-        setManualP(String(iot.p ?? 20));
-        setManualK(String(iot.k ?? 60));
-        setManualPh(String(iot.ph ?? 6.2));
-        setManualMoisture(String(iot.soilMoisture ?? 45));
-        // Auto predict with live data
-        await runPrediction(currentTreeData, iot, fData?.locationName || "Colombo", true);
-      } else {
-        setIotLive(false);
-        // Do NOT auto-predict. Wait for farmer to enter data and press button.
-      }
+      const fData = await getFarm(user.uid, farmId);
+      setIotLive(false);
     } catch (e) {
       setIotLive(false);
     }
   };
 
   const handleRunPrediction = async () => {
+    if (!user) return;
     // Validate sensor input
     const n = parseFloat(manualN);
     const p = parseFloat(manualP);
@@ -150,18 +127,18 @@ export default function SingleTreeScreen() {
 
     const sensorInput = { n, p, k, ph, soilMoisture: moisture };
 
-    // 1. Save sensor data to Firebase under this tree
-    const treeDbRef = ref(rtdb, `trees/${user?.uid}/${farmId}/${treeId}`);
-    await update(treeDbRef, { sensorData: sensorInput });
+    // 1. Save sensor data under this tree
+    await updateTreeData(user.uid, farmId, treeId, { sensorData: sensorInput } as any);
 
     // 2. Get farm location
-    const farmSnap = await get(ref(rtdb, `farms/${user?.uid}/${farmId}`));
-    const farmLocation = farmSnap.exists() ? (farmSnap.val().locationName || "Colombo") : "Colombo";
+    const fData = await getFarm(user.uid, farmId);
+    const farmLocation = fData?.locationName || "Colombo";
 
     await runPrediction(treeData, sensorInput, farmLocation, false);
   };
 
   const runPrediction = async (currentTreeData: any, sensorInput: any, farmLocation: string, isAutoFromIot: boolean) => {
+    if (!user) return;
     setPredicting(true);
     setSaving(true);
     try {
@@ -205,13 +182,12 @@ export default function SingleTreeScreen() {
       };
 
       const healthStats = calculateTreeHealth(currentTreeData?.disease || "", finalYield);
-      const treeDbRef = ref(rtdb, `trees/${user?.uid}/${farmId}/${treeId}`);
-      await update(treeDbRef, {
+      await updateTreeData(user.uid, farmId, treeId, {
         latest: newHistoryEntry,
         status: healthStats.status,
         health: healthStats.health,
-      });
-      await set(ref(rtdb, `trees/${user?.uid}/${farmId}/${treeId}/history/${tsId}`), newHistoryEntry);
+      } as any);
+      await saveTreeHistory(user.uid, farmId, treeId, newHistoryEntry as any);
 
       setTreeData((prev: any) => {
         const prevHist = prev?.history || {};
@@ -234,7 +210,7 @@ export default function SingleTreeScreen() {
   };
 
   const saveActuals = async () => {
-    if (!treeData?.latest) return;
+    if (!treeData?.latest || !user) return;
     setIsUpdatingActual(true);
     try {
       const tsId = treeData.latest.id;
@@ -242,8 +218,10 @@ export default function SingleTreeScreen() {
       if (actualYield) { updates.actualYield = Number(actualYield); updates.actualYieldNuts = Number(actualYield); }
       if (disease) updates.disease = disease;
 
-      await update(ref(rtdb, `trees/${user?.uid}/${farmId}/${treeId}/latest`), updates);
-      await update(ref(rtdb, `trees/${user?.uid}/${farmId}/${treeId}/history/${tsId}`), updates);
+      await updateTreeData(user.uid, farmId, treeId, {
+        latest: { ...treeData.latest, ...updates }
+      } as any);
+      await updateTreeHistoryRecord(user.uid, farmId, treeId, tsId, updates);
 
       setTreeData((prev: any) => {
         const prevHist = prev?.history || {};

@@ -1,5 +1,4 @@
-import { ref, get, set, update, push } from "firebase/database";
-import { rtdb } from "@/services/firebase";
+import api from "@/services/api";
 import type { TelemetryData } from "@/types/yield";
 
 export interface TreeData {
@@ -24,76 +23,79 @@ export interface TreeHistoryRecord {
 
 export const fetchTreeData = async (uid: string, farmId: string, treeId: string): Promise<TreeData | null> => {
   try {
-    const snapshot = await get(ref(rtdb, `trees/${uid}/${farmId}/${treeId}`));
-    if (snapshot.exists()) {
-      return snapshot.val() as TreeData;
-    }
-    return null;
-  } catch (error) {
-    console.error("Error fetching tree data:", error);
+    const res = await api.get(`/yield/farms/${farmId}/trees/${treeId}`, { params: { uid } });
+    return res.data?.tree || null;
+  } catch (error: any) {
+    console.error("Error fetching tree data:", error.message);
     return null;
   }
 };
 
 export const fetchAllTrees = async (uid: string, farmId: string): Promise<TreeData[]> => {
   try {
-    const snapshot = await get(ref(rtdb, `trees/${uid}/${farmId}`));
-    if (snapshot.exists()) {
-      const treesObj = snapshot.val();
-      return Object.values(treesObj) as TreeData[];
+    const res = await api.get(`/yield/farms/${farmId}/trees`, { params: { uid } });
+    if (res.data?.trees) {
+      return Object.values(res.data.trees) as TreeData[];
     }
     return [];
-  } catch (error) {
-    console.error("Error fetching all trees:", error);
+  } catch (error: any) {
+    console.error("Error fetching all trees:", error.message);
     return [];
   }
 };
 
 export const initializeFarmTrees = async (uid: string, farmId: string, treeCount: number) => {
   try {
-    for (let i = 1; i <= treeCount; i++) {
-      const treeRef = ref(rtdb, `trees/${uid}/${farmId}/${i}`);
-      const snapshot = await get(treeRef);
-      if (!snapshot.exists()) {
-        await set(treeRef, {
-          id: i.toString(),
-          label: `Tree ${i}`,
-          latest: null,
-          history: {}
+    const existing = await fetchAllTrees(uid, farmId);
+    if (existing.length === 0) {
+      for (let i = 1; i <= treeCount; i++) {
+        await api.put(`/yield/farms/${farmId}/trees/${i}`, {
+          uid,
+          tree: {
+            id: i.toString(),
+            label: `Tree ${i}`,
+            latest: null,
+            history: {},
+          },
         });
       }
     }
-  } catch (error) {
-    console.error("Error initializing trees:", error);
+  } catch (error: any) {
+    console.error("Error initializing trees:", error.message);
   }
 };
 
 export const updateTreeLatestData = async (uid: string, farmId: string, treeId: string, telemetry: TelemetryData) => {
   try {
-    await update(ref(rtdb, `trees/${uid}/${farmId}/${treeId}`), {
-      latest: telemetry
+    await api.put(`/yield/farms/${farmId}/trees/${treeId}`, {
+      uid,
+      patch: { latest: telemetry },
     });
-  } catch (error) {
-    console.error("Error updating tree telemetry:", error);
+  } catch (error: any) {
+    console.error("Error updating tree telemetry:", error.message);
   }
 };
 
 export const saveTreeHistory = async (uid: string, farmId: string, treeId: string, record: TreeHistoryRecord) => {
   try {
-    const historyRef = ref(rtdb, `trees/${uid}/${farmId}/${treeId}/history`);
-    const newRecordRef = push(historyRef);
-    await set(newRecordRef, record);
-    return newRecordRef.key;
-  } catch (error) {
-    console.error("Error saving tree history:", error);
+    const res = await api.post(`/yield/farms/${farmId}/trees/${treeId}/history`, {
+      uid,
+      record,
+    });
+    return res.data?.key || `rec_${Date.now()}`;
+  } catch (error: any) {
+    console.error("Error saving tree history:", error.message);
     return null;
   }
 };
 
 export const updateTreeHistoryRecord = async (uid: string, farmId: string, treeId: string, recordId: string, updates: Partial<TreeHistoryRecord>) => {
   try {
-    await update(ref(rtdb, `trees/${uid}/${farmId}/${treeId}/history/${recordId}`), updates);
-  } catch (error) {
-    console.error("Error updating tree history record:", error);
+    await api.put(`/yield/farms/${farmId}/trees/${treeId}`, {
+      uid,
+      patch: { [`history/${recordId}`]: updates },
+    });
+  } catch (error: any) {
+    console.error("Error updating tree history record:", error.message);
   }
 };

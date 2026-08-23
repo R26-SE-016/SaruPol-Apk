@@ -14,7 +14,7 @@ export default function TreeWisePredictionScreen() {
   const TREES_PER_PAGE = 20;
   const [currentPage, setCurrentPage] = useState(1);
   
-  const totalTrees = currentFarm?.trees || currentFarm?.totalTrees || 0;
+  const totalTrees = (currentFarm as any)?.trees || currentFarm?.totalTrees || 0;
   
   // Mapping of tree numbers to zone colors
   const treeColorMap = useMemo(() => {

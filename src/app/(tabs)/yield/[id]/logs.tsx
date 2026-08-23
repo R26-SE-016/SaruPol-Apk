@@ -2,20 +2,17 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { View, Text, TouchableOpacity, TextInput, ScrollView, Modal, ActivityIndicator, TouchableWithoutFeedback, Image, Platform } from "react-native";
-import { ref, push, set, update, remove, onValue, serverTimestamp } from "firebase/database";
 import {
   ClipboardList, Calendar, Hash, FileText, Plus, AlertCircle,
   Pencil, Trash2, Coins, TrendingUp, X, AlertTriangle, Minus,
   ArrowLeft, ChevronRight
 } from "lucide-react-native";
-import { rtdb } from "@/services/firebase";
 import { useYieldApp } from "@/store/YieldAppContext";
 import { ImageBackground } from "react-native";
 import { DatePickerField } from "@/components/yield/DatePicker";
 import type { HarvestLog } from "@/types/yield";
 import { fetchCDARates } from "@/services/yieldService";
-
-
+import { fetchHarvestLogs, saveHarvestLog, deleteHarvestLog } from "@/services/yieldFarmDb";
 
 const inputCls = "w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-800 bg-white";
 
@@ -32,7 +29,6 @@ export default function logsScreen() {
   }, [farmId, currentFarmId, setCurrentFarmId]);
 
   const farm = farms.find((f) => f.id === farmId);
-  const harvestPath = user && farm ? `/harvests/${user.uid}/${farmId}` : "";
 
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [gradeA, setGradeA] = useState("");
@@ -103,44 +99,20 @@ export default function logsScreen() {
     return () => { mounted = false; };
   }, []);
 
-  useEffect(() => {
-    let unsub: (() => void) | undefined;
-    if (!harvestPath) return;
+  const loadLogs = useCallback(async () => {
+    if (!user || !farmId) return;
     try {
-      const harvestRef = ref(rtdb, harvestPath);
-      unsub = onValue(
-        harvestRef,
-        (snap) => {
-          const v = snap.val();
-          if (v) {
-            const arr: HarvestLog[] = Object.entries(v).map(([id, val]: [string, any]) => ({
-              id,
-              date: val.date ?? "",
-              nutCount: val.nutCount ?? (val.gradeA ?? 0) + (val.gradeB ?? 0) + (val.gradeC ?? 0),
-              gradeA: val.gradeA ?? 0,
-              gradeB: val.gradeB ?? 0,
-              gradeC: val.gradeC ?? 0,
-              priceA: val.priceA ?? 155,
-              priceB: val.priceB ?? 120,
-              priceC: val.priceC ?? 95,
-              revenue: val.revenue ?? 0,
-              notes: val.notes ?? "",
-              createdAt: val.createdAt ?? 0,
-            }));
-            arr.sort((a, b) => b.createdAt - a.createdAt);
-            setRemoteLogs(arr);
-            setSyncError(null);
-          } else {
-            setRemoteLogs([]);
-          }
-        },
-        (err) => setSyncError(`Sync error: ${err.message}`)
-      );
+      const arr = await fetchHarvestLogs(user.uid, farmId);
+      setRemoteLogs(arr);
+      setSyncError(null);
     } catch (e: any) {
       setSyncError(`Sync error: ${e.message}`);
     }
-    return () => unsub?.();
-  }, [harvestPath]);
+  }, [user, farmId]);
+
+  useEffect(() => {
+    loadLogs();
+  }, [loadLogs]);
 
   const resetForm = useCallback(() => {
     setDate(new Date().toISOString().slice(0, 10));
@@ -174,7 +146,7 @@ export default function logsScreen() {
   const handleSave = useCallback(async () => {
     if (!date) return setError("Select a harvest date.");
     if (totalNuts <= 0) return setError("Enter at least one nut count.");
-    if (!harvestPath) return setError("Farm not loaded yet.");
+    if (!user || !farmId) return setError("Farm not loaded yet.");
 
     setError(null);
     setSaving(true);
@@ -193,25 +165,22 @@ export default function logsScreen() {
     };
 
     try {
-      if (editingId) {
-        await update(ref(rtdb, `${harvestPath}/${editingId}`), entry);
-      } else {
-        const node = push(ref(rtdb, harvestPath));
-        await set(node, { ...entry, createdAt: serverTimestamp() });
-      }
+      await saveHarvestLog(user.uid, farmId, entry, editingId || undefined);
+      await loadLogs();
       resetForm();
     } catch (e: any) {
       setError(`Save failed: ${e.message}`);
     } finally {
       setSaving(false);
     }
-  }, [date, totalNuts, harvestPath, gradeA, gradeB, gradeC, priceA, priceB, priceC, totalRevenue, notes, editingId, resetForm]);
+  }, [date, totalNuts, user, farmId, gradeA, gradeB, gradeC, priceA, priceB, priceC, totalRevenue, notes, editingId, resetForm, loadLogs]);
 
   const handleDelete = useCallback(async (recordId: string) => {
-    if (!harvestPath) return;
+    if (!user || !farmId) return;
     setDeleting(true);
     try {
-      await remove(ref(rtdb, `${harvestPath}/${recordId}`));
+      await deleteHarvestLog(user.uid, farmId, recordId);
+      await loadLogs();
       if (editingId === recordId) resetForm();
     } catch (e: any) {
       setSyncError(`Delete failed: ${e.message}`);
@@ -219,7 +188,7 @@ export default function logsScreen() {
       setDeleting(false);
       setConfirmDelete(null);
     }
-  }, [harvestPath, editingId, resetForm]);
+  }, [user, farmId, editingId, resetForm, loadLogs]);
 
   return (
     <View className="flex-1 bg-[#0b6441]">
