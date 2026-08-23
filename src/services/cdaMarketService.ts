@@ -6,7 +6,7 @@ export interface CdaRateResponse {
 
 export const fetchLiveCdaRates = async (): Promise<CdaRateResponse> => {
   try {
-    const res = await api.get("/cda-rates");
+    const res = await api.get("/yield/cda-rates");
     if (res.data) {
       const data = res.data;
       return {
