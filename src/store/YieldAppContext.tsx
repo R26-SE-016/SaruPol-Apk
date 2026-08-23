@@ -1,8 +1,6 @@
 import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from "react";
-import { rtdb } from "@/services/firebase";
-import { ref, onValue } from "firebase/database";
 import type { AppUser, Farm, Zone } from "@/types/yield";
-import { subscribeFarms, subscribeZones } from "@/services/yieldFarmDb";
+import { subscribeFarms, subscribeZones, fetchDevicePresence } from "@/services/yieldFarmDb";
 import { useAppStore } from "@/store/appStore";
 
 const DEFAULT_DEMO_UID = process.env.EXPO_PUBLIC_DEMO_UID || "DkjGfclo7uQnopbpPbmZICE5Vt13";
@@ -49,7 +47,7 @@ export function YieldAppProvider({ children }: { children: ReactNode }) {
       const unsub = subscribeFarms(user.uid, setFarms);
       return unsub;
     } catch (e) {
-      console.warn("[YieldAppContext] Failed to subscribe to farms:", e);
+      console.warn("[YieldAppContext] Failed to load farms:", e);
     }
   }, [user.uid]);
 
@@ -63,7 +61,7 @@ export function YieldAppProvider({ children }: { children: ReactNode }) {
       const unsub = subscribeZones(user.uid, currentFarmId, setCurrentZones);
       return unsub;
     } catch (e) {
-      console.warn("[YieldAppContext] Failed to subscribe to zones:", e);
+      console.warn("[YieldAppContext] Failed to load zones:", e);
     }
   }, [user.uid, currentFarmId]);
 
@@ -73,16 +71,10 @@ export function YieldAppProvider({ children }: { children: ReactNode }) {
     if (!currentFarmId) return;
     const farm = farms.find((f) => f.id === currentFarmId);
     if (!farm || !farm.deviceId) return;
-    try {
-      if (rtdb && rtdb.app) {
-        const unsub = onValue(ref(rtdb, `/devices/${farm.deviceId}/latest`), (snap) => {
-          setDeviceLive(!!snap.val());
-        });
-        return unsub;
-      }
-    } catch (e) {
-      console.warn("[YieldAppContext] Failed to subscribe to device telemetry:", e);
-    }
+    
+    fetchDevicePresence(farm.deviceId).then((isLive) => {
+      setDeviceLive(isLive);
+    });
   }, [currentFarmId, farms]);
 
   const currentFarm = currentFarmId ? farms.find((f) => f.id === currentFarmId) ?? null : null;
