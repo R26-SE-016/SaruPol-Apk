@@ -410,14 +410,6 @@ export default function AdvisorScreen() {
 
     setAudioLoadingMsgId(msgId);
     try {
-      // Configure audio session for device
-      await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: true,
-        allowsRecordingIOS: false,
-        staysActiveInBackground: false,
-        playThroughEarpieceAndroid: false,
-      });
-
       const url = getTtsUrl(text, language);
       if (__DEV__) console.log("Fetching TTS audio from endpoint:", url.split('?')[0]);
 
@@ -441,8 +433,15 @@ export default function AdvisorScreen() {
     }
   };
 
-  // Stop audio on component unmount to prevent leaks
+  // Pre-initialize audio mode once and clean up on component unmount
   React.useEffect(() => {
+    Audio.setAudioModeAsync({
+      playsInSilentModeIOS: true,
+      allowsRecordingIOS: false,
+      staysActiveInBackground: false,
+      playThroughEarpieceAndroid: false,
+    }).catch((err) => console.warn("Failed to configure audio session:", err));
+
     return () => {
       if (soundRef.current) {
         soundRef.current.unloadAsync().catch((err: unknown) => console.log("Clean up sound error", err));
@@ -765,6 +764,45 @@ export default function AdvisorScreen() {
               </View>
             ) : (
               <GlassCard style={[styles.botBubble, msg.isMultiLlm && styles.botBubbleMultiLlm]}>
+                {/* Bot Header with Sender & Listen/Audio Button */}
+                <View style={styles.botBubbleHeader}>
+                  <View style={styles.botSenderRow}>
+                    <Ionicons name="sparkles" size={12} color={COLORS.primaryLight} />
+                    <Text style={styles.botSenderLabel}>
+                      {language === 'ta' ? 'சருபோல் AI' : language === 'si' ? 'සරුපොල් AI' : 'SaruPol AI'}
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={() => toggleAudio(msg.id, msg.text)}
+                    style={[
+                      styles.audioButton,
+                      activeAudioMsgId === msg.id && styles.audioButtonActive
+                    ]}
+                    disabled={audioLoadingMsgId === msg.id}
+                    activeOpacity={0.75}
+                  >
+                    {audioLoadingMsgId === msg.id ? (
+                      <ActivityIndicator size="small" color={COLORS.primaryLight} style={{ marginRight: 4, transform: [{ scale: 0.8 }] }} />
+                    ) : (
+                      <Ionicons
+                        name={activeAudioMsgId === msg.id ? "volume-mute-outline" : "volume-medium-outline"}
+                        size={14}
+                        color={activeAudioMsgId === msg.id ? COLORS.primaryLight : COLORS.textSecondary}
+                        style={{ marginRight: 4 }}
+                      />
+                    )}
+                    <Text style={[
+                      styles.audioButtonText,
+                      activeAudioMsgId === msg.id ? styles.audioActiveText : styles.audioInactiveText
+                    ]}>
+                      {activeAudioMsgId === msg.id
+                        ? (language === 'ta' ? 'நிறுத்து' : language === 'si' ? 'නවතන්න' : 'Stop')
+                        : (language === 'ta' ? 'கேட்க' : language === 'si' ? 'සවන් දෙන්න' : 'Listen')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
                 {msg.isMultiLlm && (
                   <View style={styles.earlyExitBadgeRow}>
                     {msg.early_exit ? (
@@ -998,7 +1036,7 @@ export default function AdvisorScreen() {
                 {msg.sources && msg.sources.length > 0 && (
                   <View style={styles.sourcesContainer}>
                     <Text style={styles.sourcesHeader}>
-                      📚 {language === 'ta' ? 'சரிபார்க்கப்பட்ட ஆதாரங்கள்:' : language === 'si' ? 'සහතික කළ මූලාශ්‍ර:' : 'Verified Sources:'}
+                      📚 {language === 'ta' ? 'CRI சரிபார்க்கப்பட்ட ஆவணங்கள்:' : language === 'si' ? 'CRI සහතික කළ ලේඛන:' : 'CRI Verified Documents:'}
                     </Text>
                     {msg.sources.map((src, i) => (
                       <Text key={i} style={styles.sourceText}>• {src}</Text>
@@ -1019,30 +1057,6 @@ export default function AdvisorScreen() {
                 )}
 
                 <View style={styles.botBubbleFooter}>
-                  <TouchableOpacity
-                    onPress={() => toggleAudio(msg.id, msg.text)}
-                    style={styles.audioButton}
-                    disabled={audioLoadingMsgId === msg.id}
-                  >
-                    {audioLoadingMsgId === msg.id ? (
-                      <ActivityIndicator size="small" color={COLORS.primaryLight} style={{ marginRight: 4, transform: [{ scale: 0.8 }] }} />
-                    ) : (
-                      <Ionicons
-                        name={activeAudioMsgId === msg.id ? "volume-mute-outline" : "volume-medium-outline"}
-                        size={16}
-                        color={activeAudioMsgId === msg.id ? COLORS.primaryLight : COLORS.textSecondary}
-                        style={{ marginRight: 4 }}
-                      />
-                    )}
-                    <Text style={[
-                      styles.audioButtonText,
-                      activeAudioMsgId === msg.id ? styles.audioActiveText : styles.audioInactiveText
-                    ]}>
-                      {activeAudioMsgId === msg.id
-                        ? (language === 'ta' ? 'நிறுத்து' : language === 'si' ? 'නවතන්න' : 'Stop')
-                        : (language === 'ta' ? 'கேட்க' : language === 'si' ? 'සවන් දෙන්න' : 'Listen')}
-                    </Text>
-                  </TouchableOpacity>
                   <Text style={styles.botTime}>{msg.timestamp}</Text>
                 </View>
               </GlassCard>
@@ -1385,28 +1399,50 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 6,
   },
+  botBubbleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  botSenderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  botSenderLabel: {
+    color: COLORS.primaryLight,
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
   botTime: {
     color: COLORS.textMuted,
     fontSize: 10,
   },
   botBubbleFooter: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     alignItems: 'center',
-    marginTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.08)',
-    paddingTop: 8,
+    marginTop: 8,
   },
   audioButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 4,
-    paddingHorizontal: 10,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
     borderRadius: ROUNDING.full,
     backgroundColor: 'rgba(255, 255, 255, 0.06)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  audioButtonActive: {
+    backgroundColor: 'rgba(76, 175, 80, 0.18)',
+    borderColor: 'rgba(76, 175, 80, 0.35)',
   },
   audioButtonText: {
     fontSize: 11,

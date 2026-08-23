@@ -146,7 +146,7 @@ export default {
     high: "ඉහළ එකඟතාව",
     medium: "මධ්‍යම එකඟතාව",
     low: "අඩු එකඟතාව",
-    sources: "සත්‍යාපිත CRI මූලාශ්‍ර",
+    sources: "CRI සහතික කළ ලේඛන",
     models: "AI ආකෘති ප්‍රතිචාර"
   }
 };

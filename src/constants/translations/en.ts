@@ -146,7 +146,7 @@ export default {
     high: "High Agreement",
     medium: "Moderate Agreement",
     low: "Low Agreement",
-    sources: "Verified CRI Sources",
+    sources: "CRI Verified Documents",
     models: "AI Model Responses"
   }
 };
