@@ -11,7 +11,7 @@ import {
   Animated,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -19,7 +19,7 @@ import { Camera } from 'expo-camera';
 import { COLORS, ROUNDING, SHADOWS } from '../../constants/theme';
 import GlassCard from '../../components/common/GlassCard';
 import GradientButton from '../../components/common/GradientButton';
-import { classifyImage, syncDiagnostics, type PathologyResult } from '../../services/pathologyService';
+import { classifyImage, syncDiagnostics, updateHotspotStatus, type PathologyResult } from '../../services/pathologyService';
 import { useAppStore } from '../../store/appStore';
 import { getDiseaseInfo, DISEASE_CLASS_ORDER } from '../../constants/diseaseKnowledge';
 
@@ -47,9 +47,11 @@ const ANALYSIS_STEPS = [
 export default function ScanScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const params = useLocalSearchParams<{ hotspot_id?: string; target_lat?: string; target_lng?: string; hotspot_action?: string }>();
   const addHistoryItem = useAppStore(state => state.addHistoryItem);
   const user = useAppStore(state => state.user);
   const language = useAppStore(state => state.language);
+
 
   const [selectedPart, setSelectedPart] = useState('leaf');
   const [imageUri, setImageUri] = useState<string | null>(null);
@@ -208,8 +210,14 @@ export default function ScanScreen() {
           part: selectedPart,
         }],
       })
-        .then(() => setSyncStatus('synced'))
+        .then(() => {
+          setSyncStatus('synced');
+          if (params.hotspot_id) {
+            updateHotspotStatus(params.hotspot_id, 'inspected');
+          }
+        })
         .catch(() => setSyncStatus('failed'));
+
 
       // Navigate to full result screen
       router.push({
@@ -307,8 +315,37 @@ export default function ScanScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
+        {/* ── Targeted Hotspot Inspection Banner (Macro-to-Micro Bridge) ── */}
+        {params.hotspot_id && (
+          <GlassCard
+            style={{
+              marginBottom: 16,
+              padding: 14,
+              borderLeftWidth: 4,
+              borderLeftColor: COLORS.diseased,
+              backgroundColor: 'rgba(239, 68, 68, 0.08)',
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+              <Ionicons name="airplane" size={18} color={COLORS.diseased} style={{ marginRight: 6 }} />
+              <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.diseased }}>
+                TARGETED DRONE HOTSPOT INSPECTION
+              </Text>
+            </View>
+            <Text style={{ fontSize: 12, color: COLORS.text, marginBottom: 2 }}>
+              {params.hotspot_action || 'Stressed tree flagged by aerial spectral scan.'}
+            </Text>
+            {params.target_lat && params.target_lng && (
+              <Text style={{ fontSize: 11, color: COLORS.textSecondary, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>
+                📍 GPS: {parseFloat(params.target_lat).toFixed(5)}, {parseFloat(params.target_lng).toFixed(5)}
+              </Text>
+            )}
+          </GlassCard>
+        )}
+
         {/* ── Part Selector ───────────────────────────────────── */}
         <Text style={styles.sectionLabel}>
+
           {language === 'en' ? 'SELECT PALM PART' : 'කොටස තෝරන්න'}
         </Text>
         <View style={styles.partsGrid}>
