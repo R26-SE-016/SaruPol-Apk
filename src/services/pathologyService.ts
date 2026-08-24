@@ -129,3 +129,85 @@ export const submitDiagnosisFeedback = async (input: FeedbackInput) => {
     return { success: true, local: true };
   }
 };
+
+// ── System A (Aerial) Hotspot Inspection Bridge ───────────────────────
+
+export interface CanopyHotspotItem {
+  id: string;
+  estate_id?: string;
+  location: { lat: number; lng: number };
+  severity: 'critical' | 'high' | 'moderate';
+  mean_index_value: number;
+  radius_meters: number;
+  recommended_action: string;
+  status: 'pending' | 'inspected' | 'resolved';
+  created_at?: string;
+  leaf_diagnostic_id?: string;
+}
+
+/**
+ * Fetches flagged canopy stress hotspots for an estate from the Gateway
+ * to direct the field officer to trees requiring ground verification.
+ */
+export const getCanopyHotspots = async (
+  estateId: string = 'estate_001',
+  status?: string
+): Promise<{ estate_id: string; count: number; hotspots: CanopyHotspotItem[]; offline?: boolean }> => {
+  try {
+    const params: Record<string, string> = { estate_id: estateId };
+    if (status) params.status = status;
+
+    const response = await api.get('/pathology/aerial/hotspots', { params });
+    return response.data;
+  } catch (err: any) {
+    console.warn('[PathologyService] Failed to fetch hotspots, returning default list:', err.message);
+    return {
+      estate_id: estateId,
+      count: 2,
+      hotspots: [
+        {
+          id: 'hotspot_sector_b_01',
+          estate_id: estateId,
+          location: { lat: 7.2914, lng: 80.6342 },
+          severity: 'critical',
+          mean_index_value: 0.28,
+          radius_meters: 6.4,
+          recommended_action: 'Sector B: Immediate on-site mobile leaf scan required for Bud Rot.',
+          status: 'pending',
+        },
+        {
+          id: 'hotspot_sector_c_04',
+          estate_id: estateId,
+          location: { lat: 7.2928, lng: 80.6325 },
+          severity: 'high',
+          mean_index_value: 0.42,
+          radius_meters: 4.8,
+          recommended_action: 'Sector C: Crown chlorosis detected. Inspect leaf margins for Gray Leaf Spot.',
+          status: 'pending',
+        },
+      ],
+      offline: true,
+    };
+  }
+};
+
+/**
+ * Updates a hotspot status once the field officer conducts a mobile leaf scan.
+ */
+export const updateHotspotStatus = async (
+  hotspotId: string,
+  status: 'inspected' | 'resolved',
+  leafDiagnosticId?: string
+) => {
+  try {
+    const response = await api.patch(`/pathology/aerial/hotspots/${hotspotId}`, {
+      status,
+      leaf_diagnostic_id: leafDiagnosticId,
+    });
+    return response.data;
+  } catch (err: any) {
+    console.warn('[PathologyService] Update hotspot status offline acknowledgement:', err.message);
+    return { success: true, local: true, hotspot_id: hotspotId, status };
+  }
+};
+
