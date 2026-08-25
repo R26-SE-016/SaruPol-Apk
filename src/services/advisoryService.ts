@@ -17,6 +17,8 @@ export const sendAdvisoryMessage = async (
     session_id: sessionId || null,
     latitude: latitude ?? null,
     longitude: longitude ?? null
+  }, {
+    timeout: 60000 // 60s for RAG query + conversation memory + translation
   });
   return response.data;
 };
@@ -32,6 +34,8 @@ export const translateMessagesBatch = async (messages: TranslateItem[], targetLa
   const response = await api.post('/advisory/translate-batch', {
     messages,
     target_lang: targetLang
+  }, {
+    timeout: 60000
   });
   return response.data;
 };
@@ -45,12 +49,19 @@ export const getTtsUrl = (text: string, lang: string) => {
 
 // ─── Multi-LLM Consensus Query ────────────────────────────────────────────────
 // Gateway: POST /api/advisory/ask-multi  →  Advisory Service: POST /ask-multi
-export const sendMultiLLMQuery = async (question: string, latitude: number | undefined, longitude: number | undefined, language: string) => {
+export const sendMultiLLMQuery = async (
+  question: string,
+  latitude: number | undefined,
+  longitude: number | undefined,
+  language: string,
+  sessionId?: string | null
+) => {
   const response = await api.post('/advisory/ask-multi', {
     question,
     latitude: latitude ?? null,
     longitude: longitude ?? null,
-    language
+    language,
+    session_id: sessionId ?? null,
   }, {
     timeout: 120000, // 120s — this endpoint runs 3 LLMs + judge + translations
   });

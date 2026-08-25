@@ -32,25 +32,31 @@ const RECORDING_OPTIONS: Audio.RecordingOptions = {
     extension: '.m4a',
     outputFormat: Audio.AndroidOutputFormat.MPEG_4,
     audioEncoder: Audio.AndroidAudioEncoder.AAC,
-    sampleRate: 16000,
+    sampleRate: 44100,
     numberOfChannels: 1,
-    bitRate: 64000,
+    bitRate: 128000,
   },
   ios: {
     extension: '.m4a',
     audioQuality: Audio.IOSAudioQuality.HIGH,
-    sampleRate: 16000,
+    sampleRate: 44100,
     numberOfChannels: 1,
-    bitRate: 64000,
+    bitRate: 128000,
     linearPCMBitDepth: 16,
     linearPCMIsBigEndian: false,
     linearPCMIsFloat: false,
   },
   web: {
     mimeType: 'audio/webm',
-    bitsPerSecond: 64000,
+    bitsPerSecond: 128000,
   },
 };
+
+const SPEECH_THRESHOLD_DB = -32;    // Audio >= -32 dB confirms active human voice
+const SILENCE_TRIGGER_MS = 1400;    // 1.4s of silence AFTER speaking triggers auto-stop
+const MIN_SPEECH_DURATION_MS = 600; // Must record at least 0.6s before silence auto-stop can engage
+const INITIAL_SILENCE_TIMEOUT_MS = 12000; // Wait up to 12s for the user to start speaking
+const MAX_RECORDING_TIME_MS = 25000; // Absolute max 25s recording
 
 export default function VoiceInputButton({
   language = 'auto',
@@ -65,9 +71,13 @@ export default function VoiceInputButton({
 
   const recordingRef = useRef<Audio.Recording | null>(null);
   const timerRef = useRef<any>(null);
-  const silenceTimerRef = useRef<any>(null);
-  const hasSpokenRef = useRef(false);
+  const isStartingRef = useRef(false);
   const isProcessingRef = useRef(false);
+
+  // VAD (Voice Activity Detection) tracking refs
+  const hasSpokenRef = useRef(false);
+  const silenceStartRef = useRef<number | null>(null);
+  const recordingStartTimeRef = useRef<number>(0);
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const pulseLoop = useRef<Animated.CompositeAnimation | null>(null);
@@ -115,9 +125,9 @@ export default function VoiceInputButton({
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
-      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       if (recordingRef.current) {
         recordingRef.current.stopAndUnloadAsync().catch(() => {});
+        recordingRef.current = null;
       }
     };
   }, []);
@@ -143,46 +153,60 @@ export default function VoiceInputButton({
   };
 
   const getListeningText = () => {
-    if (language === 'si') return 'අහගෙන ඉන්නේ...';
-    if (language === 'ta') return 'கேட்கிறது...';
-    return 'Listening...';
+    const timeStr = `${Math.floor(durationSeconds / 60)}:${(durationSeconds % 60).toString().padStart(2, '0')}`;
+    if (language === 'si') return `අහගෙන ඉන්නේ... (${timeStr})`;
+    if (language === 'ta') return `கேட்கிறது... (${timeStr})`;
+    return `Listening... (${timeStr})`;
   };
 
   const onRecordingStatusUpdate = (status: Audio.RecordingStatus) => {
     if (!status.isRecording || isProcessingRef.current) return;
 
-    const metering = status.metering;
-    if (metering !== undefined) {
-      // Speech detected threshold (typically -38 dB to -10 dB)
-      if (metering > -38) {
-        hasSpokenRef.current = true;
-        if (silenceTimerRef.current) {
-          clearTimeout(silenceTimerRef.current);
-          silenceTimerRef.current = null;
-        }
-      } else if (hasSpokenRef.current && metering <= -40) {
-        // User has spoken and is now silent: auto-stop after 1.2 seconds of silence!
-        if (!silenceTimerRef.current) {
-          silenceTimerRef.current = setTimeout(() => {
-            if (!isProcessingRef.current && recordingRef.current) {
-              void stopRecordingAndTranscribe();
-            }
-          }, 1200);
-        }
-      }
+    const now = Date.now();
+    const elapsed = now - recordingStartTimeRef.current;
+
+    // Safety timeout: auto-stop after 25 seconds of recording
+    if (elapsed > MAX_RECORDING_TIME_MS || status.durationMillis > MAX_RECORDING_TIME_MS) {
+      void stopRecordingAndTranscribe();
+      return;
     }
 
-    // Safety timeout: auto-stop after 15 seconds of speaking
-    if (hasSpokenRef.current && status.durationMillis > 15000) {
+    // If user hasn't spoken at all after initial wait timeout (12s), auto-stop
+    if (!hasSpokenRef.current && elapsed > INITIAL_SILENCE_TIMEOUT_MS) {
       void stopRecordingAndTranscribe();
+      return;
+    }
+
+    // Automatic Voice Activity Detection (VAD)
+    const metering = status.metering;
+    if (metering !== undefined && metering !== null) {
+      if (metering >= SPEECH_THRESHOLD_DB) {
+        // Active speech detected
+        hasSpokenRef.current = true;
+        silenceStartRef.current = null;
+      } else {
+        // User paused / finished speaking
+        if (hasSpokenRef.current && elapsed >= MIN_SPEECH_DURATION_MS) {
+          if (silenceStartRef.current === null) {
+            silenceStartRef.current = now;
+          } else if (now - silenceStartRef.current >= SILENCE_TRIGGER_MS) {
+            // User finished speaking -> Auto stop and fill in text box!
+            void stopRecordingAndTranscribe();
+          }
+        }
+      }
     }
   };
 
   const startRecording = async () => {
+    if (isStartingRef.current || isProcessingRef.current) return;
+    isStartingRef.current = true;
+
     try {
       // 1. Check & Request Permissions
       const permission = await Audio.requestPermissionsAsync();
       if (!permission.granted) {
+        isStartingRef.current = false;
         Alert.alert(
           language === 'si' ? 'අවසර අවශ්‍යයි' : language === 'ta' ? 'அனுமதி தேவை' : 'Permission Required',
           getPermissionAlertMessage()
@@ -190,14 +214,22 @@ export default function VoiceInputButton({
         return;
       }
 
-      // 2. Trigger Haptic Feedback
+      // 2. Safely unload any leftover previous recording instance
+      if (recordingRef.current) {
+        try {
+          await recordingRef.current.stopAndUnloadAsync();
+        } catch (_) {}
+        recordingRef.current = null;
+      }
+
+      // 3. Trigger Haptic Feedback
       if (Platform.OS !== 'web') {
         try {
           await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         } catch (_) {}
       }
 
-      // 3. Configure Audio Mode for Recording
+      // 4. Configure Audio Mode for Recording
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
@@ -205,13 +237,11 @@ export default function VoiceInputButton({
         playThroughEarpieceAndroid: false,
       });
 
-      // 4. Create and Prepare Recording with Metering & Status Updates
-      hasSpokenRef.current = false;
+      // 5. Reset VAD Tracking & State
       isProcessingRef.current = false;
-      if (silenceTimerRef.current) {
-        clearTimeout(silenceTimerRef.current);
-        silenceTimerRef.current = null;
-      }
+      hasSpokenRef.current = false;
+      silenceStartRef.current = null;
+      recordingStartTimeRef.current = Date.now();
 
       const recording = new Audio.Recording();
       await recording.prepareToRecordAsync(RECORDING_OPTIONS);
@@ -221,8 +251,9 @@ export default function VoiceInputButton({
 
       recordingRef.current = recording;
 
-      // 5. Start Duration Timer
+      // 6. Start Duration Timer
       setDurationSeconds(0);
+      if (timerRef.current) clearInterval(timerRef.current);
       timerRef.current = setInterval(() => {
         setDurationSeconds((prev) => prev + 1);
       }, 1000);
@@ -230,25 +261,31 @@ export default function VoiceInputButton({
       updateState('RECORDING');
     } catch (err: any) {
       console.error('Failed to start recording:', err);
+      if (recordingRef.current) {
+        try {
+          await recordingRef.current.stopAndUnloadAsync();
+        } catch (_) {}
+        recordingRef.current = null;
+      }
       updateState('ERROR');
       onError?.(err?.message || 'Failed to start recording');
       setTimeout(() => updateState('IDLE'), 2000);
+    } finally {
+      isStartingRef.current = false;
     }
   };
 
   const stopRecordingAndTranscribe = async () => {
     if (!recordingRef.current || isProcessingRef.current) return;
     isProcessingRef.current = true;
+    const recording = recordingRef.current;
+    recordingRef.current = null; // Detach immediately to prevent duplicate invocations
 
     try {
-      // 1. Clear Duration & Silence Timers
+      // 1. Clear Duration Timer
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
-      }
-      if (silenceTimerRef.current) {
-        clearTimeout(silenceTimerRef.current);
-        silenceTimerRef.current = null;
       }
 
       // 2. Trigger Haptic Feedback
@@ -260,7 +297,6 @@ export default function VoiceInputButton({
 
       // 3. Stop and Unload Recording
       updateState('PROCESSING');
-      const recording = recordingRef.current;
       await recording.stopAndUnloadAsync();
 
       // Reset audio mode to playback only
@@ -270,18 +306,9 @@ export default function VoiceInputButton({
       });
 
       const uri = recording.getURI();
-      recordingRef.current = null;
 
       if (!uri) {
         throw new Error('No audio file URI available');
-      }
-
-      // Check if recording was too short (< 0.5s)
-      if (durationSeconds < 1 && !hasSpokenRef.current) {
-        console.log('Recording too short, discarding');
-        isProcessingRef.current = false;
-        updateState('IDLE');
-        return;
       }
 
       // 4. Send to Backend STT /transcribe endpoint
@@ -309,7 +336,7 @@ export default function VoiceInputButton({
   };
 
   const handlePress = () => {
-    if (disabled || state === 'PROCESSING') return;
+    if (disabled || state === 'PROCESSING' || isStartingRef.current) return;
 
     if (state === 'RECORDING') {
       stopRecordingAndTranscribe();

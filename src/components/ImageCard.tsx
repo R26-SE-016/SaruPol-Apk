@@ -33,12 +33,14 @@ export default function ImageCard({ image, baseUrl, style }: ImageCardProps) {
 
   let fullUrl = image.url || '';
   if (fullUrl.startsWith('http://localhost:8000') || fullUrl.startsWith('http://127.0.0.1:8000')) {
-    fullUrl = fullUrl.replace(/^http:\/\/(?:localhost|127\.0\.0\.1):8000/, baseHost);
+    fullUrl = fullUrl.replace(/^http:\/\/(?:localhost|127\.0\.0\.1):8000/, baseHost.replace(/:\d+$/, ':5002'));
   } else if (!fullUrl.startsWith('http://') && !fullUrl.startsWith('https://')) {
     const cleanPath = fullUrl.startsWith('/') ? fullUrl : `/${fullUrl}`;
     // Encode space and special chars in filename while preserving slashes
     const encodedPath = cleanPath.split('/').map(segment => encodeURIComponent(segment)).join('/');
-    fullUrl = `${baseHost}${encodedPath}`;
+    // Direct host connection to Python backend (port 5002) to bypass gateway
+    const directHost = baseHost.replace(/:\d+$/, ':5002');
+    fullUrl = `${directHost}${encodedPath}`;
   }
 
   return (
