@@ -533,7 +533,10 @@ export default function AdvisorScreen() {
 
     try {
       if (chatMode === 'multi') {
-        const response = await sendMultiLLMQuery(trimmed, userCoords?.lat, userCoords?.lon, language);
+        const response = await sendMultiLLMQuery(trimmed, userCoords?.lat, userCoords?.lon, language, sessionId);
+        if (response.session_id) {
+          setSessionId(response.session_id);
+        }
         if (response.success) {
           const gemmaAns = response.gemma_answer || response.qwen_answer;
           const botMsg: Message = {
