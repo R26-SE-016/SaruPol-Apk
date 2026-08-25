@@ -9,6 +9,7 @@ import { COLORS, ROUNDING } from '../../constants/theme';
 import GlassCard from '../../components/common/GlassCard';
 import GradientButton from '../../components/common/GradientButton';
 import { getLiveWeather, WeatherData } from '../../services/weatherService';
+import { getCanopyHotspots, CanopyHotspotItem } from '../../services/pathologyService';
 
 export default function HomeScreen() {
   const { t } = useTranslation();
@@ -17,6 +18,7 @@ export default function HomeScreen() {
 
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(true);
+  const [hotspots, setHotspots] = useState<CanopyHotspotItem[]>([]);
 
   // Time-aware greeting
   const getGreeting = () => {
@@ -50,8 +52,19 @@ export default function HomeScreen() {
       }
     }
 
+    async function loadHotspots() {
+      try {
+        const res = await getCanopyHotspots(user?.estate_id || 'estate_001');
+        setHotspots(res.hotspots || []);
+      } catch (e) {
+        // non-blocking
+      }
+    }
+
     fetchWeather();
-  }, []);
+    loadHotspots();
+  }, [user?.estate_id]);
+
 
   const handleLogout = () => {
     const logoutTitle = language === 'ta' ? 'வெளியேறு' : language === 'si' ? 'පිටවීම' : 'Logout';
@@ -153,8 +166,63 @@ export default function HomeScreen() {
           )}
         </GlassCard>
 
+        {/* Aerial Canopy Stress Hotspots Alert Card (Macro-to-Micro Bridge) */}
+        {hotspots.length > 0 && (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => router.push('/(screens)/canopy-hotspots' as any)}
+          >
+            <GlassCard
+              style={{
+                marginBottom: 16,
+                padding: 14,
+                borderLeftWidth: 4,
+                borderLeftColor: COLORS.diseased,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                backgroundColor: 'rgba(239, 68, 68, 0.08)',
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 10 }}>
+                <View
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 12,
+                  }}
+                >
+                  <Ionicons name="airplane" size={22} color={COLORS.diseased} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: COLORS.text }}>
+                    {language === 'ta'
+                      ? `${hotspots.length} விமான அச்சுறுத்தல்கள்`
+                      : language === 'si'
+                      ? `ගුවන් තර්ජන කලාප ${hotspots.length} ක්`
+                      : `${hotspots.length} Aerial Stress Hotspots`}
+                  </Text>
+                  <Text style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 2 }}>
+                    {language === 'ta'
+                      ? 'ட்ரோன் ஸ்கேன் மூலம் கொடியிடப்பட்ட மரங்கள்'
+                      : language === 'si'
+                      ? 'ඩ්‍රෝන් මඟින් හඳුනාගත් ගස් පරීක්ෂා කරන්න'
+                      : 'Drone NDVI/VARI flagged trees requiring leaf scans'}
+                  </Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={COLORS.textSecondary} />
+            </GlassCard>
+          </TouchableOpacity>
+        )}
+
         {/* Quick Actions Shortcuts */}
         <Text style={styles.sectionTitle}>{t('home.quickActions')}</Text>
+
         <View style={styles.actionGrid}>
           <TouchableOpacity
             style={styles.gridBtn}
