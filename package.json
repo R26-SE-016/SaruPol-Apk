@@ -66,11 +66,11 @@
     "typescript": "~5.9.2"
   },
   "scripts": {
-    "start": "expo start --port 3000",
+    "start": "expo start --port 8085",
     "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo start --android --port 3000",
-    "ios": "expo start --ios --port 3000",
-    "web": "expo start --web --port 3000",
+    "android": "expo start --android --port 8085",
+    "ios": "expo start --ios --port 8085",
+    "web": "expo start --web --port 8085",
     "lint": "expo lint"
   },
   "private": true
