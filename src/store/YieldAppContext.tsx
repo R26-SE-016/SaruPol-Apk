@@ -13,6 +13,8 @@ interface YieldAppContextValue {
   currentFarm: Farm | null;
   currentZones: Zone[];
   setCurrentFarmId: (farmId: string | null) => void;
+  refreshFarms: () => Promise<void>;
+  refreshZones: () => Promise<void>;
 }
 
 const YieldAppContext = createContext<YieldAppContextValue | null>(null);
@@ -65,6 +67,27 @@ export function YieldAppProvider({ children }: { children: ReactNode }) {
     }
   }, [user.uid, currentFarmId]);
 
+  const refreshFarms = async () => {
+    try {
+      const { fetchFarms } = await import("@/services/yieldFarmDb");
+      const updated = await fetchFarms(user.uid);
+      setFarms(updated);
+    } catch (e) {
+      console.warn("[YieldAppContext] refreshFarms error:", e);
+    }
+  };
+
+  const refreshZones = async () => {
+    if (!currentFarmId) return;
+    try {
+      const { fetchZones } = await import("@/services/yieldFarmDb");
+      const updated = await fetchZones(user.uid, currentFarmId);
+      setCurrentZones(updated);
+    } catch (e) {
+      console.warn("[YieldAppContext] refreshZones error:", e);
+    }
+  };
+
   // --- telemetry device id live presence (for "ESP32 LIVE" badge) ---
   const [deviceLive, setDeviceLive] = useState(false);
   useEffect(() => {
@@ -89,6 +112,8 @@ export function YieldAppProvider({ children }: { children: ReactNode }) {
         currentFarm,
         currentZones,
         setCurrentFarmId,
+        refreshFarms,
+        refreshZones,
       }}
     >
       {children}
