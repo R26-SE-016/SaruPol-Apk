@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { predictDashboardYield } from '@/services/yieldService';
-import { fetchTrees } from '@/services/yieldFarmDb';
+import { fetchTrees, fetchHarvestLogs } from '@/services/yieldFarmDb';
 import type { Farm } from '@/types/yield';
 
-export function useUnifiedFarmYield(userUid: string | undefined, farms: Farm[], logsMap?: Record<string, any[]>) {
+export function useUnifiedFarmYield(userUid: string | undefined, farms: Farm[], externalLogsMap?: Record<string, any[]>, refreshTrigger?: number) {
   const [basePredictions, setBasePredictions] = useState<Record<string, any>>({});
   const [farmTrees, setFarmTrees] = useState<Record<string, Record<string, any>>>({});
   const [isPredicting, setIsPredicting] = useState<boolean>(true);
@@ -22,13 +22,25 @@ export function useUnifiedFarmYield(userUid: string | undefined, farms: Farm[], 
       
       for (const farm of farms) {
         try {
+          let farmLogs = externalLogsMap ? (externalLogsMap[farm.id] || []) : [];
+          if (!externalLogsMap) {
+            const rawLogs = await fetchHarvestLogs(userUid, farm.id);
+            farmLogs = rawLogs.map((l: any) => ({
+              id: l.id,
+              date: l.date || l.timestamp,
+              actual_yield_nuts: l.nutCount || l.actual_yield_nuts || (l.gradeA || 0) + (l.gradeB || 0) + (l.gradeC || 0) || 0,
+              predicted_yield_nuts: l.predicted_yield_nuts || 0 
+            }));
+            farmLogs.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          }
+
           const reqBody = {
             uid: userUid,
             farm_id: farm.id,
             estate: farm.locationName || 'Colombo',
             trees_count: farm.totalTrees || 40,
             last_harvest_yield: farm.lastHarvestYield || null,
-            actual_harvest_logs: logsMap ? (logsMap[farm.id] || []) : []
+            actual_harvest_logs: farmLogs
           };
           const data = await predictDashboardYield(reqBody);
           if (data && data.predicted_next_pick_yield_nuts !== undefined) {
@@ -48,7 +60,7 @@ export function useUnifiedFarmYield(userUid: string | undefined, farms: Farm[], 
     fetchAll();
 
     return () => { isMounted = false; };
-  }, [userUid, farms.map(f => f.id).join(','), logsMap]);
+  }, [userUid, farms.map(f => f.id).join(','), externalLogsMap, refreshTrigger]);
 
   useEffect(() => {
     if (!userUid || farms.length === 0) return;
@@ -67,7 +79,7 @@ export function useUnifiedFarmYield(userUid: string | undefined, farms: Farm[], 
 
     loadAllTrees();
     return () => { isMounted = false; };
-  }, [userUid, farms.map(f => f.id).join(',')]);
+  }, [userUid, farms.map(f => f.id).join(','), refreshTrigger]);
 
   const unifiedYields = useMemo(() => {
     const result: Record<string, number> = {};
