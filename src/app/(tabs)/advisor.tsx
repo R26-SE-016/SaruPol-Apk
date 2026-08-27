@@ -1,9 +1,10 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
 import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal } from 'react-native';
 import GlassCard from '../../components/common/GlassCard';
 import ImageCard, { ImageReference } from '../../components/ImageCard';
 import VoiceInputButton from '../../components/VoiceInputButton';
@@ -43,6 +44,68 @@ interface Message {
   similarity_score?: number;
   latency_ms?: number;
 }
+
+export interface ChatSession {
+  id: string;
+  topic: string;
+  timestamp: number;
+  messages: Message[];
+  chatMode: 'standard' | 'multi';
+}
+
+const getLocName = (name: string, lang: string) => {
+  if (lang === 'si') {
+    if (name.includes('Wet Zone')) return 'තෙත් කලාපය';
+    if (name.includes('Intermediate Zone')) return 'අතරමැදි කලාපය';
+    if (name.includes('Dry Zone')) return 'වියළි කලාපය';
+    if (name.includes('Auto')) return 'ස්වයංක්‍රීය (GPS)';
+  } else if (lang === 'ta') {
+    if (name.includes('Wet Zone')) return 'ஈர மண்டலம்';
+    if (name.includes('Intermediate Zone')) return 'இடைநிலை மண்டலம்';
+    if (name.includes('Dry Zone')) return 'உலர் மண்டலம்';
+    if (name.includes('Auto')) return 'தானியங்கி (GPS)';
+  }
+  return name;
+};
+
+const getSeasonName = (name: string, lang: string) => {
+  if (lang === 'si') {
+    if (name.includes('Yala')) return 'යල කන්නය';
+    if (name.includes('Maha')) return 'මහ කන්නය';
+    if (name.includes('Auto')) return 'ස්වයංක්‍රීය (දිනය)';
+  } else if (lang === 'ta') {
+    if (name.includes('Yala')) return 'யால பருவம்';
+    if (name.includes('Maha')) return 'மகா பருவம்';
+    if (name.includes('Auto')) return 'தானியங்கி (தேதி)';
+  }
+  return name;
+};
+
+const getTranslatedContext = (ctx: string, lang: string) => {
+  if (!ctx) return '';
+  if (lang === 'en') return ctx;
+  let translated = ctx;
+  if (lang === 'si') {
+    translated = translated.replace('Wet Zone', 'තෙත් කලාපය').replace('Intermediate Zone', 'අතරමැදි කලාපය')
+      .replace('Dry Zone', 'වියළි කලාපය').replace('Unknown Zone', 'නොදන්නා කලාපය')
+      .replace('Yala Season', 'යල කන්නය').replace('Maha Season', 'මහ කන්නය')
+      .replace('Demo Mode', 'ආදර්ශන ප්‍රකාරය')
+      .replace('January', 'ජනවාරි').replace('February', 'පෙබරවාරි').replace('March', 'මාර්තු')
+      .replace('April', 'අප්‍රේල්').replace('May', 'මැයි').replace('June', 'ජූනි')
+      .replace('July', 'ජූලි').replace('August', 'අගෝස්තු').replace('September', 'සැප්තැම්බර්')
+      .replace('October', 'ඔක්තෝබර්').replace('November', 'නොවැම්බර්').replace('December', 'දෙසැම්බර්');
+  } else if (lang === 'ta') {
+    translated = translated.replace('Wet Zone', 'ஈர மண்டலம்').replace('Intermediate Zone', 'இடைநிலை மண்டலம்')
+      .replace('Dry Zone', 'உலர் மண்டலம்').replace('Unknown Zone', 'அறியப்படாத மண்டலம்')
+      .replace('Yala Season', 'யால பருவம்').replace('Maha Season', 'மகா பருவம்')
+      .replace('Demo Mode', 'டெமோ முறை')
+      .replace('January', 'ஜனவரி').replace('February', 'பிப்ரவரி').replace('March', 'மார்ச்')
+      .replace('April', 'ஏப்ரல்').replace('May', 'மே').replace('June', 'ஜூன்')
+      .replace('July', 'ஜூலை').replace('August', 'ஆகஸ்ட்').replace('September', 'செப்டம்பர்')
+      .replace('October', 'அக்டோபர்').replace('November', 'நவம்பர்').replace('December', 'டிசம்பர்');
+  }
+  return translated;
+};
 
 const ReliabilityBadge = ({
   combinedReliability,
@@ -124,6 +187,9 @@ export default function AdvisorScreen() {
   const [translating, setTranslating] = useState(false);
   const textInputRef = useRef<TextInput>(null);
 
+  const [chatHistory, setChatHistory] = useState<ChatSession[]>([]);
+
+
   const handleEditQuestion = (msg: Message) => {
     setEditingMsgId(msg.id);
     setInputText(msg.text);
@@ -150,6 +216,14 @@ export default function AdvisorScreen() {
       if (!msg.translations?.[nextLang]) {
         const textToTranslate = msg.translations?.['en'] || msg.translations?.['si'] || msg.text;
         messagesToTranslate.push({ id: msg.id + "_text", text: textToTranslate });
+      }
+
+      if (msg.images && msg.images.length > 0) {
+        msg.images.forEach((img, idx) => {
+          if (!msg.translations?.[`img_${idx}_${nextLang}`] && img.caption) {
+            messagesToTranslate.push({ id: msg.id + `_img_${idx}`, text: img.caption });
+          }
+        });
       }
 
       if (msg.isMultiLlm) {
@@ -183,6 +257,13 @@ export default function AdvisorScreen() {
           text: msg.translations?.[nextLang] || msg.text
         };
 
+        if (msg.images && msg.images.length > 0) {
+          updatedMsg.images = msg.images.map((img, idx) => ({
+            ...img,
+            caption: msg.translations?.[`img_${idx}_${nextLang}`] || img.caption
+          }));
+        }
+
         if (msg.isMultiLlm) {
           updatedMsg = {
             ...updatedMsg,
@@ -212,6 +293,13 @@ export default function AdvisorScreen() {
           if (!cachedTranslations[currentLang]) {
             cachedTranslations[currentLang] = msg.text;
           }
+          if (msg.images && msg.images.length > 0) {
+            msg.images.forEach((img, idx) => {
+              if (!cachedTranslations[`img_${idx}_${currentLang}`] && img.caption) {
+                cachedTranslations[`img_${idx}_${currentLang}`] = img.caption;
+              }
+            });
+          }
           if (msg.isMultiLlm) {
             if (!cachedTranslations[`llama_${currentLang}`]) {
               cachedTranslations[`llama_${currentLang}`] = msg.llama_answer;
@@ -237,10 +325,28 @@ export default function AdvisorScreen() {
             cachedTranslations[nextLang] = textTrans.translated_text;
           }
 
+          if (msg.images && msg.images.length > 0) {
+            msg.images.forEach((img, idx) => {
+              const imgTrans = result.translations.find((t: any) => t.id === msg.id + `_img_${idx}`);
+              if (imgTrans) {
+                cachedTranslations[`img_${idx}_${nextLang}`] = imgTrans.translated_text;
+              }
+            });
+          }
+
+          let updatedImages = msg.images;
+          if (msg.images && msg.images.length > 0) {
+            updatedImages = msg.images.map((img, idx) => ({
+              ...img,
+              caption: cachedTranslations[`img_${idx}_${nextLang}`] || img.caption
+            }));
+          }
+
           let updatedMsg = {
             ...msg,
             text: cachedTranslations[nextLang] || msg.text,
-            translations: cachedTranslations
+            translations: cachedTranslations,
+            images: updatedImages
           };
 
           if (msg.isMultiLlm) {
@@ -289,6 +395,13 @@ export default function AdvisorScreen() {
           ...msg,
           text: msg.translations?.[nextLang] || msg.text
         };
+
+        if (msg.images && msg.images.length > 0) {
+          updatedMsg.images = msg.images.map((img, idx) => ({
+            ...img,
+            caption: msg.translations?.[`img_${idx}_${nextLang}`] || img.caption
+          }));
+        }
 
         if (msg.isMultiLlm) {
           updatedMsg = {
@@ -369,7 +482,99 @@ export default function AdvisorScreen() {
   const [expandedMultiLlmMsgIds, setExpandedMultiLlmMsgIds] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
   const [userContext, setUserContext] = useState<string | null>(null);
+  const [zoneOverride, setZoneOverride] = useState<'auto' | 'Wet Zone' | 'Intermediate Zone' | 'Dry Zone'>('auto');
+  const [seasonOverride, setSeasonOverride] = useState<'auto' | 'Yala' | 'Maha'>('auto');
+  const [showDemoPanel, setShowDemoPanel] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  // Load chat history on mount
+  React.useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('sarupol_chat_history');
+        if (stored) {
+          setChatHistory(JSON.parse(stored));
+        }
+      } catch (err) {
+        console.warn("Failed to load chat history:", err);
+      }
+    };
+    loadHistory();
+  }, []);
+
+  // Save current chat session whenever messages change
+  React.useEffect(() => {
+    if (messages.length <= 1) return; // Don't save empty/welcome-only sessions
+    
+    const saveChat = async () => {
+      try {
+        setChatHistory(prev => {
+          const existingIdx = prev.findIndex(s => s.id === sessionId);
+          const topicMsg = messages.find(m => m.sender === 'user');
+          const topic = topicMsg ? topicMsg.text.substring(0, 30) + (topicMsg.text.length > 30 ? '...' : '') : 'New Chat';
+          
+          const newSession: ChatSession = {
+            id: sessionId,
+            topic,
+            timestamp: Date.now(),
+            messages,
+            chatMode
+          };
+
+          let updated;
+          if (existingIdx >= 0) {
+            updated = [...prev];
+            updated[existingIdx] = newSession;
+          } else {
+            updated = [newSession, ...prev];
+          }
+          
+          AsyncStorage.setItem('sarupol_chat_history', JSON.stringify(updated)).catch(console.warn);
+          return updated;
+        });
+      } catch (err) {
+        console.warn("Failed to save chat:", err);
+      }
+    };
+    saveChat();
+  }, [messages, sessionId, chatMode]);
+
+  const handleStartNewChat = () => {
+    setSessionId(generateUUID());
+    setMessages([{
+      id: 'welcome',
+      sender: 'bot',
+      text: language === 'ta'
+        ? "வணக்கம்! நான் SaruPol AI விவசாய ஆலோசகர். தேங்காய் பயிர்ச்செய்கை, பூச்சி கட்டுப்பாடு, நோய்கள் அல்லது உர திட்டங்கள் பற்றி எந்தக் கேள்வியையும் கேளுங்கள்!"
+        : language === 'si'
+        ? "ආයුබෝවන්! මම සරුපොල් AI වගා උපදේශකයා වෙමි. පොල් වගාව, පළිබෝධ පාලනය, රෝග හෝ පොහොර යෙදීම් පිළිබඳ ඕනෑම ගැටලුවක් මගෙන් විමසන්න."
+        : "Hello! I am your SaruPol AI Farming Advisor. I can answer any questions about coconut cultivation, pest controls, diseases, or fertilizer schedules. Ask me anything!",
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }]);
+    setShowDemoPanel(false);
+  };
+
+  const handleLoadSession = (session: ChatSession) => {
+    setSessionId(session.id);
+    setMessages(session.messages);
+    setChatMode(session.chatMode || 'standard');
+    setShowDemoPanel(false);
+  };
+
+  const handleDeleteSession = async (id: string) => {
+    try {
+      const updated = chatHistory.filter(s => s.id !== id);
+      setChatHistory(updated);
+      await AsyncStorage.setItem('sarupol_chat_history', JSON.stringify(updated));
+      
+      // If the deleted session is the currently active one, start a new chat
+      if (id === sessionId) {
+        handleStartNewChat();
+      }
+    } catch (err) {
+      console.warn("Failed to delete chat session:", err);
+    }
+  };
 
   // Audio Playback States for TTS
   const [activeAudioMsgId, setActiveAudioMsgId] = useState<string | null>(null);
@@ -498,6 +703,24 @@ export default function AdvisorScreen() {
     const trimmed = textToSend.trim();
     if (!trimmed) return;
 
+    let sendLat = userCoords?.lat;
+    let sendLon = userCoords?.lon;
+    if (zoneOverride === 'Wet Zone') {
+      sendLat = 6.9271; sendLon = 79.8612;
+    } else if (zoneOverride === 'Intermediate Zone') {
+      sendLat = 7.2906; sendLon = 80.6337;
+    } else if (zoneOverride === 'Dry Zone') {
+      sendLat = 8.3114; sendLon = 80.4037;
+    }
+
+    let sendContext = userContext;
+    if (zoneOverride !== 'auto' || seasonOverride !== 'auto') {
+      const z = zoneOverride === 'auto' ? (userContext?.split(' | ')[0] || 'Unknown Zone') : zoneOverride;
+      const s = seasonOverride === 'auto' ? (userContext?.split(' | ')[1]?.split(' ')[0] || 'Unknown') : seasonOverride;
+      const m = seasonOverride === 'auto' ? (userContext?.split('(')[1]?.replace(')', '') || '') : (seasonOverride === 'Yala' ? 'July' : 'December');
+      sendContext = `${z} | ${s} Season (${m})`;
+    }
+
     if (editingMsgId) {
       setMessages(prev => {
         const targetIdx = prev.findIndex(m => m.id === editingMsgId);
@@ -533,7 +756,7 @@ export default function AdvisorScreen() {
 
     try {
       if (chatMode === 'multi') {
-        const response = await sendMultiLLMQuery(trimmed, userCoords?.lat, userCoords?.lon, language, sessionId);
+        const response = await sendMultiLLMQuery(trimmed, sendLat, sendLon, language, sessionId, sendContext);
         if (response.session_id) {
           setSessionId(response.session_id);
         }
@@ -575,11 +798,11 @@ export default function AdvisorScreen() {
       } else {
         const response = await sendAdvisoryMessage(
           trimmed,
-          userContext,
+          sendContext,
           language,
           sessionId,
-          userCoords?.lat,
-          userCoords?.lon
+          sendLat,
+          sendLon
         );
 
         if (response.session_id) {
@@ -672,8 +895,8 @@ export default function AdvisorScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>{t('advisor.title')}</Text>
         <View style={styles.headerActions}>
-          <TouchableOpacity onPress={startNewChat} style={styles.iconOnlyDeleteButton} activeOpacity={0.7}>
-            <Ionicons name="trash-outline" size={18} color={COLORS.diseased} />
+          <TouchableOpacity onPress={handleStartNewChat} style={styles.iconOnlyDeleteButton} activeOpacity={0.7}>
+            <Ionicons name="add" size={24} color={COLORS.primaryLight} />
           </TouchableOpacity>
           <View style={styles.langSelectorRow}>
             {(['en', 'si', 'ta'] as const).map((lang) => (
@@ -695,6 +918,9 @@ export default function AdvisorScreen() {
               </TouchableOpacity>
             ))}
           </View>
+          <TouchableOpacity onPress={() => setShowDemoPanel(true)} style={[styles.iconOnlyDeleteButton, { marginLeft: 8 }]} activeOpacity={0.7}>
+            <Ionicons name="menu-outline" size={28} color={COLORS.textPrimary} />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -720,11 +946,117 @@ export default function AdvisorScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Demo Sidebar Modal */}
+      <Modal visible={showDemoPanel} animationType="fade" transparent={true} onRequestClose={() => setShowDemoPanel(false)}>
+        <View style={{ flex: 1, flexDirection: 'row' }}>
+          <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }} onPress={() => setShowDemoPanel(false)} activeOpacity={1} />
+          <View style={{ width: 320, backgroundColor: COLORS.surface, paddingTop: Platform.OS === 'ios' ? 60 : 40, borderTopLeftRadius: 30, borderBottomLeftRadius: 30, shadowColor: '#000', shadowOffset: { width: -10, height: 0 }, shadowOpacity: 0.5, shadowRadius: 30, elevation: 20 }}>
+            {/* Header / Close Button Row */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, marginBottom: 20 }}>
+              <TouchableOpacity onPress={handleStartNewChat} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.primary, paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20 }}>
+                <Ionicons name="add" size={18} color="#fff" style={{ marginRight: 4 }} />
+                <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>
+                  {language === 'ta' ? 'புதிய அரட்டை' : language === 'si' ? 'නව සංවාදය' : 'New Chat'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setShowDemoPanel(false)} style={{ backgroundColor: 'rgba(255,255,255,0.1)', padding: 8, borderRadius: 20 }}>
+                <Ionicons name="close" size={20} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ paddingHorizontal: 24 }}>
+              {/* Zone Section */}
+              <View style={{ marginBottom: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                  <Ionicons name="location-outline" size={16} color={COLORS.primaryLight} style={{ marginRight: 6 }} />
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.textPrimary }}>
+                    {language === 'ta' ? 'மண்டலம்' : language === 'si' ? 'ස්ථාන කලාපය' : 'Location Zone'}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'column', gap: 2 }}>
+                  {[
+                    { id: 'auto', label: 'Auto (GPS)' },
+                    { id: 'Wet Zone', label: 'Wet Zone' },
+                    { id: 'Intermediate Zone', label: 'Intermediate Zone' },
+                    { id: 'Dry Zone', label: 'Dry Zone' }
+                  ].map(item => (
+                    <TouchableOpacity key={item.id} onPress={() => setZoneOverride(item.id as any)} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6, paddingHorizontal: 12, backgroundColor: zoneOverride === item.id ? COLORS.glassBackground : 'rgba(255,255,255,0.03)', borderRadius: 10, borderWidth: 1, borderColor: zoneOverride === item.id ? COLORS.primaryLight : 'transparent' }} activeOpacity={0.7}>
+                      <Text style={{ color: zoneOverride === item.id ? COLORS.textPrimary : COLORS.textSecondary, fontSize: 13, fontWeight: zoneOverride === item.id ? '600' : '500' }}>{getLocName(item.label, language)}</Text>
+                      {zoneOverride === item.id && <Ionicons name="checkmark-circle" size={16} color={COLORS.primaryLight} />}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Season Section */}
+              <View style={{ marginBottom: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                  <Ionicons name="leaf-outline" size={16} color={COLORS.primaryLight} style={{ marginRight: 6 }} />
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.textPrimary }}>
+                    {language === 'ta' ? 'தற்போதைய பருவம்' : language === 'si' ? 'වත්මන් කන්නය' : 'Current Season'}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'column', gap: 2 }}>
+                  {[
+                    { id: 'auto', label: 'Auto (Date)' },
+                    { id: 'Yala', label: 'Yala Season' },
+                    { id: 'Maha', label: 'Maha Season' }
+                  ].map(item => (
+                    <TouchableOpacity key={item.id} onPress={() => setSeasonOverride(item.id as any)} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6, paddingHorizontal: 12, backgroundColor: seasonOverride === item.id ? COLORS.glassBackground : 'rgba(255,255,255,0.03)', borderRadius: 10, borderWidth: 1, borderColor: seasonOverride === item.id ? COLORS.primaryLight : 'transparent' }} activeOpacity={0.7}>
+                      <Text style={{ color: seasonOverride === item.id ? COLORS.textPrimary : COLORS.textSecondary, fontSize: 13, fontWeight: seasonOverride === item.id ? '600' : '500' }}>{getSeasonName(item.label, language)}</Text>
+                      {seasonOverride === item.id && <Ionicons name="checkmark-circle" size={16} color={COLORS.primaryLight} />}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </View>
+
+            {/* Divider */}
+            <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginVertical: 10, marginHorizontal: 24 }} />
+
+            <ScrollView style={{ paddingHorizontal: 24, flex: 1 }} showsVerticalScrollIndicator={false}>
+              {/* Chat History Section */}
+              <View style={{ paddingBottom: 40 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
+                  <Ionicons name="time-outline" size={18} color={COLORS.primaryLight} style={{ marginRight: 8 }} />
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: COLORS.textPrimary }}>
+                    {language === 'ta' ? 'அரட்டை வரலாறு' : language === 'si' ? 'සංවාද ඉතිහාසය' : 'Chat History'}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'column', gap: 10 }}>
+                  {chatHistory.length === 0 ? (
+                    <Text style={{ color: COLORS.textMuted, fontSize: 14, fontStyle: 'italic', textAlign: 'center', marginTop: 10 }}>
+                      {language === 'ta' ? 'இதுவரை வரலாறு இல்லை.' : language === 'si' ? 'තවම ඉතිහාසයක් නොමැත.' : 'No history yet.'}
+                    </Text>
+                  ) : (
+                    chatHistory.map(session => (
+                      <View key={session.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 16, backgroundColor: sessionId === session.id ? COLORS.glassBackground : 'rgba(255,255,255,0.03)', borderRadius: 12, borderWidth: 1, borderColor: sessionId === session.id ? COLORS.primaryLight : 'transparent' }}>
+                        <TouchableOpacity style={{ flex: 1, marginRight: 10 }} onPress={() => handleLoadSession(session)}>
+                          <Text style={{ color: sessionId === session.id ? COLORS.textPrimary : COLORS.textSecondary, fontSize: 14, fontWeight: sessionId === session.id ? '600' : '500' }} numberOfLines={1}>{session.topic}</Text>
+                          <Text style={{ color: COLORS.textMuted, fontSize: 11, marginTop: 4 }}>
+                            {new Date(session.timestamp).toLocaleDateString()} • {session.chatMode === 'multi' ? 'Multi-LLM' : 'AI Chat'}
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => handleDeleteSession(session.id)} style={{ padding: 6 }}>
+                          <Ionicons name="trash-outline" size={18} color="#EF5350" />
+                        </TouchableOpacity>
+                      </View>
+                    ))
+                  )}
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
       {/* Context Banner */}
       {userContext && (
-        <View style={styles.contextBanner}>
-          <Ionicons name="location" size={14} color={COLORS.primaryLight} />
-          <Text style={styles.contextBannerText}>{userContext}</Text>
+        <View style={[styles.contextBanner, (zoneOverride !== 'auto' || seasonOverride !== 'auto') && { backgroundColor: 'rgba(245, 158, 11, 0.15)', borderColor: 'rgba(245, 158, 11, 0.4)' }]}>
+          <Ionicons name="location" size={14} color={(zoneOverride !== 'auto' || seasonOverride !== 'auto') ? '#F59E0B' : COLORS.primaryLight} />
+          <Text style={[styles.contextBannerText, (zoneOverride !== 'auto' || seasonOverride !== 'auto') && { color: '#B45309' }]}>
+            {getTranslatedContext((zoneOverride !== 'auto' || seasonOverride !== 'auto') ? `${zoneOverride === 'auto' ? (userContext?.split(' | ')[0] || '') : zoneOverride} | ${seasonOverride === 'auto' ? (userContext?.split(' | ')[1]?.split(' ')[0] || '') : seasonOverride} (Demo Mode)` : userContext, language)}
+          </Text>
         </View>
       )}
 
@@ -1133,12 +1465,13 @@ export default function AdvisorScreen() {
           />
           <TextInput
             ref={textInputRef}
-            style={styles.textInput}
+            style={[styles.textInput, { minHeight: 70, paddingTop: 10, paddingBottom: 10, textAlignVertical: 'top' }]}
             value={inputText}
             onChangeText={handleInputChange}
             placeholder={t('advisor.placeholder')}
             placeholderTextColor={COLORS.textMuted}
-            onSubmitEditing={() => handleSend(inputText)}
+            multiline={true}
+            numberOfLines={2}
           />
           <TouchableOpacity onPress={() => handleSend(inputText)} style={styles.sendButton} disabled={loading}>
             <Ionicons name={editingMsgId ? "checkmark" : "send"} size={20} color={COLORS.textPrimary} />
