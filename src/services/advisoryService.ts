@@ -54,7 +54,8 @@ export const sendMultiLLMQuery = async (
   latitude: number | undefined,
   longitude: number | undefined,
   language: string,
-  sessionId?: string | null
+  sessionId?: string | null,
+  context?: string | null
 ) => {
   const response = await api.post('/advisory/ask-multi', {
     question,
@@ -62,6 +63,7 @@ export const sendMultiLLMQuery = async (
     longitude: longitude ?? null,
     language,
     session_id: sessionId ?? null,
+    context: context ?? null,
   }, {
     timeout: 120000, // 120s — this endpoint runs 3 LLMs + judge + translations
   });
