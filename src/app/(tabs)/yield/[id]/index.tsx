@@ -344,8 +344,6 @@ export default function FarmDetailScreen() {
           </View>
         </View>
 
-        {/* Section F: Field Care Recommendations & Actions */}
-        <SmartAdvisory trees={farmData.trees} zones={currentZones} farmName={farm.name} />
 
       </ScrollView>
     </View>

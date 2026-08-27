@@ -1,8 +1,10 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { View, Text, ScrollView, TouchableOpacity, SafeAreaView, Image, ActivityIndicator } from "react-native";
-import { ArrowLeft } from "lucide-react-native";
-import { useState, useMemo } from "react";
+import { ArrowLeft, SlidersHorizontal, MapPin } from "lucide-react-native";
+import { useState, useMemo, useEffect } from "react";
 import { useYieldApp } from "@/store/YieldAppContext";
+import { subscribeTrees } from "@/services/yieldFarmDb";
+import type { Tree } from "@/types/yield";
 
 export default function TreeWisePredictionScreen() {
   const { id } = useLocalSearchParams();
@@ -10,28 +12,43 @@ export default function TreeWisePredictionScreen() {
   const router = useRouter();
   
   const { currentFarm, currentZones, user } = useYieldApp();
+  const [storedTrees, setStoredTrees] = useState<Record<string, Tree>>({});
+  
+  const [activeTab, setActiveTab] = useState<'all' | 'healthy' | 'attention'>('all');
 
-  const TREES_PER_PAGE = 20;
-  const [currentPage, setCurrentPage] = useState(1);
-  
-  const totalTrees = (currentFarm as any)?.trees || currentFarm?.totalTrees || 0;
-  
-  // Mapping of tree numbers to zone colors
-  const treeColorMap = useMemo(() => {
-    const m: Record<number, string> = {};
-    currentZones.forEach((z) => {
-      if (z.treeNumbers) {
-        z.treeNumbers.forEach((n) => { m[n] = z.color; });
-      }
-    });
-    return m;
-  }, [currentZones]);
+  useEffect(() => {
+    if (!user || !currentFarm) return;
+    const unsub = subscribeTrees(user.uid, currentFarm.id, setStoredTrees);
+    return unsub;
+  }, [user, currentFarm]);
 
-  const totalPages = Math.max(1, Math.ceil(totalTrees / TREES_PER_PAGE));
-  const startIndex = (currentPage - 1) * TREES_PER_PAGE;
-  const endIndex = Math.min(startIndex + TREES_PER_PAGE, totalTrees);
-  
-  const currentTrees = Array.from({ length: Math.max(0, endIndex - startIndex) }).map((_, i) => startIndex + i + 1);
+  const totalTreesCount = (currentFarm as any)?.trees || currentFarm?.totalTrees || 24;
+
+  const getTreeData = (index: number) => {
+    const treeNumber = index + 1;
+    const treeId = `tree-${treeNumber}`;
+    const tree = storedTrees[treeId] || Object.values(storedTrees).find(t => t.number === treeNumber);
+    
+    // Use real data, default to Good if no tree record exists yet
+    const yieldNum = tree?.latest?.finalYield || 0;
+    const health = tree?.health || "Healthy";
+    
+    return {
+      treeId,
+      treeNumber,
+      yieldNum: yieldNum,
+      isHealthy: health !== "Weak" && health !== "Need Attention",
+      health,
+    };
+  };
+
+  const allTrees = Array.from({ length: totalTreesCount }).map((_, i) => getTreeData(i));
+  const healthyTrees = allTrees.filter(t => t.isHealthy);
+  const attentionTrees = allTrees.filter(t => !t.isHealthy);
+
+  const displayedTrees = activeTab === 'all' ? allTrees 
+                       : activeTab === 'healthy' ? healthyTrees 
+                       : attentionTrees;
 
   if (!user || !currentFarm) {
     return (
@@ -43,85 +60,103 @@ export default function TreeWisePredictionScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50">
-      <View className="flex-row items-center px-4 pt-14 pb-4 bg-white shadow-sm z-10">
-        <TouchableOpacity onPress={() => router.back()} className="mr-4 p-2 bg-slate-100 rounded-full">
-          <ArrowLeft size={20} color="#334155" />
-        </TouchableOpacity>
-        <Text className="text-xl font-bold text-slate-800 tracking-wide">Tree-wise Prediction</Text>
+    <SafeAreaView className="flex-1 bg-white">
+      {/* Header */}
+      <View className="flex-row items-center justify-between px-5 pt-12 pb-4 bg-[#0C3B2E]">
+        <View className="flex-row items-center gap-4">
+          <TouchableOpacity onPress={() => router.back()}>
+            <ArrowLeft size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text className="text-[20px] font-bold text-white tracking-wide">Tree-wise Yield</Text>
+        </View>
+        <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
-        <Text className="text-slate-500 text-center mb-6 tracking-wide leading-relaxed">
-          Select a tree to view its yield prediction and apply real-time telemetry.
-        </Text>
-        
-        <View className="flex-row flex-wrap justify-between">
-          {currentTrees.map((treeId) => {
-            const zColor = treeColorMap[treeId] || '#cbd5e1'; // default slate-300 if no zone
+      <ScrollView contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+        {/* Farm Info */}
+        <View className="px-5 py-4 flex-row items-center gap-4 border-b border-slate-100">
+          <Image 
+            source={{ uri: 'https://i.ibb.co/hR8NHX1c/coconut-tree.png' }} 
+            style={{ width: 40, height: 40, borderRadius: 20 }}
+          />
+          <View>
+            <Text className="text-[17px] font-bold text-slate-800">{currentFarm.name || "Sigiriya state"}</Text>
+            <View className="flex-row items-center gap-1 mt-1">
+              <MapPin size={12} color="#3b82f6" />
+              <Text className="text-xs font-semibold text-blue-500">All {totalTreesCount} Trees</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Tabs */}
+        <View className="px-5 py-4 flex-row justify-between items-center">
+          <TouchableOpacity 
+            onPress={() => setActiveTab('all')}
+            className={`flex-1 py-2 mx-1 rounded-lg items-center ${activeTab === 'all' ? 'bg-forest-700' : 'bg-white border border-slate-200'}`}
+          >
+            <Text className={`text-[11px] font-bold ${activeTab === 'all' ? 'text-white' : 'text-slate-600'}`}>
+              All ({allTrees.length})
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={() => setActiveTab('healthy')}
+            className={`flex-1 py-2 mx-1 rounded-lg items-center ${activeTab === 'healthy' ? 'bg-white border border-forest-600' : 'bg-white border border-slate-200'}`}
+          >
+            <Text className={`text-[11px] font-bold ${activeTab === 'healthy' ? 'text-forest-700' : 'text-slate-600'}`}>
+              Healthy ({healthyTrees.length})
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={() => setActiveTab('attention')}
+            className={`flex-1 py-2 mx-1 rounded-lg items-center ${activeTab === 'attention' ? 'bg-white border border-red-500' : 'bg-white border border-slate-200'}`}
+          >
+            <Text className={`text-[11px] font-bold ${activeTab === 'attention' ? 'text-red-600' : 'text-slate-600'}`}>
+              Need Attention ({attentionTrees.length})
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Tree Grid */}
+        <View className="px-4 flex-row flex-wrap">
+          {displayedTrees.map((tree) => {
+            const isRed = !tree.isHealthy;
             return (
-              <TouchableOpacity 
-                key={treeId}
-                onPress={() => router.push(`/(tabs)/yield/${farmId}/trees/tree-${treeId}`)}
-                className="w-[30%] bg-white p-4 rounded-2xl items-center mb-4 border shadow-sm"
-                style={{
-                  borderColor: zColor,
-                  borderWidth: 1.5,
-                  backgroundColor: `${zColor}15`, // 15 opacity hex
-                  shadowColor: zColor,
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 10,
-                  elevation: 2
-                }}
-              >
-                <View className="px-2 py-0.5 rounded-full mb-2" style={{ backgroundColor: zColor }}>
-                  <Text className="text-[10px] font-black text-white">Tree {treeId}</Text>
-                </View>
-                <Image 
-                  source={{ uri: 'https://i.ibb.co/hR8NHX1c/coconut-tree.png' }} 
-                  style={{ width: 40, height: 40 }}
-                  resizeMode="contain"
-                />
-              </TouchableOpacity>
+              <View key={tree.treeId} className="w-[25%] p-1">
+                <TouchableOpacity 
+                  onPress={() => router.push(`/(tabs)/yield/${farmId}/trees/${tree.treeId}`)}
+                  className={`relative p-3 rounded-2xl items-center border ${isRed ? 'border-red-300 bg-red-50' : 'bg-[#fdfdfd] border-emerald-100'} shadow-sm overflow-hidden`}
+                  style={{
+                    shadowColor: isRed ? '#ef4444' : '#10b981',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.05,
+                    shadowRadius: 5,
+                    elevation: 1
+                  }}
+                >
+                  {isRed && <View className="absolute inset-0 bg-red-500/10" />}
+                  <Image 
+                    source={{ uri: 'https://i.ibb.co/hR8NHX1c/coconut-tree.png' }} 
+                    style={{ width: 32, height: 32, marginBottom: 6 }}
+                    resizeMode="contain"
+                  />
+                  <Text className={`text-[11px] font-bold ${isRed ? 'text-red-500' : 'text-slate-700'}`}>
+                    T{String(tree.treeNumber).padStart(2, '0')}
+                  </Text>
+                  <Text className={`text-[10px] font-bold ${isRed ? 'text-red-500' : 'text-emerald-700'}`}>
+                    {tree.yieldNum.toLocaleString()}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             )
           })}
         </View>
 
-        {/* Pagination Controls */}
-        {totalPages > 1 && (
-          <View className="flex-row justify-center mt-8 gap-2 flex-wrap">
-            {Array.from({ length: totalPages }).map((_, i) => (
-              <TouchableOpacity 
-                key={i}
-                onPress={() => setCurrentPage(i + 1)}
-                className={`w-10 h-10 rounded-full items-center justify-center mb-2 ${currentPage === i + 1 ? 'bg-teal-600 shadow-sm' : 'bg-slate-200'}`}
-              >
-                <Text className={`font-bold ${currentPage === i + 1 ? 'text-white' : 'text-slate-600'}`}>{i + 1}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-
-        {/* Zone Legend */}
-        {currentZones.length > 0 && (
-          <View className="mt-10 bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
-            <Text className="text-xs font-black text-slate-500 mb-3 tracking-wider">ZONE LEGEND</Text>
-            <View className="flex-row flex-wrap gap-x-4 gap-y-2">
-              {currentZones.map((z) => (
-                <View key={z.name} className="flex-row items-center gap-2">
-                  <View className="w-3 h-3 rounded-full" style={{ backgroundColor: z.color }} />
-                  <Text className="text-xs font-semibold text-slate-700">{z.name}</Text>
-                </View>
-              ))}
-              <View className="flex-row items-center gap-2">
-                  <View className="w-3 h-3 rounded-full bg-slate-300" />
-                  <Text className="text-xs font-semibold text-slate-500">Unassigned</Text>
-              </View>
-            </View>
-          </View>
-        )}
+        <View className="mt-8 items-center px-8">
+          <Text className="text-center font-bold text-slate-800 text-sm">
+            Tap on a tree to enter details{"\n"}and get prediction
+          </Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
-}
+}

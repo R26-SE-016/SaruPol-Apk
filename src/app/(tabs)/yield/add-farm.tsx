@@ -3,14 +3,14 @@ import { useState, useEffect, useRef, createElement } from "react";
 import { View, Text, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Alert, Platform } from "react-native";
 import { ArrowLeft, TreePine, Ruler, MapPin, Building2, Save, AlertCircle, Map as MapIcon, Crosshair, Calendar, Hash, Plus, Minus } from "lucide-react-native";
 import { useYieldApp } from "@/store/YieldAppContext";
-import { createFarm, updateFarm, getFarm } from "@/services/yieldFarmDb";
+import { createFarm, updateFarm, getFarm, deleteFarm } from "@/services/yieldFarmDb";
 import { generateTreeLayout } from "@/utils/yieldTreeFactory";
 import type { Farm } from "@/types/yield";
 import * as Location from 'expo-location';
 import { YieldLocationPickerMap } from "@/components/yield/YieldLocationPickerMap";
+import DateTimePicker from '@react-native-community/datetimepicker';
 
-const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "";
-
+// Removed Google API Key dependency
 interface FarmFormProps {
   onBack: () => void;
   onSaved: (farmId: string) => void;
@@ -25,7 +25,7 @@ export default function AddFarmScreen() {
   const farmId = id ? id.toString() : undefined;
   const onBack = () => router.back();
   const onSaved = (savedId?: string) => router.back();
-  const { user } = useYieldApp();
+  const { user, refreshFarms } = useYieldApp();
   const [name, setName] = useState("");
   const [totalTrees, setTotalTrees] = useState("");
   const [perches, setPerches] = useState("");
@@ -40,6 +40,7 @@ export default function AddFarmScreen() {
   const [loadingExisting, setLoadingExisting] = useState(!!farmId);
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [mapType, setMapType] = useState<any>("hybrid");
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const mapRef = useRef<any>(null);
 
   const [region, setRegion] = useState<any>({
@@ -78,36 +79,29 @@ export default function AddFarmScreen() {
   const reverseGeocode = async (latitude: number, longitude: number) => {
     setIsGeocoding(true);
     try {
-      const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GOOGLE_API_KEY}`);
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`,
+        { headers: { 'User-Agent': 'SaruPolApp/1.0 (Contact: admin@sarupol.lk)' } }
+      );
       const data = await response.json();
       
-      if (data.status !== "OK") {
-        console.warn("Reverse geocoding API error:", data);
-        if (data.status !== "ZERO_RESULTS") {
-          Alert.alert("Geocoding Error", data.error_message || `API returned status: ${data.status}`);
-        }
+      if (data.error) {
+        console.warn("Reverse geocoding API error:", data.error);
         return;
       }
 
-      if (data.results && data.results.length > 0) {
-        let locName = data.results[0].formatted_address;
-        const addressComponents = data.results[0].address_components;
-        const sublocality = addressComponents.find((c: any) => c.types.includes("sublocality") || c.types.includes("neighborhood"));
-        const city = addressComponents.find((c: any) => c.types.includes("locality"));
-        const dist = addressComponents.find((c: any) => c.types.includes("administrative_area_level_2"));
-        
-        if (sublocality && city) {
-          locName = `${sublocality.long_name}, ${city.long_name}`;
-        } else if (city && dist) {
-          locName = `${city.long_name}, ${dist.long_name}`;
-        } else if (sublocality) {
-          locName = sublocality.long_name;
-        } else if (city) {
-          locName = city.long_name;
-        } else if (dist) {
-          locName = dist.long_name;
+      if (data.display_name) {
+        let locName = data.display_name;
+        if (data.address) {
+          const { suburb, city, town, village, county } = data.address;
+          const local = suburb || village || town;
+          const region = city || county;
+          if (local && region) {
+            locName = `${local}, ${region}`;
+          } else if (local || region) {
+            locName = local || region;
+          }
         }
-        
         setLocationName(locName);
       }
     } catch (e) {
@@ -121,19 +115,17 @@ export default function AddFarmScreen() {
     if (!address.trim()) return;
     setIsGeocoding(true);
     try {
-      const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${GOOGLE_API_KEY}`);
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`,
+        { headers: { 'User-Agent': 'SaruPolApp/1.0 (Contact: admin@sarupol.lk)' } }
+      );
       const data = await response.json();
       
-      if (data.status !== "OK") {
-        console.warn("Forward geocoding API error:", data);
-        if (data.status !== "ZERO_RESULTS") {
-          Alert.alert("Geocoding Error", data.error_message || `API returned status: ${data.status}`);
-        }
-        return;
-      }
-
-      if (data.results && data.results.length > 0) {
-        const { lat, lng } = data.results[0].geometry.location;
+      if (data && data.length > 0) {
+        const result = data[0];
+        const lat = parseFloat(result.lat);
+        const lng = parseFloat(result.lon);
+        
         setLat(String(lat));
         setLng(String(lng));
         
@@ -145,6 +137,8 @@ export default function AddFarmScreen() {
         };
         setRegion(newRegion);
         mapRef.current?.animateToRegion?.(newRegion, 1000);
+      } else {
+        console.warn("Forward geocoding returned no results for:", address);
       }
     } catch (e) {
       console.warn("Forward geocoding failed", e);
@@ -204,6 +198,7 @@ export default function AddFarmScreen() {
     const latNum = parseFloat(lat);
     const lngNum = parseFloat(lng);
     if (isNaN(latNum) || isNaN(lngNum)) return setError("Enter valid latitude and longitude coordinates.");
+    if (!deviceIds.trim()) return setError("Hardware Device ID is required.");
 
     setError(null);
     setSaving(true);
@@ -226,6 +221,7 @@ export default function AddFarmScreen() {
           deviceId: primaryDeviceId,
           deviceIds: finalDeviceIds,
         });
+        await refreshFarms();
         onSaved(farmId);
       } else {
         const layout = generateTreeLayout(p, tc);
@@ -242,6 +238,7 @@ export default function AddFarmScreen() {
           deviceIds: finalDeviceIds,
           treeLayout: layout,
         });
+        await refreshFarms();
         onSaved(id);
       }
     } catch (e: any) {
@@ -249,6 +246,32 @@ export default function AddFarmScreen() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDelete = () => {
+    Alert.alert(
+      "Delete Farm",
+      "Are you sure you want to delete this farm? This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            if (!user || !farmId) return;
+            setSaving(true);
+            try {
+              await deleteFarm(user.uid, farmId);
+              await refreshFarms();
+              router.back();
+            } catch (e: any) {
+              Alert.alert("Error", `Failed to delete farm: ${e.message}`);
+              setSaving(false);
+            }
+          }
+        }
+      ]
+    );
   };
 
   if (loadingExisting) {
@@ -415,13 +438,30 @@ export default function AddFarmScreen() {
                       style: { padding: '10px 14px', borderRadius: 12, border: '1px solid #e2e8f0', width: '100%', outline: 'none', color: '#1e293b', backgroundColor: '#fff', fontSize: 14 }
                     })
                   ) : (
-                    <TextInput
-                      value={lastHarvestDate}
-                      onChangeText={setLastHarvestDate}
-                      placeholder="YYYY-MM-DD"
-                      placeholderTextColor="#cbd5e1"
-                      className={inputCls}
-                    />
+                    <>
+                      <TouchableOpacity 
+                        onPress={() => setShowDatePicker(true)}
+                        className={inputCls}
+                        style={{ justifyContent: 'center' }}
+                      >
+                        <Text style={{ color: lastHarvestDate ? '#1e293b' : '#cbd5e1' }}>
+                          {lastHarvestDate || "YYYY-MM-DD"}
+                        </Text>
+                      </TouchableOpacity>
+                      {showDatePicker && (
+                        <DateTimePicker
+                          value={lastHarvestDate ? new Date(lastHarvestDate) : new Date()}
+                          mode="date"
+                          display="default"
+                          onChange={(event: any, selectedDate?: Date) => {
+                            setShowDatePicker(false);
+                            if (selectedDate) {
+                              setLastHarvestDate(selectedDate.toISOString().slice(0,10));
+                            }
+                          }}
+                        />
+                      )}
+                    </>
                   )}
                 </View>
               </Field>
@@ -466,7 +506,7 @@ export default function AddFarmScreen() {
         </View>
 
         <View className="bg-white rounded-2xl p-5 border border-slate-100">
-          <Field label="Hardware Device ID(s)" icon={<Building2 size={14} color="#1e7550" />}>
+          <Field label="Hardware Device ID(s) *" icon={<Building2 size={14} color="#1e7550" />}>
             <Text className="text-[10px] text-slate-400 mb-2">Enter your IoT device IDs separated by commas (e.g. D8100, D8101)</Text>
             <TextInput
               value={deviceIds}
@@ -503,6 +543,17 @@ export default function AddFarmScreen() {
             </>
           )}
         </TouchableOpacity>
+
+        {farmId && (
+          <TouchableOpacity
+            onPress={handleDelete}
+            disabled={saving}
+            className="flex-row items-center justify-center gap-2 bg-red-50 border border-red-200 py-3.5 rounded-xl mt-2 mb-6"
+            style={saving ? { opacity: 0.6 } : undefined}
+          >
+            <Text className="text-red-600 font-semibold text-sm">Delete Farm</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </View>
   );

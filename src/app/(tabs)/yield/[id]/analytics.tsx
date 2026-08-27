@@ -1,4 +1,5 @@
-import { predictDashboardYield, logHarvestPrediction } from "@/services/yieldService";
+import { logHarvestPrediction } from "@/services/yieldService";
+import { useUnifiedFarmYield } from "@/hooks/useUnifiedFarmYield";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -26,9 +27,12 @@ export default function analyticsScreen() {
 
   const [loading, setLoading] = useState(true);
   const [farm, setFarm] = useState<any>(null);
-  const [prediction, setPrediction] = useState<any>(null);
   const [pastLogs, setPastLogs] = useState<any[]>([]);
   const [refreshCount, setRefreshCount] = useState(0);
+
+  const { unifiedYields, basePredictions, isPredicting: isUnifiedPredicting } = useUnifiedFarmYield(user?.uid, farm ? [farm] : [], undefined, refreshCount);
+  const unifiedYield = farm ? unifiedYields[farm.id] : 0;
+  const prediction = farm && basePredictions[farm.id] ? { ...basePredictions[farm.id], predicted_next_pick_yield_nuts: unifiedYield } : null;
 
   // Form State for new Harvest Log
   const [actualNuts, setActualNuts] = useState("");
@@ -84,24 +88,8 @@ export default function analyticsScreen() {
         }));
         logs.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
         setPastLogs(logs);
+        // Prediction is now handled by useUnifiedFarmYield hook
 
-        // 3. Hit Proxy for ML Prediction
-        const reqBody = {
-          uid: user.uid,
-          farm_id: (f as any)._id || f.id || farmId,
-          estate: (f as any).estate || (f as any).district || f.locationName || (f as any).location || "Makandura",
-          trees_count: f.totalTrees || (f as any).trees_count || (f as any).total_trees || 40,
-          last_harvest_yield: f.lastHarvestYield || (f as any).last_harvest_yield || null,
-          actual_harvest_logs: logs
-        };
-
-        const data = await predictDashboardYield(reqBody);
-
-        if (data) {
-          setPrediction(data);
-        } else {
-          Alert.alert("Error", "Failed to fetch prediction.");
-        }
       } catch (err: any) {
         console.error("Prediction Error", err);
         Alert.alert("Error", "Failed to fetch prediction.");
@@ -283,7 +271,7 @@ export default function analyticsScreen() {
   };
 
 
-  if (loading) {
+  if (loading || isUnifiedPredicting) {
     return (
       <View className="flex-1 bg-slate-50">
         <YieldScreenHeader title="Yield Analytics" onBack={() => router.back()} />
@@ -468,76 +456,6 @@ export default function analyticsScreen() {
             </TouchableOpacity>
         </View>
 
-        {/* Region Benchmark Badge & Chart */}
-        <View className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-5 mb-4 shadow-sm">
-          <View className="flex-row items-start gap-4 mb-4">
-            <View className="w-10 h-10 rounded-full bg-emerald-600 items-center justify-center shadow-sm">
-              <Text className="text-xl">🏆</Text>
-            </View>
-            <View className="flex-1 pt-0.5">
-              <Text className="text-sm font-semibold text-slate-700 leading-relaxed tracking-wide">
-                Your farm's per-tree yield is{' '}
-                {(() => {
-                  const perTree = (prediction?.predicted_next_pick_yield_nuts || 0) / (farm?.totalTrees || 1);
-                  const calibration = prediction?.calibration_factor || 1.0;
-                  const diffPct = Math.round((calibration - 1) * 100);
-                  const isAbove = diffPct >= 0;
-                  return (
-                    <Text className={`font-extrabold ${isAbove ? 'text-emerald-700' : 'text-red-600'}`}>
-                      {isAbove ? '+' : ''}{diffPct}%
-                    </Text>
-                  );
-                })()}{' '}
-                {prediction?.calibration_factor && prediction.calibration_factor !== 1.0 ? 'vs initial estimate' : 'on track'} for {prediction?.mapped_benchmark_estate || prediction?.district || farm?.locationName || 'your region'}.
-              </Text>
-            </View>
-          </View>
-          
-          <View className="flex-row items-center justify-between">
-             {/* Real Harvest Chart (SVG) */}
-             <View className="flex-1 mr-4" style={{ height: 45 }}>
-               {(() => {
-                 const svgLogs = [...pastLogs].filter(l => l.id !== 'virtual_initial').reverse().slice(-6);
-                 const predictedNext = prediction?.predicted_next_pick_yield_nuts || 0;
-                 const allPoints = [...svgLogs.map(l => l.actual_yield_nuts || 0), predictedNext];
-                 const maxVal = Math.max(...allPoints, 1);
-                 const W = 200, H = 45, pad = 5;
-                 const toY = (v: number) => H - pad - ((v / maxVal) * (H - 2 * pad));
-                 const n = allPoints.length;
-                 const xs = allPoints.map((_, i) => Math.round((i / Math.max(n - 1, 1)) * W));
-                 const farmPts = allPoints.map((v, i) => xs[i] + ',' + toY(v).toFixed(1)).join(' ');
-                 // Average line: flat at predicted_monthly_yield converted to 45-day scale
-                 const avgVal = prediction?.predicted_monthly_yield ? prediction.predicted_monthly_yield * 1.5 : maxVal * 0.7;
-                 const avgY = toY(avgVal).toFixed(1);
-                 const avgPts = [0, W].map(x => x + ',' + avgY).join(' ');
-                 return (
-                   <Svg width="100%" height="100%" viewBox={"0 0 " + W + " " + H}>
-                     {/* Average line (grey) */}
-                     <Polyline points={avgPts} fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeDasharray="4 3" />
-                     {/* Your Farm actual line (green) */}
-                     {allPoints.length > 1 && <Polyline points={farmPts} fill="none" stroke="#059669" strokeWidth="2.5" />}
-                     {allPoints.map((v, i) => (
-                       <Circle key={i} cx={xs[i]} cy={toY(v)} r="3.5"
-                         fill={i === allPoints.length - 1 ? "#f59e0b" : "#059669"} />
-                     ))}
-                   </Svg>
-                 );
-               })()}
-             </View>
-             
-             {/* Legend */}
-             <View className="justify-center">
-                <View className="flex-row items-center gap-1.5 mb-2">
-                  <View className="w-2.5 h-2.5 rounded-full bg-emerald-600" />
-                  <Text className="text-[10px] font-bold text-slate-600">Your Farm</Text>
-                </View>
-                <View className="flex-row items-center gap-1.5">
-                  <View className="w-2.5 h-2.5 rounded-full bg-slate-400" />
-                  <Text className="text-[10px] font-bold text-slate-500">Average in {prediction?.mapped_benchmark_estate || farm?.locationName || "Region"}</Text>
-                </View>
-             </View>
-          </View>
-        </View>
 
         
         {/* Yield Summary */}

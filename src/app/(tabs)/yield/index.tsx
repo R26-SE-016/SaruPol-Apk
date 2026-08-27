@@ -62,6 +62,7 @@ export default function YieldDashboardScreen() {
   const { user, farms, currentFarm, currentFarmId, setCurrentFarmId, currentZones } = useYieldApp();
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [quickGuideOpen, setQuickGuideOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -84,7 +85,6 @@ export default function YieldDashboardScreen() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [dbTasks, setDbTasks] = useState<any[]>([]);
   const [recentHarvestLogs, setRecentHarvestLogs] = useState<any[]>([]);
-  const [isPredicting, setIsPredicting] = useState(false);
   const [dashboardPrediction, setDashboardPrediction] = useState<any>(null);
 
   const toggleTask = (id: string, currentCompleted: boolean) => {
@@ -114,92 +114,23 @@ export default function YieldDashboardScreen() {
     setAddTaskModalOpen(false);
   };
 
+  const { unifiedYields, isPredicting: isUnifiedPredicting } = useUnifiedFarmYield(user?.uid, currentFarm ? [currentFarm] : []);
+
   useEffect(() => {
-    if (!user || !currentFarm) {
+    if (!currentFarm || !unifiedYields[currentFarm.id]) {
       setDashboardPrediction(null);
-      return;
+    } else {
+      setDashboardPrediction({ predicted_next_pick_yield_nuts: unifiedYields[currentFarm.id] });
     }
-    const fetchPrediction = async () => {
-      setIsPredicting(true);
-      try {
-        const rawLogs = await fetchHarvestLogs(user.uid, currentFarm.id);
-        const logs = rawLogs.map((l: any) => ({
-          id: l.id,
-          date: l.date || l.timestamp,
-          actual_yield_nuts: l.nutCount || l.actual_yield_nuts || (l.gradeA || 0) + (l.gradeB || 0) + (l.gradeC || 0) || 0,
-          large: l.large || l.gradeA || 0,
-          medium: l.medium || l.gradeB || 0,
-          small: l.small || l.gradeC || 0,
-          predicted_yield_nuts: l.predicted_yield_nuts || 0 
-        }));
-        logs.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setRecentHarvestLogs(logs);
-
-        const reqBody = {
-          uid: user.uid,
-          farm_id: currentFarm.id,
-          estate: (currentFarm as any).district || currentFarm.locationName || (currentFarm as any).location || "Makandura",
-          trees_count: currentFarm.totalTrees || 40,
-          last_harvest_yield: currentFarm.lastHarvestYield || (currentFarm as any).last_harvest_yield || null,
-          actual_harvest_logs: logs
-        };
-
-        const data = await predictDashboardYield(reqBody);
-
-        if (data) {
-          setDashboardPrediction(data);
-        } else {
-          setDashboardPrediction(null);
-        }
-      } catch (err) {
-        console.error("Dashboard prediction fetch error:", err);
-        setDashboardPrediction(null);
-      } finally {
-        setIsPredicting(false);
-      }
-    };
-    
-    fetchPrediction();
-  }, [user, currentFarm]);
+  }, [currentFarm?.id, unifiedYields]);
 
   useEffect(() => {
-    if (!currentFarm && farms.length > 0) setCurrentFarmId(farms[0].id);
+    if (!currentFarm && farms.length > 0) {
+      setCurrentFarmId(farms[0].id);
+    }
   }, [currentFarm, farms, setCurrentFarmId]);
 
-  // Fetch ML predictions for dashboard farm cards
-  useEffect(() => {
-    if (!user || farms.length === 0) return;
-    farms.slice(0, 3).forEach(async (farm) => {
-      if (farmPredictions[farm.id] !== undefined) return;
-      setLoadingPredictions(prev => ({ ...prev, [farm.id]: true }));
-      try {
-        const rawLogs = await fetchHarvestLogs(user.uid, farm.id);
-        const logs = rawLogs.map((l: any) => ({
-          id: l.id,
-          date: l.date || l.timestamp,
-          actual_yield_nuts: l.nutCount || l.actual_yield_nuts || 0,
-          predicted_yield_nuts: l.predicted_yield_nuts || 0
-        }));
-        logs.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-        const result = await predictDashboardYield({
-          uid: user.uid,
-          farm_id: farm.id,
-          estate: farm.locationName || 'Makandura',
-          trees_count: farm.totalTrees || 40,
-          last_harvest_yield: farm.lastHarvestYield || null,
-          actual_harvest_logs: logs
-        });
-        if (result && result.predicted_next_pick_yield_nuts !== undefined) {
-          setFarmPredictions(prev => ({ ...prev, [farm.id]: result.predicted_next_pick_yield_nuts }));
-        }
-      } catch (e) {
-        console.error('Farm card prediction failed:', e);
-      } finally {
-        setLoadingPredictions(prev => ({ ...prev, [farm.id]: false }));
-      }
-    });
-  }, [farms, user]);
+  const { unifiedYields: allFarmYields } = useUnifiedFarmYield(user?.uid, farms);
 
   const { telemetry, weather, source, deviceLive, usedFallbackCoords } = useYieldHybridTelemetry(currentFarm);
   const env = useMemo(() => resolveEnvValues(telemetry, weather, source), [telemetry, weather, source]);
@@ -209,7 +140,7 @@ export default function YieldDashboardScreen() {
     if (!user || !currentFarm) { setStoredTrees({}); return; }
     const unsub = subscribeTrees(user.uid, currentFarm.id, setStoredTrees);
     return unsub;
-  }, [user, currentFarm]);
+  }, [user?.uid, currentFarm?.id]);
 
   const farmData = useMemo(() => {
     if (!currentFarm) return null;
@@ -338,20 +269,29 @@ export default function YieldDashboardScreen() {
                   <Text className="text-[22px] font-extrabold text-white tracking-tight">Yield Predictor</Text>
                 </View>
               </View>
-              <TouchableOpacity onPress={() => setNotificationsOpen(true)} className="relative">
-                <Bell size={24} color="#fff" />
-                {unreadNotifs > 0 && (
-                  <View className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full items-center justify-center border-[1.5px] border-[#0C3B2E]">
-                    <Text className="text-[8px] font-bold text-white">{unreadNotifs}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
             </View>
           </View>
         </View>
 
         <View className="px-4 gap-6" style={{ marginTop: -35 }}>
           
+          {/* Quick Guide Banner */}
+          <View className="bg-white rounded-3xl p-4 flex-row items-center justify-between border-2 border-forest-600 shadow-sm" style={{ shadowColor: '#12211C', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 25, elevation: 5, overflow: 'hidden' }}>
+            <View style={{ position: 'absolute', right: -20, bottom: -10, opacity: 0.2 }}>
+              <Image source={{ uri: 'https://i.ibb.co/v609fFfL/quick-guide.png' }} style={{ width: 120, height: 120 }} resizeMode="contain" />
+            </View>
+            <View className="flex-1 mr-4">
+              <Text className="text-forest-800 text-xs font-bold mb-1">Need help using the app?</Text>
+              <Text className="text-xl font-extrabold text-slate-800 mb-3">Quick Guide</Text>
+              <TouchableOpacity onPress={() => setQuickGuideOpen(true)} className="bg-forest-600 px-4 py-2 rounded-xl self-start">
+                <Text className="text-white text-xs font-bold">View Guide</Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity onPress={() => {}} className="absolute top-3 right-3 w-6 h-6 bg-slate-100 rounded-full items-center justify-center">
+              <X size={14} color="#64748b" />
+            </TouchableOpacity>
+          </View>
+
           {/* Harvest Reminder Banner */}
           {currentFarm && daysRemaining <= 7 && (
             <View className={`rounded-[24px] p-4 flex-row items-center justify-between border ${daysRemaining <= 0 ? 'bg-red-50 border-red-200' : 'bg-orange-50 border-orange-200'}`} style={{ shadowColor: '#12211C', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.06, shadowRadius: 25, elevation: 5 }}>
@@ -492,9 +432,6 @@ export default function YieldDashboardScreen() {
           <View>
             <View className="flex-row items-center justify-between mb-3">
               <Text className="text-slate-800 text-[15px] font-bold tracking-tight">Your Farms</Text>
-              <TouchableOpacity onPress={() => router.push('/yield/list')}>
-                <Text className="text-forest-600 text-[12px] font-bold">View All {'>'}</Text>
-              </TouchableOpacity>
             </View>
             
             {/* Farm Search & Filter Bar */}
@@ -560,11 +497,11 @@ export default function YieldDashboardScreen() {
                       <View className="flex-row items-center gap-2">
                         <Image source={{ uri: 'https://i.ibb.co/gbSQjznt/coconut-fruit.png' }} style={{ width: 20, height: 20, resizeMode: 'contain' }} />
                         <View>
-                          {loadingPredictions[farm.id] ? (
+                          {isUnifiedPredicting ? (
                             <ActivityIndicator size="small" color="#16a34a" />
                           ) : (
                             <Text className="text-sm font-bold text-slate-800">
-                              {farmPredictions[farm.id] !== undefined ? farmPredictions[farm.id] : (farm.lastHarvestYield || '—')}
+                              {allFarmYields[farm.id] !== undefined ? allFarmYields[farm.id] : (farm.lastHarvestYield || '—')}
                             </Text>
                           )}
                           <Text className="text-[10px] text-slate-500 font-medium">Predicted Nuts</Text>
@@ -621,6 +558,111 @@ export default function YieldDashboardScreen() {
 
         </View>
       </ScrollView>
+
+      {/* Quick Guide Modal */}
+      <Modal visible={quickGuideOpen} animationType="slide" transparent onRequestClose={() => setQuickGuideOpen(false)}>
+        <View className="flex-1 bg-black/40 justify-center items-center p-4">
+          <View className="bg-[#fbfdfa] rounded-[24px] w-full max-h-[95%] overflow-hidden border border-[#e5f0ea]">
+            
+            <View className="pt-6 pb-4 px-5">
+              <View className="flex-row items-start justify-between relative mb-1">
+                <View className="absolute left-0 -top-1">
+                  <Lightbulb size={34} color="#15803d" strokeWidth={1.5} />
+                </View>
+                <View className="flex-1 items-center justify-center pt-0.5">
+                  <Text className="text-[19px] font-extrabold text-[#114B3A]">Quick Guide</Text>
+                </View>
+                <TouchableOpacity onPress={() => setQuickGuideOpen(false)} className="absolute right-0 top-1 p-1">
+                  <X size={20} color="#64748b" strokeWidth={1.5} />
+                </TouchableOpacity>
+              </View>
+              <Text className="text-[12px] text-slate-700 font-medium text-center mt-1">How to get the most accurate yield prediction</Text>
+            </View>
+            <ScrollView className="px-4" style={{ flexShrink: 1 }} contentContainerStyle={{ gap: 12, paddingBottom: 20 }}>
+              {/* Step 1 */}
+              <View className="bg-white rounded-2xl p-5 border border-slate-100 flex-row gap-4 shadow-sm" style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }}>
+                <View className="items-center">
+                  <View className="w-6 h-6 rounded-full bg-forest-700 items-center justify-center mb-3">
+                    <Text className="text-white text-[11px] font-bold">1</Text>
+                  </View>
+                  <Image source={{ uri: 'https://i.ibb.co/hx4RSv22/weather-baseline.png' }} style={{ width: 44, height: 35 }} resizeMode="contain" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-[13px] font-bold text-slate-800 mb-1 mt-0.5">Weather Baseline</Text>
+                  <Text className="text-[12px] text-slate-600 leading-[18px]">We show the maximum yield potential based on your area's current weather.</Text>
+                  <View className="flex-row gap-1.5 mt-4">
+                    <View className="w-4 h-[3px] rounded-full bg-forest-600" />
+                    <View className="w-4 h-[3px] rounded-full bg-slate-200" />
+                    <View className="w-4 h-[3px] rounded-full bg-slate-200" />
+                  </View>
+                </View>
+              </View>
+
+              {/* Step 2 */}
+              <View className="bg-white rounded-2xl p-5 border border-slate-100 flex-row gap-4 shadow-sm" style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }}>
+                <View className="items-center">
+                  <View className="w-6 h-6 rounded-full bg-forest-700 items-center justify-center mb-3">
+                    <Text className="text-white text-[11px] font-bold">2</Text>
+                  </View>
+                  <Image source={{ uri: 'https://i.ibb.co/TDcT3gKJ/update-tree-info.png' }} style={{ width: 34, height: 44 }} resizeMode="contain" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-[13px] font-bold text-slate-800 mb-1 mt-0.5">Update Tree Info</Text>
+                  <Text className="text-[12px] text-slate-600 leading-[18px]">Go to Tree-wise Yield and enter each tree's age, variety and healthy frond count.</Text>
+                  <View className="flex-row gap-1.5 mt-4">
+                    <View className="w-4 h-[3px] rounded-full bg-forest-600" />
+                    <View className="w-4 h-[3px] rounded-full bg-slate-200" />
+                    <View className="w-4 h-[3px] rounded-full bg-slate-200" />
+                  </View>
+                </View>
+              </View>
+
+              {/* Step 3 */}
+              <View className="bg-white rounded-2xl p-5 border border-slate-100 flex-row gap-4 shadow-sm" style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }}>
+                <View className="items-center">
+                  <View className="w-6 h-6 rounded-full bg-forest-700 items-center justify-center mb-3">
+                    <Text className="text-white text-[11px] font-bold">3</Text>
+                  </View>
+                  <Image source={{ uri: 'https://i.ibb.co/bjVsC0Qs/soil-and-sensor-data.png' }} style={{ width: 38, height: 44 }} resizeMode="contain" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-[13px] font-bold text-slate-800 mb-1 mt-0.5">Soil & Sensor Data</Text>
+                  <Text className="text-[12px] text-slate-600 leading-[18px]">Place the soil NPK sensor at the base of the tree to get live soil nutrient, pH & moisture data.</Text>
+                  <View className="flex-row gap-1.5 mt-4">
+                    <View className="w-4 h-[3px] rounded-full bg-forest-600" />
+                    <View className="w-4 h-[3px] rounded-full bg-slate-200" />
+                    <View className="w-4 h-[3px] rounded-full bg-slate-200" />
+                  </View>
+                </View>
+              </View>
+
+              {/* Step 4 */}
+              <View className="bg-white rounded-2xl p-5 border border-slate-100 flex-row gap-4 shadow-sm" style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }}>
+                <View className="items-center">
+                  <View className="w-6 h-6 rounded-full bg-forest-700 items-center justify-center mb-3">
+                    <Text className="text-white text-[11px] font-bold">4</Text>
+                  </View>
+                  <Image source={{ uri: 'https://i.ibb.co/R4Hm6WyH/yield-and-alaysis.png' }} style={{ width: 44, height: 40 }} resizeMode="contain" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-[13px] font-bold text-slate-800 mb-1 mt-0.5">Final Yield & Advice</Text>
+                  <Text className="text-[12px] text-slate-600 leading-[18px]">Get the final predicted yield, loss % and exact fertilizer & care recommendations for each tree.</Text>
+                </View>
+              </View>
+            </ScrollView>
+            <View className="p-5 bg-white border-t border-slate-100">
+              <View className="flex-row items-start gap-3 mb-5 px-1">
+                <Lightbulb size={22} color="#15803d" strokeWidth={1.5} />
+                <Text className="flex-1 text-[13px] font-medium text-forest-800 leading-tight">Update all 3 inputs for each tree to get the most accurate prediction & best results.</Text>
+              </View>
+              <TouchableOpacity onPress={() => setQuickGuideOpen(false)} className="bg-[#15803d] py-3.5 rounded-xl flex-row justify-center items-center gap-2 shadow-sm">
+                <Text className="text-white font-bold text-[15px]">Got it, Let's Start!</Text>
+                <Text className="text-white text-[10px] mt-0.5">▶</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Notifications Drawer/Modal */}
       <Modal visible={notificationsOpen} animationType="slide" transparent onRequestClose={() => setNotificationsOpen(false)}>
