@@ -932,7 +932,7 @@ export default function AdvisorScreen() {
         >
           <Ionicons name="chatbubble-ellipses-outline" size={16} color={chatMode === 'standard' ? COLORS.textPrimary : COLORS.textSecondary} />
           <Text style={[styles.modeTabText, chatMode === 'standard' && styles.modeTabTextActive]}>
-            {language === 'ta' ? 'AI அரட்டை' : language === 'si' ? 'AI සංවාදය' : 'AI Chat'}
+            {language === 'ta' ? 'விவசாயிகளுக்கு' : language === 'si' ? 'ගොවීන් සඳහා' : 'For Farmers'}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -1327,7 +1327,7 @@ export default function AdvisorScreen() {
                           );
                         })()}
 
-                        {/* Gemma 2 9B */}
+                        {/* Gemini Flash */}
                         {(msg.gemma_answer || msg.qwen_answer) && (() => {
                           const isBest = msg.best_model === 'gemma' || msg.best_model === 'qwen';
                           const answerText = msg.gemma_answer || msg.qwen_answer;
@@ -1335,7 +1335,7 @@ export default function AdvisorScreen() {
                             <View style={[styles.inlineModelRow, isBest && styles.inlineModelRowBest]}>
                               <View style={styles.inlineModelHeader}>
                                 <Text style={styles.inlineModelIcon}>💎</Text>
-                                <Text style={[styles.inlineModelName, { color: '#FF6D00' }]}>Gemma 2 9B</Text>
+                                <Text style={[styles.inlineModelName, { color: '#FF6D00' }]}>Gemini Flash</Text>
                                 {isBest && <Text style={styles.inlineBestBadge}>✓ Selected</Text>}
                               </View>
                               <Text style={styles.inlineModelAnswer}>{answerText}</Text>
