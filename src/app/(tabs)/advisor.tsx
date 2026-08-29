@@ -36,7 +36,7 @@ interface Message {
   judge_reason?: string;
   consensus_score?: number;
   llama_answer?: string;
-  llama8b_answer?: string;
+  gpt4omini_answer?: string;
   gemma_answer?: string;
   qwen_answer?: string;
   // Early exit optimization fields
@@ -232,8 +232,8 @@ export default function AdvisorScreen() {
           messagesToTranslate.push({ id: msg.id + "_llama", text: msg.llama_answer });
         }
         // Check LLaMA 8B
-        if (!msg.translations?.[`llama8b_${nextLang}`] && msg.llama8b_answer) {
-          messagesToTranslate.push({ id: msg.id + "_llama8b", text: msg.llama8b_answer });
+        if (!msg.translations?.[`gpt4omini_${nextLang}`] && msg.gpt4omini_answer) {
+          messagesToTranslate.push({ id: msg.id + "_gpt4omini", text: msg.gpt4omini_answer });
         }
         // Check Gemma
         const gemmaAns = msg.gemma_answer || msg.qwen_answer;
@@ -268,7 +268,7 @@ export default function AdvisorScreen() {
           updatedMsg = {
             ...updatedMsg,
             llama_answer: msg.translations?.[`llama_${nextLang}`] || msg.llama_answer,
-            llama8b_answer: msg.translations?.[`llama8b_${nextLang}`] || msg.llama8b_answer,
+            gpt4omini_answer: msg.translations?.[`gpt4omini_${nextLang}`] || msg.gpt4omini_answer,
             gemma_answer: msg.translations?.[`gemma_${nextLang}`] || msg.translations?.[`qwen_${nextLang}`] || msg.gemma_answer || msg.qwen_answer,
             qwen_answer: msg.translations?.[`gemma_${nextLang}`] || msg.translations?.[`qwen_${nextLang}`] || msg.gemma_answer || msg.qwen_answer,
             judge_reason: msg.translations?.[`reason_${nextLang}`] || msg.judge_reason,
@@ -304,8 +304,8 @@ export default function AdvisorScreen() {
             if (!cachedTranslations[`llama_${currentLang}`]) {
               cachedTranslations[`llama_${currentLang}`] = msg.llama_answer;
             }
-            if (!cachedTranslations[`llama8b_${currentLang}`]) {
-              cachedTranslations[`llama8b_${currentLang}`] = msg.llama8b_answer;
+            if (!cachedTranslations[`gpt4omini_${currentLang}`]) {
+              cachedTranslations[`gpt4omini_${currentLang}`] = msg.gpt4omini_answer;
             }
             const gemmaAns = msg.gemma_answer || msg.qwen_answer;
             if (!cachedTranslations[`gemma_${currentLang}`] && gemmaAns) {
@@ -356,9 +356,9 @@ export default function AdvisorScreen() {
               cachedTranslations[`llama_${nextLang}`] = llamaTrans.translated_text;
             }
             // 3. LLaMA 8B translation
-            const llama8bTrans = result.translations.find((t: any) => t.id === msg.id + "_llama8b");
-            if (llama8bTrans) {
-              cachedTranslations[`llama8b_${nextLang}`] = llama8bTrans.translated_text;
+            const gpt4ominiTrans = result.translations.find((t: any) => t.id === msg.id + "_gpt4omini");
+            if (gpt4ominiTrans) {
+              cachedTranslations[`gpt4omini_${nextLang}`] = gpt4ominiTrans.translated_text;
             }
             // 4. Gemma translation
             const gemmaTrans = result.translations.find((t: any) => t.id === msg.id + "_gemma" || t.id === msg.id + "_qwen");
@@ -375,7 +375,7 @@ export default function AdvisorScreen() {
             updatedMsg = {
               ...updatedMsg,
               llama_answer: cachedTranslations[`llama_${nextLang}`] || msg.llama_answer,
-              llama8b_answer: cachedTranslations[`llama8b_${nextLang}`] || msg.llama8b_answer,
+              gpt4omini_answer: cachedTranslations[`gpt4omini_${nextLang}`] || msg.gpt4omini_answer,
               gemma_answer: cachedTranslations[`gemma_${nextLang}`] || cachedTranslations[`qwen_${nextLang}`] || msg.gemma_answer || msg.qwen_answer,
               qwen_answer: cachedTranslations[`gemma_${nextLang}`] || cachedTranslations[`qwen_${nextLang}`] || msg.gemma_answer || msg.qwen_answer,
               judge_reason: cachedTranslations[`reason_${nextLang}`] || msg.judge_reason,
@@ -407,7 +407,7 @@ export default function AdvisorScreen() {
           updatedMsg = {
             ...updatedMsg,
             llama_answer: msg.translations?.[`llama_${nextLang}`] || msg.llama_answer,
-            llama8b_answer: msg.translations?.[`llama8b_${nextLang}`] || msg.llama8b_answer,
+            gpt4omini_answer: msg.translations?.[`gpt4omini_${nextLang}`] || msg.gpt4omini_answer,
             gemma_answer: msg.translations?.[`gemma_${nextLang}`] || msg.translations?.[`qwen_${nextLang}`] || msg.gemma_answer || msg.qwen_answer,
             qwen_answer: msg.translations?.[`gemma_${nextLang}`] || msg.translations?.[`qwen_${nextLang}`] || msg.gemma_answer || msg.qwen_answer,
             judge_reason: msg.translations?.[`reason_${nextLang}`] || msg.judge_reason,
@@ -769,7 +769,7 @@ export default function AdvisorScreen() {
             translations: {
               [language]: response.best_answer,
               [`llama_${language}`]: response.llama_answer,
-              [`llama8b_${language}`]: response.llama8b_answer,
+              [`gpt4omini_${language}`]: response.gpt4omini_answer,
               [`gemma_${language}`]: gemmaAns,
               [`qwen_${language}`]: gemmaAns,
               [`reason_${language}`]: response.reason,
@@ -783,7 +783,7 @@ export default function AdvisorScreen() {
             judge_reason: response.reason,
             consensus_score: response.consensus_score,
             llama_answer: response.llama_answer,
-            llama8b_answer: response.llama8b_answer,
+            gpt4omini_answer: response.gpt4omini_answer,
             gemma_answer: gemmaAns,
             qwen_answer: gemmaAns,
             early_exit: response.early_exit ?? false,
@@ -932,7 +932,7 @@ export default function AdvisorScreen() {
         >
           <Ionicons name="chatbubble-ellipses-outline" size={16} color={chatMode === 'standard' ? COLORS.textPrimary : COLORS.textSecondary} />
           <Text style={[styles.modeTabText, chatMode === 'standard' && styles.modeTabTextActive]}>
-            {language === 'ta' ? 'AI அரட்டை' : language === 'si' ? 'AI සංවාදය' : 'AI Chat'}
+            {language === 'ta' ? 'விவசாயிகளுக்கு' : language === 'si' ? 'ගොවීන් සඳහා' : 'For Farmers'}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -1297,14 +1297,14 @@ export default function AdvisorScreen() {
                         {/* Model response snippets */}
                         <Text style={styles.inlineSectionTitle}>{language === 'ta' ? 'தனிநபர் மாதிரி பதில்கள்:' : language === 'si' ? 'ආකෘති මට්ටමින් පිළිතුරු:' : 'Individual Model Answers:'}</Text>
 
-                        {/* LLaMA 3.3 */}
+                        {/* LLaMA 3.1 */}
                         {msg.llama_answer && (() => {
                           const isBest = msg.best_model === 'llama';
                           return (
                             <View style={[styles.inlineModelRow, isBest && styles.inlineModelRowBest]}>
                               <View style={styles.inlineModelHeader}>
                                 <Text style={styles.inlineModelIcon}>🦙</Text>
-                                <Text style={[styles.inlineModelName, { color: '#7C4DFF' }]}>LLaMA 3.3 70B</Text>
+                                <Text style={[styles.inlineModelName, { color: '#7C4DFF' }]}>LLaMA 3.1 8B</Text>
                                 {isBest && <Text style={styles.inlineBestBadge}>✓ Selected</Text>}
                               </View>
                               <Text style={styles.inlineModelAnswer}>{msg.llama_answer}</Text>
@@ -1313,8 +1313,8 @@ export default function AdvisorScreen() {
                         })()}
 
                         {/* GPT-4o Mini */}
-                        {msg.llama8b_answer && (() => {
-                          const isBest = msg.best_model === 'llama8b';
+                        {msg.gpt4omini_answer && (() => {
+                          const isBest = msg.best_model === 'gpt4omini';
                           return (
                             <View style={[styles.inlineModelRow, isBest && styles.inlineModelRowBest]}>
                               <View style={styles.inlineModelHeader}>
@@ -1322,12 +1322,12 @@ export default function AdvisorScreen() {
                                 <Text style={[styles.inlineModelName, { color: '#00BCD4' }]}>GPT-4o Mini</Text>
                                 {isBest && <Text style={styles.inlineBestBadge}>✓ Selected</Text>}
                               </View>
-                              <Text style={styles.inlineModelAnswer}>{msg.llama8b_answer}</Text>
+                              <Text style={styles.inlineModelAnswer}>{msg.gpt4omini_answer}</Text>
                             </View>
                           );
                         })()}
 
-                        {/* Gemma 2 9B */}
+                        {/* Gemini Flash */}
                         {(msg.gemma_answer || msg.qwen_answer) && (() => {
                           const isBest = msg.best_model === 'gemma' || msg.best_model === 'qwen';
                           const answerText = msg.gemma_answer || msg.qwen_answer;
@@ -1335,7 +1335,7 @@ export default function AdvisorScreen() {
                             <View style={[styles.inlineModelRow, isBest && styles.inlineModelRowBest]}>
                               <View style={styles.inlineModelHeader}>
                                 <Text style={styles.inlineModelIcon}>💎</Text>
-                                <Text style={[styles.inlineModelName, { color: '#FF6D00' }]}>Gemma 2 9B</Text>
+                                <Text style={[styles.inlineModelName, { color: '#FF6D00' }]}>Gemini Flash</Text>
                                 {isBest && <Text style={styles.inlineBestBadge}>✓ Selected</Text>}
                               </View>
                               <Text style={styles.inlineModelAnswer}>{answerText}</Text>
