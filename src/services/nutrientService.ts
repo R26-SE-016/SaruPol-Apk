@@ -53,9 +53,7 @@ export const analyzeLeafImage = async (imageUri: string): Promise<NutrientAnalys
     // Axios in React Native has known bugs with appending boundaries to multipart/form-data.
     const token = useAppStore.getState().token;
     const baseUrl = api.defaults.baseURL || 'http://localhost:8000/api';
-    const endpoint = baseUrl.endsWith('/api') 
-      ? baseUrl.replace(/\/api$/, '/api/v1/nutrient-analysis/predict')
-      : `${baseUrl}/v1/nutrient-analysis/predict`;
+    const endpoint = `${baseUrl}/soil/nutrient-analysis/predict`;
 
     const fetchResponse = await fetch(endpoint, {
       method: 'POST',

@@ -42,11 +42,46 @@ export interface PredictionResult {
 }
 
 export const predictTriangulatedSoil = async (payload: TriangulatedSoilPayload): Promise<PredictionResult> => {
-  const response = await api.post('/api/v1/predict/triangulated', payload);
+  const response = await api.post('/soil/predict/triangulated', payload);
   return response.data;
 };
 
 export const getMakanduraTrees = async () => {
-  const response = await api.get('/api/v1/trees');
+  const response = await api.get('/soil/trees');
+  return response.data;
+};
+
+export const getAgroClimaticZone = async (latitude: number, longitude: number) => {
+  const response = await api.post('/soil/location/agro-zone', { latitude, longitude });
+  return response.data;
+};
+
+export interface SoilAnalysisStartResponse {
+  analysis_id: string;
+  tree_no: string;
+  status: string;
+  message: string;
+}
+
+export const startSoilAnalysis = async (treeNo: string): Promise<SoilAnalysisStartResponse> => {
+  const response = await api.post('/soil/analysis/start', { tree_no: treeNo });
+  return response.data;
+};
+
+export const addSoilReading = async (payload: {
+  analysis_id: string;
+  tree_no: string;
+  point_name: string;
+  reading: SoilReading;
+}) => {
+  const response = await api.post('/soil/analysis/reading', payload);
+  return response.data;
+};
+
+export const completeSoilAnalysis = async (payload: {
+  analysis_id: string;
+  tree_no: string;
+}) => {
+  const response = await api.post('/soil/analysis/complete', payload);
   return response.data;
 };

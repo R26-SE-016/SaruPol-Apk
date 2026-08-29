@@ -7,6 +7,7 @@ export interface User {
   name: string;
   email: string;
   role: string;
+  estate_id?: string;
 }
 
 export interface PredictionHistoryItem {

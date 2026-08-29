@@ -75,7 +75,7 @@ export default function NutrientAnalysisScreen() {
       const { latitude, longitude } = location.coords;
 
       // Call backend
-      const response = await api.post('/v1/location/agro-zone', { latitude, longitude });
+      const response = await api.post('/soil/location/agro-zone', { latitude, longitude });
       const data = response.data;
 
       if (data.success && data.zone) {
