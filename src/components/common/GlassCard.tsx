@@ -16,9 +16,7 @@ export default function GlassCard({ children, style }: GlassCardProps) {
       end={{ x: 1, y: 1 }}
       style={[styles.container, style as any]}
     >
-      <View style={styles.innerContent}>
-        {children}
-      </View>
+      {children}
     </LinearGradient>
   );
 }
@@ -28,6 +26,7 @@ const styles = StyleSheet.create({
     borderRadius: ROUNDING.md,
     borderWidth: 1,
     borderColor: 'rgba(76, 175, 80, 0.22)',
+    padding: 16,
     overflow: 'hidden',
     ...Platform.select({
       ios: {
@@ -43,8 +42,5 @@ const styles = StyleSheet.create({
         boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
       }
     })
-  },
-  innerContent: {
-    padding: 16,
   }
 });
