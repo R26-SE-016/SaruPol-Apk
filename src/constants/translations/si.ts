@@ -137,7 +137,7 @@ export default {
     placeholder: "රෝග, පස හෝ පොහොර ගැන විමසන්න..."
   },
   validate: {
-    title: "බහු-LLM වලංගුකරණය",
+    title: "විශේෂඥ වලංගුකරණය",
     placeholder: "AI ආකෘති 3ක් හරහා වලංගු කිරීමට ප්‍රශ්නයක් අසන්න...",
     querying: "LLM 3ක් විමසමින්...",
     bestAnswer: "හොඳම පිළිතුර",
