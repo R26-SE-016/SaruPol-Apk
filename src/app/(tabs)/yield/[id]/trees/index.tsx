@@ -15,6 +15,7 @@ export default function TreeWisePredictionScreen() {
   const [storedTrees, setStoredTrees] = useState<Record<string, Tree>>({});
   
   const [activeTab, setActiveTab] = useState<'all' | 'healthy' | 'attention'>('all');
+  const [activeZone, setActiveZone] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user || !currentFarm) return;
@@ -28,6 +29,7 @@ export default function TreeWisePredictionScreen() {
     const treeNumber = index + 1;
     const treeId = `tree-${treeNumber}`;
     const tree = storedTrees[treeId] || Object.values(storedTrees).find(t => t.number === treeNumber);
+    const zone = currentZones?.find(z => z.treeNumbers?.includes(treeNumber));
     
     // Use real data, default to Good if no tree record exists yet
     const yieldNum = tree?.latest?.finalYield || 0;
@@ -39,14 +41,16 @@ export default function TreeWisePredictionScreen() {
       yieldNum: yieldNum,
       isHealthy: health !== "Weak" && health !== "Need Attention",
       health,
+      zone,
     };
   };
 
   const allTrees = Array.from({ length: totalTreesCount }).map((_, i) => getTreeData(i));
-  const healthyTrees = allTrees.filter(t => t.isHealthy);
-  const attentionTrees = allTrees.filter(t => !t.isHealthy);
+  const zoneFilteredTrees = activeZone ? allTrees.filter(t => t.zone?.id === activeZone) : allTrees;
+  const healthyTrees = zoneFilteredTrees.filter(t => t.isHealthy);
+  const attentionTrees = zoneFilteredTrees.filter(t => !t.isHealthy);
 
-  const displayedTrees = activeTab === 'all' ? allTrees 
+  const displayedTrees = activeTab === 'all' ? zoneFilteredTrees 
                        : activeTab === 'healthy' ? healthyTrees 
                        : attentionTrees;
 
@@ -95,7 +99,7 @@ export default function TreeWisePredictionScreen() {
             className={`flex-1 py-2 mx-1 rounded-lg items-center ${activeTab === 'all' ? 'bg-forest-700' : 'bg-white border border-slate-200'}`}
           >
             <Text className={`text-[11px] font-bold ${activeTab === 'all' ? 'text-white' : 'text-slate-600'}`}>
-              All ({allTrees.length})
+              All ({zoneFilteredTrees.length})
             </Text>
           </TouchableOpacity>
           <TouchableOpacity 
@@ -115,6 +119,29 @@ export default function TreeWisePredictionScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* Zone Filters */}
+        {currentZones && currentZones.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="px-5 pb-4" contentContainerStyle={{ gap: 8 }}>
+            <TouchableOpacity 
+              onPress={() => setActiveZone(null)}
+              className={`px-3 py-1.5 rounded-full border ${!activeZone ? 'bg-slate-800 border-slate-800' : 'bg-white border-slate-200'}`}
+            >
+              <Text className={`text-[11px] font-bold ${!activeZone ? 'text-white' : 'text-slate-600'}`}>All Zones</Text>
+            </TouchableOpacity>
+            {currentZones.map(z => (
+              <TouchableOpacity 
+                key={z.id}
+                onPress={() => setActiveZone(z.id)}
+                className={`flex-row items-center gap-1.5 px-3 py-1.5 rounded-full border ${activeZone === z.id ? 'border-transparent' : 'bg-white border-slate-200'}`}
+                style={activeZone === z.id ? { backgroundColor: z.color } : undefined}
+              >
+                {activeZone !== z.id && <View className="w-2 h-2 rounded-full" style={{ backgroundColor: z.color }} />}
+                <Text className={`text-[11px] font-bold ${activeZone === z.id ? 'text-white' : 'text-slate-600'}`}>{z.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
 
         {/* Tree Grid */}
         <View className="px-4 flex-row flex-wrap">
@@ -142,6 +169,9 @@ export default function TreeWisePredictionScreen() {
                   <Text className={`text-[11px] font-bold ${isRed ? 'text-red-500' : 'text-slate-700'}`}>
                     T{String(tree.treeNumber).padStart(2, '0')}
                   </Text>
+                  {tree.zone && (
+                    <View className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full" style={{ backgroundColor: tree.zone.color }} />
+                  )}
                   <Text className={`text-[10px] font-bold ${isRed ? 'text-red-500' : 'text-emerald-700'}`}>
                     {tree.yieldNum.toLocaleString()}
                   </Text>

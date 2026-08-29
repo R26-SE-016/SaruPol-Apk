@@ -47,6 +47,7 @@ export default function logsScreen() {
   const [deleting, setDeleting] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  const [marketPrices, setMarketPrices] = useState({ a: "155", b: "120", c: "95" });
 
   const totalNuts = useMemo(() => {
     const a = parseInt(gradeA, 10) || 0;
@@ -56,14 +57,14 @@ export default function logsScreen() {
   }, [gradeA, gradeB, gradeC]);
 
   const totalRevenue = useMemo(() => {
-    const pA = parseFloat(priceA) || 0;
-    const pB = parseFloat(priceB) || 0;
-    const pC = parseFloat(priceC) || 0;
+    const pA = parseFloat(priceA) || parseFloat(marketPrices.a) || 0;
+    const pB = parseFloat(priceB) || parseFloat(marketPrices.b) || 0;
+    const pC = parseFloat(priceC) || parseFloat(marketPrices.c) || 0;
     const a = parseInt(gradeA, 10) || 0;
     const b = parseInt(gradeB, 10) || 0;
     const c = parseInt(gradeC, 10) || 0;
     return (a * pA) + (b * pB) + (c * pC);
-  }, [gradeA, gradeB, gradeC, priceA, priceB, priceC]);
+  }, [gradeA, gradeB, gradeC, priceA, priceB, priceC, marketPrices]);
 
   const monthlyStats = useMemo(() => {
     if (remoteLogs.length === 0) return { nuts: 0, rev: 0, avgPrice: 0, label: '' };
@@ -87,9 +88,10 @@ export default function logsScreen() {
       try {
         const data = await fetchCDARates();
         if (data && mounted) {
-          setPriceA((prev) => prev || String(data.a_grade_price ?? 155));
-          setPriceB((prev) => prev || String(data.b_grade_price ?? 120));
-          setPriceC((prev) => prev || String(data.c_grade_price ?? 95));
+          const a = String(data.a_grade_price ?? 155);
+          const b = String(data.b_grade_price ?? 120);
+          const c = String(data.c_grade_price ?? 95);
+          setMarketPrices({ a, b, c });
         }
       } catch (error) {
         console.warn('Failed to fetch CDA prices, using defaults:', error);
@@ -119,14 +121,14 @@ export default function logsScreen() {
     setGradeA("");
     setGradeB("");
     setGradeC("");
-    setPriceA("155");
-    setPriceB("120");
-    setPriceC("95");
+    setPriceA("");
+    setPriceB("");
+    setPriceC("");
     setNotes("");
     setError(null);
     setEditingId(null);
     setShowForm(false);
-  }, []);
+  }, [marketPrices]);
 
   const handleEdit = useCallback((log: HarvestLog) => {
     setEditingId(log.id);
@@ -134,14 +136,14 @@ export default function logsScreen() {
     setGradeA(log.gradeA ? String(log.gradeA) : "");
     setGradeB(log.gradeB ? String(log.gradeB) : "");
     setGradeC(log.gradeC ? String(log.gradeC) : "");
-    setPriceA(log.priceA ? String(log.priceA) : "155");
-    setPriceB(log.priceB ? String(log.priceB) : "120");
-    setPriceC(log.priceC ? String(log.priceC) : "95");
+    setPriceA(log.priceA ? String(log.priceA) : "");
+    setPriceB(log.priceB ? String(log.priceB) : "");
+    setPriceC(log.priceC ? String(log.priceC) : "");
     setNotes(log.notes);
     setError(null);
     setShowForm(true);
     scrollRef.current?.scrollTo({ y: 0, animated: true });
-  }, []);
+  }, [marketPrices]);
 
   const handleSave = useCallback(async () => {
     if (!date) return setError("Select a harvest date.");
@@ -157,9 +159,9 @@ export default function logsScreen() {
       gradeA: parseInt(gradeA, 10) || 0,
       gradeB: parseInt(gradeB, 10) || 0,
       gradeC: parseInt(gradeC, 10) || 0,
-      priceA: parseFloat(priceA) || 0,
-      priceB: parseFloat(priceB) || 0,
-      priceC: parseFloat(priceC) || 0,
+      priceA: parseFloat(priceA) || parseFloat(marketPrices.a) || 0,
+      priceB: parseFloat(priceB) || parseFloat(marketPrices.b) || 0,
+      priceC: parseFloat(priceC) || parseFloat(marketPrices.c) || 0,
       revenue: totalRevenue,
       notes: notes.trim(),
     };
@@ -521,15 +523,18 @@ export default function logsScreen() {
                 <View className="gap-3">
                   <View>
                     <Text className="text-[10px] font-black text-slate-700 mb-1">Large Nuts Price <Text className="text-slate-400 font-normal">(A-Grade)</Text></Text>
-                    <TextInput value={priceA} onChangeText={setPriceA} keyboardType="numeric" className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 shadow-sm" />
+                    <TextInput value={priceA} onChangeText={setPriceA} placeholder={marketPrices.a} placeholderTextColor="#94a3b8" keyboardType="numeric" className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 shadow-sm" />
+                    {parseInt(gradeA, 10) > 0 && <Text className="text-[10px] text-emerald-600 font-bold mt-1.5 ml-1">Subtotal: LKR {((parseFloat(priceA) || parseFloat(marketPrices.a) || 0) * parseInt(gradeA, 10)).toLocaleString()}</Text>}
                   </View>
                   <View>
                     <Text className="text-[10px] font-black text-slate-700 mb-1">Medium Nuts Price <Text className="text-slate-400 font-normal">(B-Grade)</Text></Text>
-                    <TextInput value={priceB} onChangeText={setPriceB} keyboardType="numeric" className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 shadow-sm" />
+                    <TextInput value={priceB} onChangeText={setPriceB} placeholder={marketPrices.b} placeholderTextColor="#94a3b8" keyboardType="numeric" className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 shadow-sm" />
+                    {parseInt(gradeB, 10) > 0 && <Text className="text-[10px] text-emerald-600 font-bold mt-1.5 ml-1">Subtotal: LKR {((parseFloat(priceB) || parseFloat(marketPrices.b) || 0) * parseInt(gradeB, 10)).toLocaleString()}</Text>}
                   </View>
                   <View>
                     <Text className="text-[10px] font-black text-slate-700 mb-1">Small Nuts Price <Text className="text-slate-400 font-normal">(C-Grade)</Text></Text>
-                    <TextInput value={priceC} onChangeText={setPriceC} keyboardType="numeric" className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 shadow-sm" />
+                    <TextInput value={priceC} onChangeText={setPriceC} placeholder={marketPrices.c} placeholderTextColor="#94a3b8" keyboardType="numeric" className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 shadow-sm" />
+                    {parseInt(gradeC, 10) > 0 && <Text className="text-[10px] text-emerald-600 font-bold mt-1.5 ml-1">Subtotal: LKR {((parseFloat(priceC) || parseFloat(marketPrices.c) || 0) * parseInt(gradeC, 10)).toLocaleString()}</Text>}
                   </View>
                 </View>
                 <Text className="text-[10px] text-slate-400 mt-3 text-right font-medium">Prices updated: {new Date().toLocaleDateString('en-GB')}</Text>

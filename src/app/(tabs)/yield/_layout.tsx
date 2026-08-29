@@ -20,7 +20,7 @@ export default function YieldLayout() {
       <Stack.Screen name="add-farm" />
       <Stack.Screen name="[id]/index" />
       <Stack.Screen name="[id]/analytics" />
-      <Stack.Screen name="[id]/mapper" />
+
       <Stack.Screen name="[id]/telemetry" />
       <Stack.Screen name="[id]/logs" />
       <Stack.Screen name="[id]/add-zone" />

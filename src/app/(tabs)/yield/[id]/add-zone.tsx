@@ -1,17 +1,12 @@
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, TextInput, ScrollView, ActivityIndicator } from "react-native";
-import { ArrowLeft, Palette, TreePine, FileText, Save, AlertCircle, Check } from "lucide-react-native";
+import { useState } from "react";
+import { View, Text, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Image } from "react-native";
+import { ArrowLeft, Leaf, HelpCircle, Check, Plus, Info } from "lucide-react-native";
 import { useYieldApp } from "@/store/YieldAppContext";
-import { createZone, updateZone, deleteZone, getClaimedTreeNumbers } from "@/services/yieldFarmDb";
-import type { Zone } from "@/types/yield";
+import { createZone, updateZone } from "@/services/yieldFarmDb";
+import { useEffect } from "react";
 
-
-
-const PRESET_COLORS = [
-  "#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#8b5cf6",
-  "#ec4899", "#14b8a6", "#f97316", "#6366f1", "#84cc16",
-];
+const PRESET_COLORS = ["#16a34a", "#facc15", "#3b82f6", "#a855f7", "#f97316", "#14b8a6"];
 
 const inputCls = "w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-800 bg-white";
 
@@ -20,223 +15,217 @@ export default function AddZoneScreen() {
   const params = useLocalSearchParams();
   const farmId = params.id as string;
   const zoneId = params.zoneId as string | undefined;
-  const { user, currentZones, currentFarm } = useYieldApp();
+  const { user, currentFarm, currentZones, refreshZones } = useYieldApp();
+
   const editingZone = zoneId ? currentZones.find((z) => z.id === zoneId) : null;
 
   const [name, setName] = useState("");
   const [color, setColor] = useState(PRESET_COLORS[0]);
-  const [selectedTrees, setSelectedTrees] = useState<number[]>([]);
+  const [area, setArea] = useState("");
   const [notes, setNotes] = useState("");
-  const [claimed, setClaimed] = useState<Set<number>>(new Set());
-  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [loaded, setLoaded] = useState(!zoneId);
 
   useEffect(() => {
-    if (!zoneId || !editingZone) {
-      if (!zoneId) setLoaded(true);
-      return;
+    if (editingZone) {
+      setName(editingZone.name);
+      setColor(editingZone.color);
+      setNotes(editingZone.notes);
+      // area was not in Zone by default, but we can try to extract if it exists
+      setArea((editingZone as any).estimatedArea || "");
     }
-    setName(editingZone.name);
-    setColor(editingZone.color);
-    setSelectedTrees(editingZone.treeNumbers ?? []);
-    setNotes(editingZone.notes);
-    setLoaded(true);
-  }, [zoneId, editingZone]);
-
-  useEffect(() => {
-    if (!user || !farmId) return;
-    getClaimedTreeNumbers(user.uid, farmId, zoneId).then(setClaimed);
-  }, [user, farmId, zoneId]);
-
-  const totalTrees = currentFarm?.totalTrees ?? 0;
-  const treeNumbers = Array.from({ length: totalTrees }, (_, i) => i + 1);
-
-  const toggleTree = (n: number) => {
-    setError(null);
-    setSelectedTrees((prev) => {
-      if (prev.includes(n)) return prev.filter((x) => x !== n);
-      if (claimed.has(n)) {
-        setError(`Tree #${String(n).padStart(2, "0")} is already assigned to another zone.`);
-        return prev;
-      }
-      return [...prev, n];
-    });
-  };
+  }, [editingZone]);
 
   const handleSave = async () => {
     if (!user) return;
-    if (!name.trim()) return setError("Zone name is required.");
-    if (selectedTrees.length === 0) return setError("Select at least one tree for this zone.");
+    if (!name.trim()) return;
 
-    setError(null);
     setSaving(true);
     try {
       const data = {
         name: name.trim(),
         color,
-        treeNumbers: selectedTrees.sort((a, b) => a - b),
+        treeNumbers: editingZone?.treeNumbers || [],
         notes: notes.trim(),
-      };
+        estimatedArea: area.trim(),
+      } as any;
+      
       if (zoneId) {
         await updateZone(user.uid, farmId, zoneId, data);
       } else {
         await createZone(user.uid, farmId, data);
       }
+      
+      await refreshZones();
       router.back();
     } catch (e: any) {
-      setError(`Save failed: ${e.message}`);
+      console.warn(e);
     } finally {
       setSaving(false);
     }
   };
-
-  const handleDelete = async () => {
-    if (!user || !zoneId) return;
-    setSaving(true);
-    try {
-      await deleteZone(user.uid, farmId, zoneId);
-      router.back();
-    } catch (e: any) {
-      setError(`Delete failed: ${e.message}`);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (!loaded) {
-    return (
-      <View className="flex-1 bg-slate-50 items-center justify-center">
-        <ActivityIndicator size="large" color="#1e7550" />
-      </View>
-    );
-  }
 
   return (
     <View className="flex-1 bg-slate-50">
-      <View className="bg-white px-3 pt-4 pb-3.5 shadow-sm flex-row items-center gap-2">
-        <TouchableOpacity onPress={() => router.back()} className="w-9 h-9 rounded-full items-center justify-center">
-          <ArrowLeft size={20} color="#475569" />
-        </TouchableOpacity>
-        <Text className="text-lg font-bold text-slate-800">{zoneId ? "Edit Zone" : "Add Zone"}</Text>
+      {/* Header */}
+      <View className="bg-[#0C3B2E] pt-12 pb-4 px-4 flex-row items-center justify-between">
+        <View className="flex-row items-center gap-3">
+          <TouchableOpacity onPress={() => router.back()} className="p-1 -ml-1">
+            <ArrowLeft size={24} color="#fff" />
+          </TouchableOpacity>
+          <View>
+            <Text className="text-white text-[19px] font-bold">{zoneId ? "Edit Zone" : "Add Zone"}</Text>
+            <Text className="text-emerald-100 text-xs mt-0.5">Active Farm: {currentFarm?.name || "Sigiriya state"}</Text>
+          </View>
+        </View>
       </View>
 
-      <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ gap: 16, paddingBottom: 96 }}>
-        <View className="bg-white rounded-2xl p-5 border border-slate-100">
-          <View className="gap-4">
-            <View>
-              <View className="flex-row items-center gap-2 mb-1.5">
-                <Palette size={14} color="#1e7550" />
-                <Text className="text-xs font-medium text-slate-600">Zone Name</Text>
-              </View>
+      <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ paddingBottom: 40, gap: 16 }}>
+        
+        <Text className="text-base font-bold text-slate-800 mt-2">Create a New Zone</Text>
+
+        {/* Form */}
+        <View className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm gap-4">
+          
+          <View>
+            <Text className="text-xs font-semibold text-slate-600 mb-2">Zone Name</Text>
+            <View className="relative justify-center">
               <TextInput
                 value={name}
                 onChangeText={setName}
-                placeholder="e.g. Zone A - North Field"
-                placeholderTextColor="#cbd5e1"
-                className={inputCls}
+                placeholder="e.g. Zone A, North Block, Low Land"
+                placeholderTextColor="#94a3b8"
+                className={`${inputCls}`}
               />
             </View>
+          </View>
 
-            <View>
-              <View className="flex-row items-center gap-2 mb-2">
-                <View className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
-                <Text className="text-xs font-medium text-slate-600">Zone Color</Text>
-              </View>
-              <View className="flex-row flex-wrap gap-2" style={{ flexGrow: 1, paddingBottom: 10 }}>
+          <View className="flex-row gap-4">
+            <View className="flex-1">
+              <Text className="text-xs font-semibold text-slate-600 mb-2">Select Zone Color</Text>
+              <View className="flex-row flex-wrap gap-2">
                 {PRESET_COLORS.map((c) => (
                   <TouchableOpacity
                     key={c}
                     onPress={() => setColor(c)}
-                    className="w-9 h-9 rounded-full items-center justify-center"
+                    className="w-8 h-8 rounded-full items-center justify-center"
                     style={{ backgroundColor: c }}
                   >
-                    {color === c && <Check size={16} color="#fff" />}
+                    {color === c && <Check size={14} color="#fff" />}
                   </TouchableOpacity>
                 ))}
               </View>
             </View>
-
-            <View>
-              <View className="flex-row items-center gap-2 mb-2">
-                <TreePine size={14} color="#1e7550" />
-                <Text className="text-xs font-medium text-slate-600">Select Trees</Text>
-                <Text className="ml-auto text-[10px] text-slate-400">{selectedTrees.length} selected</Text>
-              </View>
-              <Text className="text-[11px] text-slate-400 mb-2">Trees already in another zone are disabled.</Text>
-              <View className="flex-row flex-wrap gap-1.5 max-h-48">
-                {treeNumbers.map((n) => {
-                  const isSelected = selectedTrees.includes(n);
-                  const isClaimed = claimed.has(n);
-                  return (
-                    <TouchableOpacity
-                      key={n}
-                      onPress={() => toggleTree(n)}
-                      disabled={isClaimed}
-                      className={`w-9 h-9 rounded-lg items-center justify-center ${isSelected ? "" : isClaimed ? "bg-slate-100" : "bg-slate-100"}`}
-                      style={isSelected ? { backgroundColor: color } : undefined}
-                    >
-                      <Text
-                        style={{ color: isSelected ? "#fff" : isClaimed ? "#cbd5e1" : "#64748b" }}
-                        className="text-xs font-bold"
-                      >
-                        {String(n).padStart(2, "0")}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
+            
+            <View className="flex-1">
+              <Text className="text-xs font-semibold text-slate-600 mb-2">Estimated Area (Perches)</Text>
+              <View className="relative justify-center">
+                <TextInput
+                  value={area}
+                  onChangeText={setArea}
+                  placeholder="e.g. 10"
+                  placeholderTextColor="#94a3b8"
+                  keyboardType="numeric"
+                  className={`${inputCls} pr-16`}
+                />
+                <Text className="absolute right-3 text-[11px] text-slate-500 font-semibold">Perches</Text>
               </View>
             </View>
+          </View>
 
-            <View>
-              <View className="flex-row items-center gap-2 mb-1.5">
-                <FileText size={14} color="#1e7550" />
-                <Text className="text-xs font-medium text-slate-600">Zone Notes (Optional)</Text>
-              </View>
+          <View>
+            <Text className="text-xs font-semibold text-slate-600 mb-2">Describe this Zone (Optional)</Text>
+            <View className="relative">
               <TextInput
                 value={notes}
                 onChangeText={setNotes}
-                placeholder="e.g. Different fertilizer schedule"
-                placeholderTextColor="#cbd5e1"
+                placeholder="Add a short description about this zone..."
+                placeholderTextColor="#94a3b8"
                 multiline
-                className={`${inputCls} min-h-[60px]`}
+                className={`${inputCls} min-h-[80px] text-left align-top`}
               />
             </View>
+          </View>
 
-            {error && (
-              <View className="flex-row items-start gap-1.5 bg-red-50 rounded-lg px-3 py-2">
-                <AlertCircle size={16} color="#dc2626" />
-                <Text className="text-sm text-red-600 flex-1">{error}</Text>
+          <View className="flex-row items-center gap-3 bg-green-50 rounded-xl p-3 border border-green-100">
+            <View className="w-6 h-6 bg-green-700 rounded-full items-center justify-center shadow-sm">
+              <Info size={12} color="#fff" />
+            </View>
+            <Text className="text-[10px] text-slate-600 flex-1 pr-6">
+              <Text className="font-bold text-green-800">Tip:</Text> You can group trees based on soil type, water availability, age, or any other factors.
+            </Text>
+          </View>
+
+        </View>
+
+        <TouchableOpacity
+          onPress={handleSave}
+          disabled={saving || !name.trim()}
+          className="flex-row items-center justify-center gap-2 bg-[#0C3B2E] py-4 rounded-xl mt-2"
+          style={(saving || !name.trim()) ? { opacity: 0.6 } : undefined}
+        >
+          {saving ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <>
+              <Plus size={18} color="#fff" />
+              <Text className="text-white font-bold text-sm">{zoneId ? "Update Zone" : "Add Zone"}</Text>
+            </>
+          )}
+        </TouchableOpacity>
+
+        <View className="flex-row items-center justify-center gap-3 my-1">
+          <View className="h-px bg-slate-200 flex-1" />
+          <Text className="text-[10px] font-bold text-slate-400">OR</Text>
+          <View className="h-px bg-slate-200 flex-1" />
+        </View>
+
+        <TouchableOpacity
+          onPress={() => router.back()}
+          className="bg-white border border-slate-200 rounded-xl py-3.5 items-center justify-center mb-6 shadow-sm flex-row gap-2"
+        >
+          <Leaf size={16} color="#475569" />
+          <Text className="text-slate-600 font-bold text-sm">Continue Without Zones</Text>
+        </TouchableOpacity>
+
+        {/* Hero Card */}
+        <View className="bg-[#F2FAF6] rounded-2xl p-5 border border-emerald-50 relative overflow-hidden">
+          <View className="w-[65%]">
+            <Text className="text-lg font-bold text-slate-800 mb-2">What is a Zone?</Text>
+            <Text className="text-xs text-slate-600 mb-4 leading-tight">
+              Divide your farm into smaller areas based on location, soil type, or tree condition to get more accurate insights and recommendations.
+            </Text>
+            <View className="gap-2">
+              <View className="flex-row items-center gap-2">
+                <View className="w-4 h-4 bg-green-500 rounded-full items-center justify-center">
+                  <Check size={10} color="#fff" />
+                </View>
+                <Text className="text-[11px] text-slate-700 font-medium">Better analysis for each area</Text>
               </View>
-            )}
-
-            <TouchableOpacity
-              onPress={handleSave}
-              disabled={saving}
-              className="flex-row items-center justify-center gap-2 bg-forest-600 py-3.5 rounded-xl"
-              style={saving ? { opacity: 0.6 } : undefined}
-            >
-              {saving ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <>
-                  <Save size={18} color="#fff" />
-                  <Text className="text-white font-semibold text-sm">{zoneId ? "Update Zone" : "Create Zone"}</Text>
-                </>
-              )}
-            </TouchableOpacity>
-
-            {zoneId && (
-              <TouchableOpacity
-                onPress={handleDelete}
-                disabled={saving}
-                className="flex-row items-center justify-center gap-2 bg-red-50 py-3 rounded-xl"
-              >
-                <Text className="text-sm font-semibold text-red-600">Delete Zone</Text>
-              </TouchableOpacity>
-            )}
+              <View className="flex-row items-center gap-2">
+                <View className="w-4 h-4 bg-green-500 rounded-full items-center justify-center">
+                  <Check size={10} color="#fff" />
+                </View>
+                <Text className="text-[11px] text-slate-700 font-medium">More accurate yield predictions</Text>
+              </View>
+            </View>
+          </View>
+          <View className="absolute right-0 top-6 bottom-0 w-[40%] items-end justify-center">
+             <Image source={{ uri: 'https://i.ibb.co/Dg6V1tk1/zone.png' }} style={{ width: 100, height: 100, resizeMode: 'contain', opacity: 0.8 }} />
           </View>
         </View>
+
+        {/* Optional Card */}
+        <View className="bg-white rounded-2xl p-4 border border-slate-100 flex-row items-center gap-4">
+          <View className="flex-1">
+            <View className="flex-row items-center gap-2">
+              <Text className="text-sm font-bold text-slate-800">This is Optional</Text>
+              <View className="bg-green-100 px-2 py-0.5 rounded-full">
+                <Text className="text-[9px] font-bold text-green-700">Not Required</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
       </ScrollView>
     </View>
   );

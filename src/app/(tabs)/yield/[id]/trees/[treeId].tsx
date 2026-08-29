@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, ActivityIndicator, TextInput, Alert, Image } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, ActivityIndicator, TextInput, Alert, Image, Modal } from "react-native";
 import { ArrowLeft, Save, AlertTriangle, Thermometer, Droplets, FlaskConical, Info, FileDown, Search, CheckCircle2, XCircle, Zap, Edit3, MoreVertical, ChevronDown, Share2, MapPin, Clock, RefreshCw } from "lucide-react-native";
 import { useState, useEffect } from "react";
 import { LinearGradient } from "expo-linear-gradient";
@@ -39,6 +39,7 @@ export default function SingleTreeScreen() {
   const [treeData, setTreeData] = useState<any>(null);
   const [currentPrediction, setCurrentPrediction] = useState<any>(null);
   const [iotLive, setIotLive] = useState(false);
+  const [showReport, setShowReport] = useState(false);
 
   // Reset prediction state when switching trees
   useEffect(() => {
@@ -60,6 +61,7 @@ export default function SingleTreeScreen() {
   const [actualYield, setActualYield] = useState("");
   const [disease, setDisease] = useState("");
   const [isUpdatingActual, setIsUpdatingActual] = useState(false);
+  const [isUpdatingDisease, setIsUpdatingDisease] = useState(false);
 
   // Biological Inputs
   const [variety, setVariety] = useState("Sri Lanka Tall");
@@ -113,18 +115,55 @@ export default function SingleTreeScreen() {
   const [newMonth, setNewMonth] = useState("");
   const [newNuts, setNewNuts] = useState("");
 
-  const [syncingIoT, setSyncingIoT] = useState(false);
-  const fetchRealtimeIoTData = () => {
-    setSyncingIoT(true);
-    // Simulate DB fetch delay for IoT device
-    setTimeout(() => {
-      setManualN(String(Math.floor(Math.random() * (60 - 30) + 30)));
-      setManualP(String(Math.floor(Math.random() * (40 - 15) + 15)));
-      setManualK(String(Math.floor(Math.random() * (80 - 40) + 40)));
-      setManualPh((Math.random() * (7.5 - 5.5) + 5.5).toFixed(1));
-      setManualMoisture(String(Math.floor(Math.random() * (70 - 30) + 30)));
-      setSyncingIoT(false);
-    }, 1200);
+  const saveSensorData = async () => {
+    if (!user) return;
+    const n = parseFloat(manualN);
+    const p = parseFloat(manualP);
+    const k = parseFloat(manualK);
+    const ph = parseFloat(manualPh);
+    const moisture = parseFloat(manualMoisture);
+
+    if ([n, p, k, ph, moisture].some(isNaN)) {
+      Alert.alert("Invalid Input", "Please enter valid values for all sensor fields.");
+      return;
+    }
+    if (ph < 0 || ph > 14) { Alert.alert("Invalid Input", "pH must be between 0 and 14."); return; }
+    if (moisture < 0 || moisture > 100) { Alert.alert("Invalid Input", "Soil moisture must be between 0 and 100%."); return; }
+
+    const sensorInput = { n, p, k, ph, soilMoisture: moisture };
+    setSaving(true);
+    try {
+      await updateTreeData(user.uid, farmId, treeId, { sensorData: sensorInput } as any);
+      setTreeData((prev: any) => ({ ...prev, sensorData: sensorInput }));
+      Alert.alert("Success", "Sensor data saved successfully.");
+    } catch (error) {
+      Alert.alert("Error", "Could not save sensor data.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteSensorData = () => {
+    Alert.alert("Clear Sensor Data", "Are you sure you want to clear the saved sensor data?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Clear", style: "destructive", onPress: async () => {
+        if (!user) return;
+        setSaving(true);
+        try {
+          await updateTreeData(user.uid, farmId, treeId, { sensorData: null } as any);
+          setTreeData((prev: any) => ({ ...prev, sensorData: null }));
+          setManualN("");
+          setManualP("");
+          setManualK("");
+          setManualPh("");
+          setManualMoisture("");
+        } catch (e) {
+          Alert.alert("Error", "Could not clear sensor data.");
+        } finally {
+          setSaving(false);
+        }
+      }}
+    ]);
   };
 
   useEffect(() => {
@@ -379,14 +418,13 @@ export default function SingleTreeScreen() {
     ]);
   };
 
-  const saveActuals = async () => {
+  const saveActualHarvest = async () => {
     if (!treeData?.latest || !user) return;
+    if (!actualYield) return Alert.alert("Error", "Please enter the actual harvested nuts.");
     setIsUpdatingActual(true);
     try {
       const tsId = treeData.latest.id;
-      const updates: any = {};
-      if (actualYield) { updates.actualYield = Number(actualYield); updates.actualYieldNuts = Number(actualYield); }
-      if (disease) updates.disease = disease;
+      const updates: any = { actualYield: Number(actualYield), actualYieldNuts: Number(actualYield) };
 
       await updateTreeData(user.uid, farmId, treeId, {
         latest: { ...treeData.latest, ...updates }
@@ -399,13 +437,46 @@ export default function SingleTreeScreen() {
         return { ...prev, latest: updatedEntry, history: { ...prevHist, [tsId]: updatedEntry } };
       });
 
-      Alert.alert("Saved", "Post-harvest data saved.");
+      Alert.alert("Saved", "Actual harvest data saved.");
       setActualYield("");
-      setDisease("");
     } catch (e) {
-      Alert.alert("Error", "Failed to save.");
+      Alert.alert("Error", "Failed to save harvest data.");
     } finally {
       setIsUpdatingActual(false);
+    }
+  };
+
+  const saveDisease = async () => {
+    if (!user) return;
+    if (!disease) return Alert.alert("Error", "Please enter a disease.");
+    setIsUpdatingDisease(true);
+    try {
+      // Save disease under the tree object directly
+      await updateTreeData(user.uid, farmId, treeId, { disease } as any);
+      
+      // Also optionally update the latest history record if it exists
+      if (treeData?.latest) {
+        const tsId = treeData.latest.id;
+        const updates = { disease };
+        await updateTreeData(user.uid, farmId, treeId, {
+          latest: { ...treeData.latest, ...updates }
+        } as any);
+        await updateTreeHistoryRecord(user.uid, farmId, treeId, tsId, updates);
+        setTreeData((prev: any) => {
+          const prevHist = prev?.history || {};
+          const updatedEntry = { ...prev.latest, ...updates };
+          return { ...prev, disease, latest: updatedEntry, history: { ...prevHist, [tsId]: updatedEntry } };
+        });
+      } else {
+        setTreeData((prev: any) => ({ ...prev, disease }));
+      }
+
+      Alert.alert("Saved", "Disease details saved.");
+      setDisease("");
+    } catch (e) {
+      Alert.alert("Error", "Failed to save disease data.");
+    } finally {
+      setIsUpdatingDisease(false);
     }
   };
 
@@ -487,10 +558,15 @@ export default function SingleTreeScreen() {
           <Text className={`text-[13px] font-semibold mb-1 ${isAttention ? 'text-red-400' : 'text-slate-400'}`}>Tree ID</Text>
           <Text className={`text-[22px] font-bold ${isAttention ? 'text-red-900' : 'text-slate-800'}`}>{treeObj?.id || treeId.replace("tree-", "")}</Text>
         </View>
-        <View className="items-end">
-          <Text className={`text-[13px] font-semibold mb-1 ${isAttention ? 'text-red-400' : 'text-slate-400'}`}>Status</Text>
-          <View className={`px-3 py-1 rounded-full border ${isAttention ? 'bg-red-100 border-red-200' : 'bg-emerald-50 border-emerald-100'}`}>
-            <Text className={`font-bold text-xs ${isAttention ? 'text-red-700' : 'text-emerald-600'}`}>{isAttention ? "Need Attention" : (treeObj?.health || "Healthy")}</Text>
+        <View className="flex-row items-center gap-4">
+          <TouchableOpacity onPress={() => setShowReport(true)} className="items-center justify-center bg-slate-100 w-10 h-10 rounded-full">
+            <FileDown size={18} color="#0f172a" />
+          </TouchableOpacity>
+          <View className="items-end">
+            <Text className={`text-[13px] font-semibold mb-1 ${isAttention ? 'text-red-400' : 'text-slate-400'}`}>Status</Text>
+            <View className={`px-3 py-1 rounded-full border ${isAttention ? 'bg-red-100 border-red-200' : 'bg-emerald-50 border-emerald-100'}`}>
+              <Text className={`font-bold text-xs ${isAttention ? 'text-red-700' : 'text-emerald-600'}`}>{isAttention ? "Need Attention" : (treeObj?.health || "Healthy")}</Text>
+            </View>
           </View>
         </View>
       </View>
@@ -586,14 +662,16 @@ export default function SingleTreeScreen() {
               </View>
               <Text className="text-forest-700 font-bold text-[15px]">Soil & Sensor Data</Text>
             </View>
-            <TouchableOpacity
-              onPress={fetchRealtimeIoTData}
-              disabled={syncingIoT}
-              className={`border px-3 py-1.5 rounded-lg flex-row items-center gap-1.5 shadow-sm ${syncingIoT ? 'bg-slate-100 border-slate-200' : 'bg-blue-50 border-blue-200'}`}
-            >
-              {syncingIoT ? <ActivityIndicator size="small" color="#94a3b8" style={{ width: 14, height: 14 }} /> : <RefreshCw size={14} color="#2563eb" />}
-              <Text className={`font-bold text-[11px] ${syncingIoT ? 'text-slate-500' : 'text-blue-600'}`}>{syncingIoT ? "Syncing..." : "Sync IoT Data"}</Text>
-            </TouchableOpacity>
+            {treeData?.sensorData && (
+              <TouchableOpacity
+                onPress={deleteSensorData}
+                disabled={saving}
+                className="border border-red-200 bg-red-50 px-3 py-1.5 rounded-lg flex-row items-center gap-1.5 shadow-sm"
+              >
+                <Trash2 size={14} color="#ef4444" />
+                <Text className="font-bold text-[11px] text-red-600">Clear Data</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           <View className="gap-5 border-b border-slate-100 pb-5 mb-4">
@@ -602,43 +680,64 @@ export default function SingleTreeScreen() {
                 <View className="bg-slate-50 p-2 rounded-xl border border-slate-100">
                   <Image source={{ uri: 'https://i.ibb.co/mrqhgPd3/Nitrogen.png' }} style={{ width: 24, height: 24 }} resizeMode="contain" />
                 </View>
-                <Text className="text-[13px] text-slate-700 font-semibold">Nitrogen (N)</Text>
+                <Text className="text-[13px] text-slate-700 font-semibold">Nitrogen (N) mg/kg</Text>
               </View>
-              <Text className="text-[15px] font-bold text-slate-800 w-16 text-right">{manualN || "0.026"} %</Text>
+              <TextInput
+                value={manualN}
+                onChangeText={setManualN}
+                keyboardType="numeric"
+                placeholder="0"
+                className="text-[15px] font-bold text-slate-800 w-20 text-right bg-slate-50 border border-slate-200 rounded-lg px-2 py-1"
+              />
               <View className="w-16 items-end">
                 <Text className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${Number(manualN) < 30 ? 'text-amber-600 bg-amber-50' : 'text-emerald-600 bg-emerald-50'}`}>
                   {Number(manualN) < 30 ? "Low" : "Good"}
                 </Text>
               </View>
             </View>
+            
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center gap-4 flex-1">
                 <View className="bg-slate-50 p-2 rounded-xl border border-slate-100">
                   <Image source={{ uri: 'https://i.ibb.co/gbt6rcPh/Phosphorus.png' }} style={{ width: 24, height: 24 }} resizeMode="contain" />
                 </View>
-                <Text className="text-[13px] text-slate-700 font-semibold">Phosphorus (P)</Text>
+                <Text className="text-[13px] text-slate-700 font-semibold">Phosphorus (P) mg/kg</Text>
               </View>
-              <Text className="text-[15px] font-bold text-slate-800 w-16 text-right">{manualP || "0.185"} %</Text>
+              <TextInput
+                value={manualP}
+                onChangeText={setManualP}
+                keyboardType="numeric"
+                placeholder="0"
+                className="text-[15px] font-bold text-slate-800 w-20 text-right bg-slate-50 border border-slate-200 rounded-lg px-2 py-1"
+              />
               <View className="w-16 items-end">
                 <Text className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${Number(manualP) < 20 ? 'text-amber-600 bg-amber-50' : 'text-emerald-600 bg-emerald-50'}`}>
                   {Number(manualP) < 20 ? "Low" : "Good"}
                 </Text>
               </View>
             </View>
+            
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center gap-4 flex-1">
                 <View className="bg-slate-50 p-2 rounded-xl border border-slate-100">
                   <Image source={{ uri: 'https://i.ibb.co/jP93ZkJ0/Potassium.png' }} style={{ width: 24, height: 24 }} resizeMode="contain" />
                 </View>
-                <Text className="text-[13px] text-slate-700 font-semibold">Potassium (K)</Text>
+                <Text className="text-[13px] text-slate-700 font-semibold">Potassium (K) mg/kg</Text>
               </View>
-              <Text className="text-[15px] font-bold text-slate-800 w-16 text-right">{manualK || "0.095"} %</Text>
+              <TextInput
+                value={manualK}
+                onChangeText={setManualK}
+                keyboardType="numeric"
+                placeholder="0"
+                className="text-[15px] font-bold text-slate-800 w-20 text-right bg-slate-50 border border-slate-200 rounded-lg px-2 py-1"
+              />
               <View className="w-16 items-end">
                 <Text className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${Number(manualK) < 50 ? 'text-amber-600 bg-amber-50' : 'text-emerald-600 bg-emerald-50'}`}>
                   {Number(manualK) < 50 ? "Low" : "Good"}
                 </Text>
               </View>
             </View>
+            
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center gap-4 flex-1">
                 <View className="bg-slate-50 p-2 rounded-xl border border-slate-100">
@@ -646,21 +745,34 @@ export default function SingleTreeScreen() {
                 </View>
                 <Text className="text-[13px] text-slate-700 font-semibold">pH Level</Text>
               </View>
-              <Text className="text-[15px] font-bold text-slate-800 w-16 text-right">{manualPh || "6.2"}</Text>
+              <TextInput
+                value={manualPh}
+                onChangeText={setManualPh}
+                keyboardType="numeric"
+                placeholder="6.5"
+                className="text-[15px] font-bold text-slate-800 w-20 text-right bg-slate-50 border border-slate-200 rounded-lg px-2 py-1"
+              />
               <View className="w-16 items-end">
                 <Text className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${Number(manualPh) < 5.5 || Number(manualPh) > 7.5 ? 'text-amber-600 bg-amber-50' : 'text-emerald-600 bg-emerald-50'}`}>
                   {Number(manualPh) < 5.5 || Number(manualPh) > 7.5 ? "Poor" : "Good"}
                 </Text>
               </View>
             </View>
+            
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center gap-4 flex-1">
                 <View className="bg-slate-50 p-2 rounded-xl border border-slate-100">
                   <Image source={{ uri: 'https://i.ibb.co/rR6JW0dr/Moisture-irrigation.png' }} style={{ width: 24, height: 24 }} resizeMode="contain" />
                 </View>
-                <Text className="text-[13px] text-slate-700 font-semibold">Soil Moisture</Text>
+                <Text className="text-[13px] text-slate-700 font-semibold">Soil Moisture %</Text>
               </View>
-              <Text className="text-[15px] font-bold text-slate-800 w-16 text-right">{manualMoisture || "22"} %</Text>
+              <TextInput
+                value={manualMoisture}
+                onChangeText={setManualMoisture}
+                keyboardType="numeric"
+                placeholder="50"
+                className="text-[15px] font-bold text-slate-800 w-20 text-right bg-slate-50 border border-slate-200 rounded-lg px-2 py-1"
+              />
               <View className="w-16 items-end">
                 <Text className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${Number(manualMoisture) < 40 ? 'text-amber-600 bg-amber-50' : 'text-emerald-600 bg-emerald-50'}`}>
                   {Number(manualMoisture) < 40 ? "Low" : "Good"}
@@ -669,10 +781,18 @@ export default function SingleTreeScreen() {
             </View>
           </View>
           <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center gap-1.5">
+            <View className="flex-row items-center gap-1.5 flex-1">
               <Clock size={14} color="#94a3b8" />
-              <Text className="text-[11px] text-slate-400 font-medium">Last Updated: {syncingIoT ? "Syncing..." : "Today, " + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</Text>
+              <Text className="text-[11px] text-slate-400 font-medium">Last Updated: {treeData?.sensorData ? "Saved Data" : "Not Saved"}</Text>
             </View>
+            <TouchableOpacity
+              onPress={saveSensorData}
+              disabled={saving}
+              className={`px-4 py-2 rounded-lg flex-row items-center gap-1.5 shadow-sm ${saving ? 'bg-blue-300' : 'bg-blue-600'}`}
+            >
+              {saving ? <ActivityIndicator size="small" color="#ffffff" style={{ width: 14, height: 14 }} /> : <Save size={14} color="#ffffff" />}
+              <Text className="font-bold text-[12px] text-white">{saving ? "Saving..." : "Save Data"}</Text>
+            </TouchableOpacity>
           </View>
         </View>
         
@@ -858,6 +978,23 @@ export default function SingleTreeScreen() {
               <Text className="text-white font-bold text-base">Analyze Disease</Text>
             </TouchableOpacity>
             
+            <View className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-6">
+              <Text className="text-xs text-slate-500 mb-1">Identified Disease (if any)</Text>
+              <TextInput
+                value={disease}
+                onChangeText={setDisease}
+                placeholder="e.g. Red Weevil, Leaf Blight"
+                className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 mb-4"
+              />
+              <TouchableOpacity
+                onPress={saveDisease}
+                disabled={isUpdatingDisease}
+                className="bg-[#0C3B2E] rounded-lg py-3 items-center flex-row justify-center gap-2"
+              >
+                <Text className="text-white font-bold">{isUpdatingDisease ? "Saving..." : "Save Disease Data"}</Text>
+              </TouchableOpacity>
+            </View>
+            
             <View className="flex-row justify-center items-center gap-1.5 mb-8">
               <Info size={14} color="#64748b" />
               <Text className="text-xs text-slate-500 font-medium">Need help? Contact Agri Expert</Text>
@@ -872,118 +1009,14 @@ export default function SingleTreeScreen() {
                 onChangeText={setActualYield}
                 keyboardType="numeric"
                 placeholder="e.g. 40"
-                className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 mb-3"
-              />
-              <Text className="text-xs text-slate-500 mb-1">Identified Disease (if any)</Text>
-              <TextInput
-                value={disease}
-                onChangeText={setDisease}
-                placeholder="e.g. Red Weevil, Leaf Blight"
                 className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 mb-4"
               />
               <TouchableOpacity
-                onPress={saveActuals}
+                onPress={saveActualHarvest}
                 disabled={isUpdatingActual}
                 className="bg-slate-800 rounded-lg py-3 items-center"
               >
                 <Text className="text-white font-bold">{isUpdatingActual ? "Saving..." : "Save Harvest Data"}</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* ── Tree Details & History Card ── */}
-            <View className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
-              <Text className="font-bold text-slate-800 text-lg mb-4">Tree Details & Harvest History</Text>
-
-              <Text className="text-xs font-medium text-slate-600 mb-1.5">Tree Status</Text>
-              <View className="flex-row flex-wrap gap-2 mb-4">
-                {(["Young", "Bearing", "Diseased", "NonBearing"] as TreeStatus[]).map((s) => {
-                  const active = status === s;
-                  return (
-                    <TouchableOpacity
-                      key={s}
-                      onPress={() => { setStatus(s); if (s === "Bearing") setHealth("Good"); else if (s === "Young") setHealth("Average"); else setHealth("Weak"); }}
-                      className={`py-2 px-3 rounded-lg border ${active ? "border-transparent" : "bg-slate-50 border-slate-200"}`}
-                      style={active ? { backgroundColor: statusColor(s) } : undefined}
-                    >
-                      <Text style={active ? { color: "#fff" } : { color: "#64748b" }} className="text-xs font-bold">{statusLabel(s)}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              <Text className="text-xs font-medium text-slate-600 mb-1.5">Health Rating</Text>
-              <View className="flex-row gap-2 mb-4">
-                {(["Good", "Average", "Weak"] as TreeHealth[]).map((h) => (
-                  <TouchableOpacity
-                    key={h}
-                    onPress={() => setHealth(h)}
-                    className={`flex-1 py-2 rounded-lg items-center border ${health === h ? "border-transparent" : "bg-slate-50 border-slate-200"}`}
-                    style={health === h ? { backgroundColor: healthColor(h) } : undefined}
-                  >
-                    <Text style={health === h ? { color: "#fff" } : { color: "#64748b" }} className="text-xs font-bold">{h}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <View className="bg-slate-50 rounded-xl p-3 mb-4">
-                <Text className="text-xs font-semibold text-slate-600 mb-2">Add Harvest Record (Nuts Picked)</Text>
-                <View className="flex-row gap-2 mb-3">
-                  <TextInput
-                    value={newMonth}
-                    onChangeText={setNewMonth}
-                    placeholder="YYYY-MM"
-                    placeholderTextColor="#cbd5e1"
-                    className="flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-800"
-                  />
-                  <TextInput
-                    value={newNuts}
-                    onChangeText={setNewNuts}
-                    placeholder="Nuts"
-                    placeholderTextColor="#cbd5e1"
-                    keyboardType="numeric"
-                    className="w-20 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-800"
-                  />
-                  <TouchableOpacity onPress={addYield} className="w-9 h-9 rounded-lg bg-emerald-600 items-center justify-center flex-shrink-0">
-                    <Plus size={16} color="#fff" />
-                  </TouchableOpacity>
-                </View>
-                {yieldHistory.length > 0 && (
-                  <View className="space-y-2 mt-2">
-                    {[...yieldHistory].sort((a, b) => b.date.localeCompare(a.date)).map((y) => (
-                      <View key={y.id} className="flex-row items-center gap-3 p-2 rounded-lg bg-white border border-slate-100">
-                        <View className="w-7 h-7 rounded-md bg-emerald-50 items-center justify-center flex-shrink-0">
-                          <Calendar size={12} color="#059669" />
-                        </View>
-                        <View className="flex-1 min-w-0">
-                          <Text className="text-xs font-bold text-slate-800">{y.nuts} nuts</Text>
-                          <Text className="text-[10px] text-slate-400">{y.date}</Text>
-                        </View>
-                        <TouchableOpacity onPress={() => removeYield(y.id)} className="p-1">
-                          <Trash2 size={14} color="#ef4444" />
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </View>
-
-              <Text className="text-xs font-medium text-slate-600 mb-1.5">Special Notes</Text>
-              <TextInput
-                value={notes}
-                onChangeText={setNotes}
-                placeholder="Fertilizer date, observed anomalies…"
-                placeholderTextColor="#cbd5e1"
-                multiline
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 min-h-[60px] mb-4"
-              />
-
-              <TouchableOpacity
-                onPress={saveManualDetails}
-                disabled={isUpdatingActual}
-                className="bg-emerald-600 rounded-xl py-3 items-center flex-row justify-center gap-2"
-              >
-                <Save size={16} color="#fff" />
-                <Text className="text-white font-bold text-sm">{isUpdatingActual ? "Saving..." : "Save Details"}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -999,6 +1032,117 @@ export default function SingleTreeScreen() {
               </View>
         )}
       </ScrollView>
+
+      {/* ── TREE REPORT MODAL ── */}
+      <Modal visible={showReport} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowReport(false)}>
+        <SafeAreaView className="flex-1 bg-slate-50">
+          <View className="px-5 py-4 flex-row items-center justify-between border-b border-slate-200 bg-white">
+            <Text className="text-lg font-bold text-slate-800">Tree Report</Text>
+            <TouchableOpacity onPress={() => setShowReport(false)} className="p-2 -mr-2">
+              <XCircle size={24} color="#64748b" />
+            </TouchableOpacity>
+          </View>
+          <ScrollView contentContainerStyle={{ padding: 20 }}>
+            <View className="items-center mb-6">
+              <View className="w-20 h-20 bg-emerald-100 rounded-full items-center justify-center mb-3">
+                <Image source={{ uri: 'https://i.ibb.co/hR8NHX1c/coconut-tree.png' }} style={{ width: 48, height: 48 }} resizeMode="contain" />
+              </View>
+              <Text className="text-2xl font-black text-slate-800">{treeObj?.id || treeId.replace("tree-", "")}</Text>
+              <Text className="text-sm font-semibold text-slate-500 mt-1">{variety} • {ageRange} Yrs</Text>
+            </View>
+
+            {/* Yield Comparison */}
+            {treeData?.latest ? (
+              <View className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
+                <Text className="text-sm font-bold text-slate-800 mb-4 uppercase tracking-wider">Yield Comparison</Text>
+                <View className="flex-row items-center justify-between mb-4">
+                  <View className="flex-1 items-center">
+                    <Text className="text-xs font-semibold text-slate-500 mb-1">Expected Yield</Text>
+                    <Text className="text-xl font-black text-emerald-700">{treeData.latest.finalYield || 0} Nuts</Text>
+                  </View>
+                  <View className="w-px h-10 bg-slate-200" />
+                  <View className="flex-1 items-center">
+                    <Text className="text-xs font-semibold text-slate-500 mb-1">Actual Yield</Text>
+                    <Text className="text-xl font-black text-slate-800">{treeData.latest.actualYieldNuts || 0} Nuts</Text>
+                  </View>
+                </View>
+                
+                {treeData.latest.actualYieldNuts && treeData.latest.finalYield ? (
+                  <View className={`mt-2 p-3 rounded-xl border ${treeData.latest.actualYieldNuts < treeData.latest.finalYield ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'}`}>
+                    {treeData.latest.actualYieldNuts < treeData.latest.finalYield ? (
+                      <View className="flex-row items-center justify-center gap-2">
+                        <AlertTriangle size={16} color="#ef4444" />
+                        <Text className="text-sm font-bold text-red-700">
+                          Yield Drop: {((treeData.latest.finalYield - treeData.latest.actualYieldNuts) / treeData.latest.finalYield * 100).toFixed(1)}%
+                        </Text>
+                      </View>
+                    ) : (
+                      <View className="flex-row items-center justify-center gap-2">
+                        <CheckCircle2 size={16} color="#059669" />
+                        <Text className="text-sm font-bold text-emerald-700">Target Reached or Exceeded!</Text>
+                      </View>
+                    )}
+                  </View>
+                ) : (
+                  <Text className="text-xs text-center text-slate-400 mt-2">Actual yield not yet recorded.</Text>
+                )}
+              </View>
+            ) : (
+              <View className="bg-amber-50 p-5 rounded-2xl border border-amber-200 mb-6 items-center">
+                <Text className="text-sm font-bold text-amber-700">No predictions made yet.</Text>
+              </View>
+            )}
+
+            {/* Sensor Data */}
+            <View className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
+              <Text className="text-sm font-bold text-slate-800 mb-4 uppercase tracking-wider">Latest Soil & Sensor Data</Text>
+              <View className="flex-row flex-wrap">
+                <View className="w-1/3 mb-4 items-center">
+                  <Text className="text-xs font-semibold text-slate-400 mb-1">Nitrogen</Text>
+                  <Text className="text-lg font-bold text-slate-700">{manualN || 0}</Text>
+                </View>
+                <View className="w-1/3 mb-4 items-center">
+                  <Text className="text-xs font-semibold text-slate-400 mb-1">Phosphorus</Text>
+                  <Text className="text-lg font-bold text-slate-700">{manualP || 0}</Text>
+                </View>
+                <View className="w-1/3 mb-4 items-center">
+                  <Text className="text-xs font-semibold text-slate-400 mb-1">Potassium</Text>
+                  <Text className="text-lg font-bold text-slate-700">{manualK || 0}</Text>
+                </View>
+                <View className="w-1/2 items-center">
+                  <Text className="text-xs font-semibold text-slate-400 mb-1">pH Level</Text>
+                  <Text className="text-lg font-bold text-slate-700">{manualPh || 0}</Text>
+                </View>
+                <View className="w-1/2 items-center">
+                  <Text className="text-xs font-semibold text-slate-400 mb-1">Moisture</Text>
+                  <Text className="text-lg font-bold text-slate-700">{manualMoisture || 0}%</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Yield History */}
+            <View className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
+              <Text className="text-sm font-bold text-slate-800 mb-4 uppercase tracking-wider">Harvest History</Text>
+              {yieldHistory.length > 0 ? (
+                yieldHistory.map((yh, idx) => (
+                  <View key={idx} className="flex-row justify-between items-center py-3 border-b border-slate-100 last:border-0">
+                    <Text className="text-sm font-bold text-slate-600">{yh.date}</Text>
+                    <Text className="text-sm font-black text-slate-800">{yh.nuts} Nuts</Text>
+                  </View>
+                ))
+              ) : (
+                <Text className="text-sm text-slate-500 italic text-center">No harvest history available.</Text>
+              )}
+            </View>
+
+            <TouchableOpacity onPress={() => setShowReport(false)} className="bg-slate-800 p-4 rounded-xl items-center mb-10">
+              <Text className="text-white font-bold text-base">Close Report</Text>
+            </TouchableOpacity>
+
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
     </SafeAreaView>
   );
 }

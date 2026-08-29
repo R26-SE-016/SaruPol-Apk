@@ -171,7 +171,9 @@ export function generateAdvisories(
   zeroCycleThreshold = 2
 ): AdvisoryAlert[] {
   const zoneByNumber = new Map<number, Zone>();
-  zones.forEach((z) => z.treeNumbers.forEach((n) => zoneByNumber.set(n, z)));
+  zones?.forEach((z) => {
+    if (z.treeNumbers) z.treeNumbers.forEach((n) => zoneByNumber.set(n, z));
+  });
 
   // Derive weather/soil conditions. When live telemetry is unavailable we
   // fall back to the latest synthetic weather point so advisories stay useful.

@@ -4,7 +4,7 @@ import Constants from 'expo-constants';
 import { useAppStore } from '../store/appStore';
 
 // Use the API URL from .env, or fallback to the provided example
-const rawApiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.104:8000';
+const rawApiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.101:8000';
 const GATEWAY_URL = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`;
 
 const api = axios.create({

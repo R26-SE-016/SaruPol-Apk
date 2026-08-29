@@ -866,8 +866,8 @@ function ActionBtn({ icon, label, onClick }: { icon: React.ReactNode; label: str
   );
 }
 
-function AdvisoryCard({ advisories, hasRecords, isAllHealthy, farmName, onView3DMap }: {
-  advisories: AdvisoryAlert[]; hasRecords: boolean; isAllHealthy: boolean; farmName: string; onView3DMap: () => void;
+function AdvisoryCard({ advisories, hasRecords, isAllHealthy, farmName }: {
+  advisories: AdvisoryAlert[]; hasRecords: boolean; isAllHealthy: boolean; farmName: string;
 }) {
   if (!hasRecords && advisories.length === 0) {
     return (
@@ -877,10 +877,6 @@ function AdvisoryCard({ advisories, hasRecords, isAllHealthy, farmName, onView3D
           <Text className="text-sm font-bold text-slate-800">Advisory</Text>
         </View>
         <Text className="text-xs text-slate-500 mb-3">No health records found.</Text>
-        <TouchableOpacity onPress={onView3DMap} className="flex-row items-center gap-1.5 self-start bg-forest-50 rounded-lg px-3 py-2">
-          <MapIcon size={14} color="#1e7550" />
-          <Text className="text-xs font-semibold text-forest-700">View 3D Map</Text>
-        </TouchableOpacity>
       </View>
     );
   }
