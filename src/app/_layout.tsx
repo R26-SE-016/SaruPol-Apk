@@ -65,6 +65,7 @@ export default function RootLayout() {
           <Stack.Screen name="(screens)/soil-result" />
           <Stack.Screen name="(screens)/guest-info" />
           <Stack.Screen name="(screens)/history" />
+          <Stack.Screen name="(screens)/deficiencies" />
           </Stack>
       </YieldAppProvider>
     </SafeAreaProvider>

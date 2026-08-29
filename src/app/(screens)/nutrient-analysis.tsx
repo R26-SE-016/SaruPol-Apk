@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -31,14 +31,15 @@ export default function NutrientAnalysisScreen() {
 
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  
-  React.useEffect(() => {
+  const [activeInput, setActiveInput] = useState<string | null>(null);
+
+  useEffect(() => {
     if (params.reset === 'true') {
       setImageUri(null);
       router.setParams({ reset: '' });
     }
   }, [params.reset]);
-  
+
   // Location states
   const [locationPermission, setLocationPermission] = useState<boolean | null>(null);
   const [fetchingLocation, setFetchingLocation] = useState(false);
@@ -46,17 +47,17 @@ export default function NutrientAnalysisScreen() {
   const [detailedZone, setDetailedZone] = useState<string | null>(null);
   const [manualZone, setManualZone] = useState<string | null>(null);
   const [showManualOverride, setShowManualOverride] = useState(false);
-  
+
   // Palm details
   const [palmAge, setPalmAge] = useState<string>('');
   const [palmStage, setPalmStage] = useState<string>('');
-  
+
   const detectLocation = async () => {
     setFetchingLocation(true);
     setGpsZone(null);
     setDetailedZone(null);
     setShowManualOverride(false);
-    
+
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
@@ -66,23 +67,21 @@ export default function NutrientAnalysisScreen() {
         return;
       }
       setLocationPermission(true);
-      
+
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
-      
+
       const { latitude, longitude } = location.coords;
-      
+
       // Call backend
       const response = await api.post('/v1/location/agro-zone', { latitude, longitude });
-      
       const data = response.data;
-      
+
       if (data.success && data.zone) {
         setGpsZone(data.zone);
         setDetailedZone(data.agro_ecological_zone);
       } else {
-        // Fallback for failure or ocean
         setShowManualOverride(true);
         Alert.alert('Zone Detection Failed', data.message || 'Could not determine zone automatically.');
       }
@@ -93,13 +92,12 @@ export default function NutrientAnalysisScreen() {
       setFetchingLocation(false);
     }
   };
-  
+
   // Trigger detection on mount
-  React.useEffect(() => {
+  useEffect(() => {
     detectLocation();
   }, []);
 
-  // ── Permissions ───────────────────────────────────────────────────
   const requestPermissions = async () => {
     if (Platform.OS !== 'web') {
       const cameraStatus = await Camera.requestCameraPermissionsAsync();
@@ -109,7 +107,6 @@ export default function NutrientAnalysisScreen() {
     return true;
   };
 
-  // ── Image picker ──────────────────────────────────────────────────
   const handlePickImage = async (useCamera: boolean) => {
     const hasPermission = await requestPermissions();
     if (!hasPermission) {
@@ -133,15 +130,13 @@ export default function NutrientAnalysisScreen() {
     }
   };
 
-  // ── API Call ──────────────────────────────────────────────────────
   const handleAnalyze = async () => {
     if (!imageUri) return;
-    
+
     setLoading(true);
     try {
       const result = await analyzeLeafImage(imageUri);
-      
-      // Navigate to the result screen, passing the JSON result as string
+
       router.push({
         pathname: '/(screens)/nutrient-result' as any,
         params: {
@@ -149,7 +144,7 @@ export default function NutrientAnalysisScreen() {
           imageUri: imageUri,
           palmAge: palmAge,
           palmStage: palmStage,
-          zone: gpsZone || manualZone || ''
+          zone: gpsZone || manualZone || '',
         },
       });
     } catch (error: any) {
@@ -170,140 +165,213 @@ export default function NutrientAnalysisScreen() {
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#1B2C1A" />
         </TouchableOpacity>
-        <Text style={styles.title}>Nutrient Analysis</Text>
+        <Text style={styles.title}>Leaf Nutrient Scan</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
-        <GlassCard style={styles.infoCard}>
+        {/* Info Card */}
+        <View style={styles.infoCard}>
           <View style={styles.infoCardHeader}>
-            <Ionicons name="leaf-outline" size={24} color={COLORS.primaryLight} />
-            <Text style={styles.infoCardTitle}>Leaf Image Analysis</Text>
+            <Ionicons name="leaf-outline" size={20} color="#1B5E20" />
+            <Text style={styles.infoCardTitle}>Visual Leaf Assessment</Text>
           </View>
           <Text style={styles.infoCardText}>
-            Analyze a coconut leaf visually to predict potential nutrient deficiencies (Nitrogen, Boron).
+            Capture or upload a clear photo of the coconut leaf to analyze and predict potential Nitrogen & Boron deficiencies.
           </Text>
-        </GlassCard>
-
-        {/* ── Context Area ──────────────────────────────────────── */}
-        <Text style={styles.sectionLabel}>PALM DETAILS</Text>
-        <View style={styles.contextBox}>
-          <Text style={styles.inputLabel}>Palm Age (Years)</Text>
-          <TextInput 
-            style={styles.textInput} 
-            placeholder="Enter Palm Age"
-            placeholderTextColor="#717B6E"
-            value={palmAge}
-            onChangeText={setPalmAge}
-            keyboardType="numeric"
-          />
-          
-          <Text style={styles.inputLabel}>Palm Stage</Text>
-          <TextInput 
-            style={styles.textInput} 
-            placeholder="Enter Stage (e.g. Seedling, Bearing)"
-            placeholderTextColor="#717B6E"
-            value={palmStage}
-            onChangeText={setPalmStage}
-          />
         </View>
 
-        <Text style={styles.sectionLabel}>AGRO-CLIMATIC ZONE</Text>
-        <View style={styles.contextBox}>
+        {/* ── Context Form Area ──────────────────────────────────────── */}
+        <View style={styles.formCard}>
+          <Text style={styles.formSectionTitle}>1. Palm Details</Text>
+          
+          {/* Palm Age Input */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Palm Age (Years)</Text>
+            <View style={[
+              styles.inputWrapper,
+              activeInput === 'palmAge' && styles.inputWrapperFocused
+            ]}>
+              <Ionicons 
+                name="calendar-outline" 
+                size={18} 
+                color={activeInput === 'palmAge' ? '#2E7D32' : '#90A4AE'} 
+                style={styles.inputIcon} 
+              />
+              <TextInput 
+                style={styles.input} 
+                placeholder="e.g. 5"
+                placeholderTextColor="#90A4AE"
+                value={palmAge}
+                onChangeText={setPalmAge}
+                keyboardType="numeric"
+                onFocus={() => setActiveInput('palmAge')}
+                onBlur={() => setActiveInput(null)}
+              />
+            </View>
+          </View>
+
+          {/* Palm Stage Input */}
+          <View style={[styles.inputGroup, { marginBottom: 0 }]}>
+            <Text style={styles.inputLabel}>Palm Stage</Text>
+            <View style={[
+              styles.inputWrapper,
+              activeInput === 'palmStage' && styles.inputWrapperFocused
+            ]}>
+              <Ionicons 
+                name="flower-outline" 
+                size={18} 
+                color={activeInput === 'palmStage' ? '#2E7D32' : '#90A4AE'} 
+                style={styles.inputIcon} 
+              />
+              <TextInput 
+                style={styles.input} 
+                placeholder="e.g. Seedling, Bearing"
+                placeholderTextColor="#90A4AE"
+                value={palmStage}
+                onChangeText={setPalmStage}
+                onFocus={() => setActiveInput('palmStage')}
+                onBlur={() => setActiveInput(null)}
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* ── Agro-climatic Zone Card ───────────────────────────────── */}
+        <View style={styles.formCard}>
+          <Text style={styles.formSectionTitle}>2. Agro-Climatic Zone</Text>
+          
           {fetchingLocation ? (
-            <View style={styles.rowCenter}>
-              <ActivityIndicator size="small" color={COLORS.primaryLight} style={{marginRight: 8}}/>
-              <Text style={styles.contextText}>[ Detecting location... ]</Text>
+            <View style={styles.locationDetectionContainer}>
+              <ActivityIndicator size="small" color="#2E7D32" />
+              <Text style={styles.locationDetectText}>Auto-detecting agro-climatic zone...</Text>
             </View>
           ) : gpsZone && !showManualOverride ? (
-            <View>
-              <Text style={styles.zoneSuccessText}>✓ {gpsZone} Zone</Text>
-              {detailedZone && <Text style={styles.zoneDetailText}>({detailedZone})</Text>}
-              <TouchableOpacity onPress={() => setShowManualOverride(true)} style={{marginTop: 8}}>
-                <Text style={styles.overrideBtn}>[ Change Zone ]</Text>
+            <View style={styles.zoneSuccessContainer}>
+              <View style={styles.zoneSuccessHeader}>
+                <View style={styles.successPinCircle}>
+                  <Ionicons name="location" size={16} color="#2E7D32" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.zoneSuccessText}>{gpsZone} Zone detected</Text>
+                  {detailedZone && <Text style={styles.zoneDetailText}>{detailedZone}</Text>}
+                </View>
+              </View>
+              <TouchableOpacity onPress={() => setShowManualOverride(true)} style={styles.changeZoneBtn}>
+                <Text style={styles.changeZoneBtnText}>Change Zone Manually</Text>
               </TouchableOpacity>
             </View>
           ) : (
             <View>
               {locationPermission === false && (
-                <Text style={styles.warningText}>
-                  Location permission is required to automatically determine the agro-climatic zone.
-                </Text>
+                <View style={styles.warningAlert}>
+                  <Ionicons name="warning" size={16} color="#C62828" />
+                  <Text style={styles.warningAlertText}>
+                    Location permission denied. Please select your zone manually below.
+                  </Text>
+                </View>
               )}
-              <Text style={styles.inputLabel}>Select zone manually (User Provided)</Text>
-              <View style={styles.rowSpace}>
-                 <TouchableOpacity onPress={() => setManualZone('Wet')} style={[styles.pill, manualZone === 'Wet' && styles.pillActive]}><Text style={styles.pillText}>Wet</Text></TouchableOpacity>
-                 <TouchableOpacity onPress={() => setManualZone('Intermediate')} style={[styles.pill, manualZone === 'Intermediate' && styles.pillActive]}><Text style={styles.pillText}>Intermediate</Text></TouchableOpacity>
-                 <TouchableOpacity onPress={() => setManualZone('Dry')} style={[styles.pill, manualZone === 'Dry' && styles.pillActive]}><Text style={styles.pillText}>Dry</Text></TouchableOpacity>
+              <Text style={styles.inputLabel}>Select Your Region Zone</Text>
+              <View style={styles.pillRow}>
+                <TouchableOpacity 
+                  onPress={() => setManualZone('Wet')} 
+                  style={[styles.pill, manualZone === 'Wet' && styles.pillActiveWet]}
+                >
+                  <Text style={[styles.pillText, manualZone === 'Wet' && styles.pillTextActiveWet]}>Wet</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => setManualZone('Intermediate')} 
+                  style={[styles.pill, manualZone === 'Intermediate' && styles.pillActiveInt]}
+                >
+                  <Text style={[styles.pillText, manualZone === 'Intermediate' && styles.pillTextActiveInt]}>Intermediate</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => setManualZone('Dry')} 
+                  style={[styles.pill, manualZone === 'Dry' && styles.pillActiveDry]}
+                >
+                  <Text style={[styles.pillText, manualZone === 'Dry' && styles.pillTextActiveDry]}>Dry</Text>
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity onPress={detectLocation} style={{marginTop: 12}}>
-                <Text style={styles.overrideBtn}>[ Retry Auto-Detect ]</Text>
+
+              <TouchableOpacity onPress={detectLocation} style={styles.retryBtn}>
+                <Ionicons name="refresh-outline" size={14} color="#005A9C" />
+                <Text style={styles.retryBtnText}>Retry Auto-Detection</Text>
               </TouchableOpacity>
             </View>
           )}
         </View>
 
-        {/* ── Image Area ──────────────────────────────────────── */}
-        <Text style={styles.sectionLabel}>PHOTO</Text>
-        <View style={styles.imageBox}>
-          {imageUri ? (
-            <View style={styles.imagePreviewContainer}>
-              <Image source={{ uri: imageUri }} style={styles.imagePreview} resizeMode="cover" />
+        {/* ── Photo Capture Box ─────────────────────────────────────── */}
+        <View style={styles.formCard}>
+          <Text style={styles.formSectionTitle}>3. Leaf Image Source</Text>
+          
+          <View style={styles.imageBox}>
+            {imageUri ? (
+              <View style={styles.imagePreviewContainer}>
+                <Image source={{ uri: imageUri }} style={styles.imagePreview} resizeMode="cover" />
 
-              {loading && (
-                <View style={styles.loadingOverlay}>
-                  <ActivityIndicator size="large" color={COLORS.primaryLight} />
-                  <Text style={styles.loadingText}>Analyzing coconut leaf...</Text>
-                </View>
-              )}
+                {loading && (
+                  <View style={styles.loadingOverlay}>
+                    <ActivityIndicator size="large" color="#FFFFFF" />
+                    <Text style={styles.loadingText}>Analyzing leaf details...</Text>
+                  </View>
+                )}
 
-              {!loading && (
-                <TouchableOpacity style={styles.closeBtn} onPress={clearSelection}>
-                  <Ionicons name="close-circle" size={30} color={COLORS.diseased} />
-                </TouchableOpacity>
-              )}
-            </View>
-          ) : (
-            <View style={styles.emptyImageWrapper}>
-              <View style={styles.emptyIconRing}>
-                <Ionicons name="camera" size={40} color={COLORS.primaryLight} />
+                {!loading && (
+                  <TouchableOpacity style={styles.closeBtn} onPress={clearSelection} activeOpacity={0.8}>
+                    <Ionicons name="close" size={20} color="#FFFFFF" />
+                  </TouchableOpacity>
+                )}
               </View>
-              <Text style={styles.emptyImageText}>No Image Selected</Text>
-              <Text style={styles.emptyImageHint}>Use Camera or Gallery below</Text>
+            ) : (
+              <TouchableOpacity 
+                style={styles.emptyImageWrapper}
+                activeOpacity={0.7}
+                onPress={() => handlePickImage(false)}
+              >
+                <View style={styles.emptyIconRing}>
+                  <Ionicons name="cloud-upload" size={32} color="#2E7D32" />
+                </View>
+                <Text style={styles.emptyImageText}>Select Leaf Photo</Text>
+                <Text style={styles.emptyImageHint}>Tap here to select an image from gallery</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Media Capture Button Row */}
+          {!loading && (
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={styles.mediaButton}
+                onPress={() => handlePickImage(true)}
+              >
+                <View style={[styles.mediaIconCircle, { backgroundColor: '#E8F5E9' }]}>
+                  <Ionicons name="camera" size={18} color="#2E7D32" />
+                </View>
+                <Text style={styles.mediaBtnText}>Camera</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.mediaButton}
+                onPress={() => handlePickImage(false)}
+              >
+                <View style={[styles.mediaIconCircle, { backgroundColor: '#E3F2FD' }]}>
+                  <Ionicons name="images" size={18} color="#005A9C" />
+                </View>
+                <Text style={styles.mediaBtnText}>Gallery</Text>
+              </TouchableOpacity>
             </View>
           )}
+
+          {/* ── Scan Trigger Button ──────────────────────────────────── */}
+          {imageUri && (
+            <GradientButton
+              title={loading ? "Analyzing..." : "Run Leaf Assessment"}
+              onPress={handleAnalyze}
+              loading={loading}
+              style={styles.scanBtn}
+            />
+          )}
         </View>
-
-        {/* ── Photo Buttons ────────────────────────────────────── */}
-        {!loading && (
-          <View style={styles.buttonRow}>
-            <TouchableOpacity
-              style={styles.mediaButton}
-              onPress={() => handlePickImage(true)}
-            >
-              <Ionicons name="camera-outline" size={20} color={COLORS.primaryLight} />
-              <Text style={styles.mediaBtnText}>Take Photo</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.mediaButton}
-              onPress={() => handlePickImage(false)}
-            >
-              <Ionicons name="images-outline" size={20} color={COLORS.primaryLight} />
-              <Text style={styles.mediaBtnText}>Choose from Gallery</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* ── Scan Button ──────────────────────────────────────── */}
-        {imageUri && (
-          <GradientButton
-            title={loading ? "Analyzing..." : "Analyze Leaf"}
-            onPress={handleAnalyze}
-            loading={loading}
-            style={styles.scanBtn}
-          />
-        )}
 
       </ScrollView>
     </View>
@@ -313,12 +381,12 @@ export default function NutrientAnalysisScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAF8',
+    backgroundColor: '#F7F7F4',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 30,
     paddingBottom: 14,
     borderBottomWidth: 1,
@@ -332,53 +400,234 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#1B2C1A',
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '800',
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingHorizontal: 16,
+    paddingTop: 16,
     paddingBottom: 40,
   },
   infoCard: {
-    marginBottom: 24,
+    backgroundColor: '#E8F5E9',
+    borderColor: '#C8E6C9',
+    borderWidth: 1,
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 20,
   },
   infoCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 10,
+    gap: 8,
+    marginBottom: 6,
   },
   infoCardTitle: {
-    color: '#1B2C1A',
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#1B5E20',
   },
   infoCardText: {
-    color: '#4B5548',
-    fontSize: 14,
-    lineHeight: 20,
+    color: '#2E7D32',
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: '500',
   },
-  sectionLabel: {
-    color: '#6E7A6B',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.2,
-    marginBottom: 10,
+  formCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#EAE7DF',
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  formSectionTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#78909C',
+    letterSpacing: 1.1,
     textTransform: 'uppercase',
+    marginBottom: 16,
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    color: '#37474F',
+    fontSize: 12.5,
+    fontWeight: '700',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    borderWidth: 1,
+    borderColor: '#ECEFF1',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+  },
+  inputWrapperFocused: {
+    borderColor: '#2E7D32',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#2E7D32',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  inputIcon: {
+    marginRight: 10,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: '#1B2C1A',
+    fontWeight: '600',
+  },
+  locationDetectionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    gap: 8,
+  },
+  locationDetectText: {
+    fontSize: 14,
+    color: '#546E7A',
+    fontWeight: '600',
+  },
+  zoneSuccessContainer: {
+    backgroundColor: '#F1F8E9',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#DCEDC8',
+    padding: 14,
+  },
+  zoneSuccessHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  successPinCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#DCEDC8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  zoneSuccessText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#2E7D32',
+  },
+  zoneDetailText: {
+    fontSize: 12,
+    color: '#558B2F',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  changeZoneBtn: {
+    marginTop: 10,
+    alignSelf: 'flex-start',
+  },
+  changeZoneBtnText: {
+    fontSize: 12,
+    color: '#005A9C',
+    fontWeight: '700',
+    textDecorationLine: 'underline',
+  },
+  warningAlert: {
+    flexDirection: 'row',
+    backgroundColor: '#FFEBEE',
+    borderColor: '#FFCDD2',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  warningAlertText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#C62828',
+    fontWeight: '600',
+  },
+  pillRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginTop: 4,
+  },
+  pill: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#ECEFF1',
+    borderRadius: 12,
+    paddingVertical: 10,
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+  },
+  pillActiveWet: {
+    backgroundColor: '#E8F5E9',
+    borderColor: '#4CAF50',
+  },
+  pillActiveInt: {
+    backgroundColor: '#FFF8E1',
+    borderColor: '#FFC107',
+  },
+  pillActiveDry: {
+    backgroundColor: '#FFE0B2',
+    borderColor: '#FF9800',
+  },
+  pillText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#78909C',
+  },
+  pillTextActiveWet: {
+    color: '#2E7D32',
+  },
+  pillTextActiveInt: {
+    color: '#F57F17',
+  },
+  pillTextActiveDry: {
+    color: '#E65100',
+  },
+  retryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    marginTop: 14,
+  },
+  retryBtnText: {
+    fontSize: 12,
+    color: '#005A9C',
+    fontWeight: '700',
   },
   imageBox: {
     width: '100%',
-    height: 280,
-    borderRadius: ROUNDING.md,
+    height: 240,
+    borderRadius: 18,
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderColor: '#82A878',
-    backgroundColor: '#EBF3E8',
+    borderColor: '#CFD8DC',
+    backgroundColor: '#F8F9FA',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-    marginBottom: 16,
+    marginBottom: 18,
   },
   imagePreviewContainer: {
     width: '100%',
@@ -391,151 +640,94 @@ const styles = StyleSheet.create({
   },
   closeBtn: {
     position: 'absolute',
-    top: 10,
-    right: 10,
+    top: 12,
+    right: 12,
     zIndex: 10,
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    borderRadius: 15,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(10, 31, 13, 0.82)',
+    backgroundColor: 'rgba(27, 44, 26, 0.85)',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 14,
+    gap: 12,
     zIndex: 20,
   },
   loadingText: {
-    color: COLORS.textSecondary,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  emptyImageWrapper: {
-    alignItems: 'center',
-    gap: 10,
-  },
-  emptyIconRing: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: 'rgba(76, 175, 80, 0.08)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(76, 175, 80, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyImageText: {
-    color: '#4B5548',
+    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
   },
+  emptyImageWrapper: {
+    alignItems: 'center',
+    padding: 20,
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+  },
+  emptyIconRing: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#E8F5E9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  emptyImageText: {
+    color: '#1B2C1A',
+    fontSize: 15,
+    fontWeight: '800',
+  },
   emptyImageHint: {
-    color: '#717B6E',
+    color: '#78909C',
     fontSize: 12,
     fontWeight: '500',
+    marginTop: 4,
+    textAlign: 'center',
   },
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 10,
-    marginBottom: 20,
+    gap: 12,
+    marginBottom: 16,
   },
   mediaButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
     backgroundColor: '#FFFFFF',
-    borderColor: '#EAE7DF',
+    borderColor: '#ECEFF1',
     borderWidth: 1,
-    borderRadius: ROUNDING.sm,
-    paddingVertical: 14,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    gap: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.02,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  mediaIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   mediaBtnText: {
     color: '#1B2C1A',
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 13.5,
+    fontWeight: '800',
   },
   scanBtn: {
-    marginTop: 10,
-  },
-  contextBox: {
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: ROUNDING.md,
-    borderWidth: 1,
-    borderColor: '#EAE7DF',
-    marginBottom: 20,
-  },
-  rowCenter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  rowSpace: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     marginTop: 8,
+    borderRadius: 14,
   },
-  contextText: {
-    fontSize: 14,
-    color: '#717B6E',
-    fontStyle: 'italic',
-  },
-  inputLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1B2C1A',
-    marginBottom: 6,
-    marginTop: 8,
-  },
-  textInput: {
-    borderWidth: 1,
-    borderColor: '#EAE7DF',
-    borderRadius: 8,
-    padding: 12,
-    backgroundColor: '#FAFAF8',
-    color: '#1B2C1A',
-    fontSize: 14,
-  },
-  zoneSuccessText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#2E7D32',
-  },
-  zoneDetailText: {
-    fontSize: 12,
-    color: '#717B6E',
-    marginTop: 2,
-  },
-  overrideBtn: {
-    fontSize: 13,
-    color: '#1565C0',
-    fontWeight: '600',
-  },
-  warningText: {
-    color: '#D32F2F',
-    fontSize: 12,
-    marginBottom: 8,
-  },
-  pill: {
-    borderWidth: 1,
-    borderColor: '#EAE7DF',
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    flex: 1,
-    marginHorizontal: 4,
-    alignItems: 'center',
-    backgroundColor: '#FAFAF8',
-  },
-  pillActive: {
-    backgroundColor: '#EBF3E8',
-    borderColor: '#82A878',
-  },
-  pillText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#4B5548',
-  }
 });
