@@ -137,7 +137,7 @@ export default {
     placeholder: "Ask about diseases, soil, fertilizer..."
   },
   validate: {
-    title: "Multi LLM Validator",
+    title: "Expert Validator",
     placeholder: "Ask a question to validate across 3 AI models...",
     querying: "Querying 3 LLMs...",
     bestAnswer: "Best Answer",
