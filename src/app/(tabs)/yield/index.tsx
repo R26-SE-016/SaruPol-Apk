@@ -63,6 +63,7 @@ export default function YieldDashboardScreen() {
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [quickGuideOpen, setQuickGuideOpen] = useState(false);
+  const [quickGuideDismissed, setQuickGuideDismissed] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -269,6 +270,18 @@ export default function YieldDashboardScreen() {
                   <Text className="text-[22px] font-extrabold text-white tracking-tight">Yield Predictor</Text>
                 </View>
               </View>
+
+              <TouchableOpacity
+                onPress={() => setNotificationsOpen(true)}
+                className="w-10 h-10 rounded-full bg-white/10 border border-white/20 items-center justify-center relative active:opacity-80"
+              >
+                <Bell size={18} color="#fff" />
+                {unreadNotifs > 0 && (
+                  <View className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full bg-red-500 items-center justify-center px-1 border-2 border-[#0C3B2E]">
+                    <Text className="text-[9px] font-bold text-white leading-none">{unreadNotifs}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -276,21 +289,23 @@ export default function YieldDashboardScreen() {
         <View className="px-4 gap-6" style={{ marginTop: -35 }}>
           
           {/* Quick Guide Banner */}
-          <View className="bg-white rounded-3xl p-4 flex-row items-center justify-between border-2 border-forest-600 shadow-sm" style={{ shadowColor: '#12211C', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 25, elevation: 5, overflow: 'hidden' }}>
-            <View style={{ position: 'absolute', right: -20, bottom: -10, opacity: 0.2 }}>
-              <Image source={{ uri: 'https://i.ibb.co/v609fFfL/quick-guide.png' }} style={{ width: 120, height: 120 }} resizeMode="contain" />
-            </View>
-            <View className="flex-1 mr-4">
-              <Text className="text-forest-800 text-xs font-bold mb-1">Need help using the app?</Text>
-              <Text className="text-xl font-extrabold text-slate-800 mb-3">Quick Guide</Text>
-              <TouchableOpacity onPress={() => setQuickGuideOpen(true)} className="bg-forest-600 px-4 py-2 rounded-xl self-start">
-                <Text className="text-white text-xs font-bold">View Guide</Text>
+          {!quickGuideDismissed && (
+            <View className="bg-white rounded-3xl p-4 flex-row items-center justify-between border-2 border-forest-600 shadow-sm" style={{ shadowColor: '#12211C', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 25, elevation: 5, overflow: 'hidden' }}>
+              <View style={{ position: 'absolute', right: -20, bottom: -10, opacity: 0.2 }}>
+                <Image source={{ uri: 'https://i.ibb.co/v609fFfL/quick-guide.png' }} style={{ width: 120, height: 120 }} resizeMode="contain" />
+              </View>
+              <View className="flex-1 mr-4">
+                <Text className="text-forest-800 text-xs font-bold mb-1">Need help using the app?</Text>
+                <Text className="text-xl font-extrabold text-slate-800 mb-3">Quick Guide</Text>
+                <TouchableOpacity onPress={() => setQuickGuideOpen(true)} className="bg-forest-600 px-4 py-2 rounded-xl self-start">
+                  <Text className="text-white text-xs font-bold">View Guide</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity onPress={() => setQuickGuideDismissed(true)} className="absolute top-3 right-3 w-6 h-6 bg-slate-100 rounded-full items-center justify-center">
+                <X size={14} color="#64748b" />
               </TouchableOpacity>
             </View>
-            <TouchableOpacity onPress={() => {}} className="absolute top-3 right-3 w-6 h-6 bg-slate-100 rounded-full items-center justify-center">
-              <X size={14} color="#64748b" />
-            </TouchableOpacity>
-          </View>
+          )}
 
           {/* Harvest Reminder Banner */}
           {currentFarm && daysRemaining <= 7 && (

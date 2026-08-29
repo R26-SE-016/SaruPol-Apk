@@ -198,7 +198,6 @@ export default function AddFarmScreen() {
     const latNum = parseFloat(lat);
     const lngNum = parseFloat(lng);
     if (isNaN(latNum) || isNaN(lngNum)) return setError("Enter valid latitude and longitude coordinates.");
-    if (!deviceIds.trim()) return setError("Hardware Device ID is required.");
 
     setError(null);
     setSaving(true);

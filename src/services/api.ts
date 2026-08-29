@@ -3,9 +3,26 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { useAppStore } from '../store/appStore';
 
-// Use the API URL from .env, or fallback to the provided example
-const rawApiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.101:8000';
-const GATEWAY_URL = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`;
+const getGatewayUrl = () => {
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    const raw = process.env.EXPO_PUBLIC_API_URL;
+    return raw.endsWith('/api') ? raw : `${raw}/api`;
+  }
+  if (__DEV__) {
+    // Constants.expoConfig?.hostUri contains the dev server's host and port (e.g. "192.168.1.x:8081")
+    const hostUri = Constants.expoConfig?.hostUri;
+    if (hostUri) {
+      const ip = hostUri.split(':')[0];
+      return `http://${ip}:8000/api`;
+    }
+    // Fallback for emulators if hostUri is not available
+    return Platform.OS === 'android' ? 'http://10.0.2.2:8000/api' : 'http://localhost:8000/api';
+  }
+  // Production/fallback URL
+  return 'http://192.168.1.7:8000/api';
+};
+
+const GATEWAY_URL = getGatewayUrl();
 
 const api = axios.create({
   baseURL: GATEWAY_URL,

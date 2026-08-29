@@ -23,6 +23,7 @@ export default function YieldLayout() {
 
       <Stack.Screen name="[id]/telemetry" />
       <Stack.Screen name="[id]/logs" />
+      <Stack.Screen name="[id]/zones" />
       <Stack.Screen name="[id]/add-zone" />
     </Stack>
   );

@@ -1,10 +1,9 @@
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
-import { View, Text, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Image } from "react-native";
-import { ArrowLeft, Leaf, HelpCircle, Check, Plus, Info } from "lucide-react-native";
+import { useState, useEffect, useMemo } from "react";
+import { View, Text, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Image, Alert } from "react-native";
+import { ArrowLeft, Leaf, HelpCircle, Check, Plus, Info, Layers } from "lucide-react-native";
 import { useYieldApp } from "@/store/YieldAppContext";
 import { createZone, updateZone } from "@/services/yieldFarmDb";
-import { useEffect } from "react";
 
 const PRESET_COLORS = ["#16a34a", "#facc15", "#3b82f6", "#a855f7", "#f97316", "#14b8a6"];
 
@@ -23,17 +22,58 @@ export default function AddZoneScreen() {
   const [color, setColor] = useState(PRESET_COLORS[0]);
   const [area, setArea] = useState("");
   const [notes, setNotes] = useState("");
+  const [selectedTrees, setSelectedTrees] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
+
+  const totalTrees = typeof currentFarm?.totalTrees === "number"
+    ? currentFarm.totalTrees
+    : (Array.isArray((currentFarm as any)?.trees) ? (currentFarm as any).trees.length : 24);
+
+  // Set of trees already assigned to OTHER zones
+  const claimedTreesMap = useMemo(() => {
+    const map = new Map<number, string>();
+    currentZones.forEach((z) => {
+      if (z.id !== zoneId && z.treeNumbers) {
+        z.treeNumbers.forEach((num) => map.set(num, z.name));
+      }
+    });
+    return map;
+  }, [currentZones, zoneId]);
 
   useEffect(() => {
     if (editingZone) {
-      setName(editingZone.name);
-      setColor(editingZone.color);
-      setNotes(editingZone.notes);
-      // area was not in Zone by default, but we can try to extract if it exists
+      setName(editingZone.name || "");
+      setColor(editingZone.color || PRESET_COLORS[0]);
+      setNotes(editingZone.notes || "");
       setArea((editingZone as any).estimatedArea || "");
+      setSelectedTrees(editingZone.treeNumbers || []);
     }
   }, [editingZone]);
+
+  const toggleTree = (num: number) => {
+    if (claimedTreesMap.has(num)) {
+      const otherZone = claimedTreesMap.get(num);
+      Alert.alert("Tree Already Assigned", `Tree #${num} is already assigned to ${otherZone}.`);
+      return;
+    }
+    setSelectedTrees((prev) =>
+      prev.includes(num) ? prev.filter((n) => n !== num) : [...prev, num].sort((a, b) => a - b)
+    );
+  };
+
+  const handleSelectAllAvailable = () => {
+    const allAvailable: number[] = [];
+    for (let i = 1; i <= totalTrees; i++) {
+      if (!claimedTreesMap.has(i)) {
+        allAvailable.push(i);
+      }
+    }
+    setSelectedTrees(allAvailable);
+  };
+
+  const handleClearSelected = () => {
+    setSelectedTrees([]);
+  };
 
   const handleSave = async () => {
     if (!user) return;
@@ -44,7 +84,7 @@ export default function AddZoneScreen() {
       const data = {
         name: name.trim(),
         color,
-        treeNumbers: editingZone?.treeNumbers || [],
+        treeNumbers: selectedTrees,
         notes: notes.trim(),
         estimatedArea: area.trim(),
       } as any;
@@ -132,7 +172,68 @@ export default function AddZoneScreen() {
             </View>
           </View>
 
-          <View>
+          {/* Tree Assignment Section */}
+          <View className="border-t border-slate-100 pt-4">
+            <View className="flex-row items-center justify-between mb-3">
+              <View className="flex-row items-center gap-2">
+                <Layers size={16} color="#15803d" />
+                <Text className="text-xs font-bold text-slate-800">Assign Trees to Zone</Text>
+              </View>
+              <View className="bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                <Text className="text-[10px] font-bold text-emerald-700">{selectedTrees.length} of {totalTrees} selected</Text>
+              </View>
+            </View>
+
+            <View className="flex-row gap-2 mb-3">
+              <TouchableOpacity
+                onPress={handleSelectAllAvailable}
+                className="bg-slate-100 px-3 py-1.5 rounded-lg active:opacity-70"
+              >
+                <Text className="text-[11px] font-semibold text-slate-700">Select All Available</Text>
+              </TouchableOpacity>
+              {selectedTrees.length > 0 && (
+                <TouchableOpacity
+                  onPress={handleClearSelected}
+                  className="bg-red-50 px-3 py-1.5 rounded-lg active:opacity-70"
+                >
+                  <Text className="text-[11px] font-semibold text-red-600">Clear</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <View className="flex-row flex-wrap gap-2 max-h-48 overflow-hidden">
+              {Array.from({ length: totalTrees }).map((_, idx) => {
+                const treeNum = idx + 1;
+                const isSelected = selectedTrees.includes(treeNum);
+                const isClaimed = claimedTreesMap.has(treeNum);
+
+                let bgCls = "bg-slate-50 border-slate-200";
+                let textCls = "text-slate-700";
+
+                if (isSelected) {
+                  bgCls = "border-transparent";
+                  textCls = "text-white font-bold";
+                } else if (isClaimed) {
+                  bgCls = "bg-slate-100 border-slate-200 opacity-40";
+                  textCls = "text-slate-400";
+                }
+
+                return (
+                  <TouchableOpacity
+                    key={treeNum}
+                    onPress={() => toggleTree(treeNum)}
+                    disabled={isClaimed}
+                    style={isSelected ? { backgroundColor: color } : undefined}
+                    className={`w-11 h-9 rounded-lg border items-center justify-center ${bgCls}`}
+                  >
+                    <Text className={`text-xs ${textCls}`}>#{treeNum}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          <View className="border-t border-slate-100 pt-4">
             <Text className="text-xs font-semibold text-slate-600 mb-2">Describe this Zone (Optional)</Text>
             <View className="relative">
               <TextInput
@@ -141,7 +242,7 @@ export default function AddZoneScreen() {
                 placeholder="Add a short description about this zone..."
                 placeholderTextColor="#94a3b8"
                 multiline
-                className={`${inputCls} min-h-[80px] text-left align-top`}
+                className={`${inputCls} min-h-[70px] text-left align-top`}
               />
             </View>
           </View>

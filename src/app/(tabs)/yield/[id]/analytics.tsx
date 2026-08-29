@@ -1,14 +1,12 @@
-import { logHarvestPrediction } from "@/services/yieldService";
 import { useUnifiedFarmYield } from "@/hooks/useUnifiedFarmYield";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Platform, TextInput, Image, Modal, Share } from "react-native";
-import { ArrowLeft, ClipboardList, AlertCircle, Sprout, CheckCircle2, BarChart3, Clock, MessageSquare, Save, Calendar, Droplets, Trophy, Plus, Edit3, Share2, Download, ChevronRight } from "lucide-react-native";
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Image } from "react-native";
+import { ClipboardList, AlertCircle, Sprout, BarChart3, Clock, Calendar, ChevronRight } from "lucide-react-native";
 import { YieldScreenHeader } from "@/components/yield/YieldScreenHeader";
 import { useYieldApp } from "@/store/YieldAppContext";
-import { getFarm, updateFarm, fetchHarvestLogs, saveHarvestLog, deleteHarvestLog } from "@/services/yieldFarmDb";
-import Svg, { Polyline, Circle } from "react-native-svg";
+import { getFarm, fetchHarvestLogs } from "@/services/yieldFarmDb";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -34,24 +32,6 @@ export default function analyticsScreen() {
   const unifiedYield = farm ? unifiedYields[farm.id] : 0;
   const prediction = farm && basePredictions[farm.id] ? { ...basePredictions[farm.id], predicted_next_pick_yield_nuts: unifiedYield } : null;
 
-  // Form State for new Harvest Log
-  const [actualNuts, setActualNuts] = useState("");
-  const [largeNuts, setLargeNuts] = useState("");
-  const [mediumNuts, setMediumNuts] = useState("");
-  const [smallNuts, setSmallNuts] = useState("");
-  const [savingLog, setSavingLog] = useState(false);
-  const [editingLogId, setEditingLogId] = useState<string | null>(null);
-  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
-  
-  const [pastNuts, setPastNuts] = useState("");
-  const [isPastModalVisible, setIsPastModalVisible] = useState(false);
-  const [pastMonth, setPastMonth] = useState(String(new Date().getMonth() + 1));
-  const [pastYear, setPastYear] = useState(String(new Date().getFullYear()));
-
-  const [isNoteModalVisible, setIsNoteModalVisible] = useState(false);
-  const [noteText, setNoteText] = useState("");
-  const [savingNote, setSavingNote] = useState(false);
-
   useEffect(() => {
     if (!user) return;
     if (!farmId || farmId === "none") {
@@ -64,10 +44,6 @@ export default function analyticsScreen() {
         // 1. Fetch Farm
         const f = await getFarm(user.uid, farmId);
         setFarm(f);
-
-        if (f && (f as any).notes) {
-          setNoteText((f as any).notes);
-        }
 
         if (!f) {
           console.warn("Farm could not be loaded, skipping prediction.");
@@ -88,7 +64,6 @@ export default function analyticsScreen() {
         }));
         logs.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
         setPastLogs(logs);
-        // Prediction is now handled by useUnifiedFarmYield hook
 
       } catch (err: any) {
         console.error("Prediction Error", err);
@@ -99,144 +74,6 @@ export default function analyticsScreen() {
     };
     loadData();
   }, [user, farmId, refreshCount]);
-
-  const handleSaveLog = async () => {
-    if (!actualNuts || !user || !farmId || !farm) return;
-    setSavingLog(true);
-    
-    try {
-      if (!editingLogId) {
-        const payload = {
-          farm_id: (farm as any)._id || farm.id || farmId,
-          actual_yield_nuts: Number(actualNuts) || 0,
-          large_nuts: Number(largeNuts) || 0,
-          medium_nuts: Number(mediumNuts) || 0,
-          small_nuts: Number(smallNuts) || 0,
-          harvest_date: new Date().toISOString()
-        };
-        
-        await logHarvestPrediction(payload).catch(err => console.warn("Predict API log save failed", err));
-      }
-      
-      if (editingLogId) {
-        await saveHarvestLog(user.uid, farmId, {
-          nutCount: parseInt(actualNuts) || 0,
-          large: parseInt(largeNuts) || 0,
-          medium: parseInt(mediumNuts) || 0,
-          small: parseInt(smallNuts) || 0,
-        }, editingLogId);
-        Alert.alert("Success", "Harvest log updated!");
-      } else {
-        await saveHarvestLog(user.uid, farmId, {
-          date: new Date().toISOString(),
-          nutCount: parseInt(actualNuts) || 0,
-          large: parseInt(largeNuts) || 0,
-          medium: parseInt(mediumNuts) || 0,
-          small: parseInt(smallNuts) || 0,
-          predicted_yield_nuts: prediction?.predicted_next_pick_yield_nuts || 0
-        });
-        Alert.alert("Success", "Harvest log saved and AI calibrated!");
-      }
-
-      setActualNuts("");
-      setLargeNuts("");
-      setMediumNuts("");
-      setSmallNuts("");
-      setEditingLogId(null);
-      setIsEditModalVisible(false);
-      setRefreshCount(prev => prev + 1);
-    } catch (err: any) {
-      console.warn("Failed saving harvest log", err);
-      Alert.alert("Error", "Failed to save harvest log.");
-    } finally {
-      setSavingLog(false);
-    }
-  };
-
-  const handleEditLog = (log: any) => {
-    setEditingLogId(log.id);
-    setActualNuts(String(log.actual_yield_nuts || log.nutCount || 0));
-    setLargeNuts(String(log.large || 0));
-    setMediumNuts(String(log.medium || 0));
-    setSmallNuts(String(log.small || 0));
-    setIsEditModalVisible(true);
-  };
-
-  const handleDeleteLog = (logId: string) => {
-    Alert.alert(
-      "Delete Log",
-      "Are you sure you want to delete this harvest log?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Delete", 
-          style: "destructive",
-          onPress: async () => {
-            if (!user || !farmId) return;
-            try {
-              await deleteHarvestLog(user.uid, farmId, logId);
-              Alert.alert("Success", "Harvest log deleted!");
-              if (editingLogId === logId) {
-                setEditingLogId(null);
-                setActualNuts("");
-                setLargeNuts("");
-                setMediumNuts("");
-                setSmallNuts("");
-              }
-              setRefreshCount(prev => prev + 1);
-            } catch (err) {
-              console.error(err);
-              Alert.alert("Error", "Failed to delete log.");
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  const handleSavePastLog = async () => {
-    if (!pastNuts || !user || !farmId || !pastMonth || !pastYear) return;
-    setSavingLog(true);
-    
-    try {
-      const formattedMonth = pastMonth.padStart(2, '0');
-      const isoDate = `${pastYear}-${formattedMonth}-15T12:00:00.000Z`;
-      
-      await saveHarvestLog(user.uid, farmId, {
-        date: isoDate,
-        nutCount: parseInt(pastNuts) || 0,
-        large: 0,
-        medium: 0,
-        small: 0,
-        predicted_yield_nuts: 0
-      });
-      
-      Alert.alert("Success", "Historical harvest log saved!");
-      setPastNuts("");
-      setIsPastModalVisible(false);
-      setRefreshCount(prev => prev + 1);
-    } catch (err: any) {
-      console.warn("Failed saving past log", err);
-      Alert.alert("Error", "Failed to save historical log.");
-    } finally {
-      setSavingLog(false);
-    }
-  };
-
-  const handleSaveNote = async () => {
-    if (!user || !farmId) return;
-    setSavingNote(true);
-    try {
-      await updateFarm(user.uid, farmId, { notes: noteText } as any);
-      Alert.alert("Success", "Note saved!");
-      setIsNoteModalVisible(false);
-    } catch (err) {
-      console.error(err);
-      Alert.alert("Error", "Failed to save note.");
-    } finally {
-      setSavingNote(false);
-    }
-  };
 
   const handleExportPDF = async () => {
     if (!prediction || !farm) {
@@ -252,7 +89,7 @@ export default function analyticsScreen() {
             <p><strong>Predicted Next Harvest:</strong> ${prediction.predicted_next_pick_yield_nuts || 0} Nuts</p>
             <p><strong>Predicted Annual Yield:</strong> ${prediction.predicted_annual_yield_nuts || 0} Nuts</p>
             <p><strong>Total Trees:</strong> ${farm.totalTrees || 0}</p>
-            <p><strong>Notes:</strong> ${noteText || 'None'}</p>
+            <p><strong>Notes:</strong> ${farm.notes || 'None'}</p>
             <br/>
             <p style="color: #666; font-size: 12px; margin-top: 40px;">Generated via CocoCast AI</p>
           </body>

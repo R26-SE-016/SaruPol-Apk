@@ -1,17 +1,31 @@
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { useState, useEffect, useMemo } from "react";
 import { View, Text, TouchableOpacity, ScrollView, Alert } from "react-native";
 import { ArrowLeft, Layers, Plus, Pencil, Trash2 } from "lucide-react-native";
 import { useYieldApp } from "@/store/YieldAppContext";
-import { deleteZone } from "@/services/yieldFarmDb";
+import { deleteZone, subscribeTrees } from "@/services/yieldFarmDb";
 import { useTranslation } from "react-i18next";
-import { aggregateHealth } from "@/utils/yieldTreeFactory";
+import { buildFarmData, aggregateHealth } from "@/utils/yieldTreeFactory";
+import type { Tree } from "@/types/yield";
 
 export default function ZonesListScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const farmId = params.id as string;
-  const { user, currentZones, currentFarm, farmData, refreshZones } = useYieldApp();
+  const { user, currentZones, currentFarm, refreshZones } = useYieldApp();
   const { t } = useTranslation();
+  const [storedTrees, setStoredTrees] = useState<Record<string, Tree>>({});
+
+  useEffect(() => {
+    if (!user || !currentFarm) return;
+    const unsub = subscribeTrees(user.uid, currentFarm.id, setStoredTrees);
+    return unsub;
+  }, [user, currentFarm]);
+
+  const farmData = useMemo(() => {
+    if (!currentFarm) return null;
+    return buildFarmData(currentFarm.perches, currentFarm.totalTrees, currentFarm.treeLayout, storedTrees);
+  }, [currentFarm, storedTrees]);
 
   if (!currentFarm) return null;
 

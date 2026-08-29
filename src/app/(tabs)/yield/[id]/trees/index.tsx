@@ -11,11 +11,17 @@ export default function TreeWisePredictionScreen() {
   const farmId = Array.isArray(id) ? id[0] : id;
   const router = useRouter();
   
-  const { currentFarm, currentZones, user } = useYieldApp();
+  const { currentFarm, currentFarmId, setCurrentFarmId, currentZones, user } = useYieldApp();
   const [storedTrees, setStoredTrees] = useState<Record<string, Tree>>({});
   
   const [activeTab, setActiveTab] = useState<'all' | 'healthy' | 'attention'>('all');
   const [activeZone, setActiveZone] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (farmId && currentFarmId !== farmId) {
+      setCurrentFarmId(farmId);
+    }
+  }, [farmId, currentFarmId, setCurrentFarmId]);
 
   useEffect(() => {
     if (!user || !currentFarm) return;
@@ -23,7 +29,9 @@ export default function TreeWisePredictionScreen() {
     return unsub;
   }, [user, currentFarm]);
 
-  const totalTreesCount = (currentFarm as any)?.trees || currentFarm?.totalTrees || 24;
+  const totalTreesCount = typeof currentFarm?.totalTrees === 'number'
+    ? currentFarm.totalTrees
+    : (Array.isArray((currentFarm as any)?.trees) ? (currentFarm as any).trees.length : 24);
 
   const getTreeData = (index: number) => {
     const treeNumber = index + 1;
@@ -32,7 +40,7 @@ export default function TreeWisePredictionScreen() {
     const zone = currentZones?.find(z => z.treeNumbers?.includes(treeNumber));
     
     // Use real data, default to Good if no tree record exists yet
-    const yieldNum = tree?.latest?.finalYield || 0;
+    const yieldNum = (tree as any)?.latest?.finalYield || 0;
     const health = tree?.health || "Healthy";
     
     return {

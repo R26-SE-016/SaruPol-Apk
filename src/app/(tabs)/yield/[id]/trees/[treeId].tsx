@@ -190,18 +190,29 @@ export default function SingleTreeScreen() {
 
       // Load tree object from farm context
       const farm: any = farms.find((f: any) => f.id === farmId);
-      if (farm) {
-        const t = farm.trees?.find((x: any) => x.id === String(treeIdRaw).replace("tree-", ""));
-        if (t) {
-          setTreeObj(t);
-          setStatus(t.status || "Bearing");
-          setHealth(t.health || "Good");
-          setNotes(t.notes || "");
-          setYieldHistory(t.yieldHistory || []);
-          if (t.variety) setVariety(t.variety);
-          if (t.ageRange) setAgeRange(t.ageRange);
-          if (t.frondCount !== undefined) setFrondCount(t.frondCount);
-        }
+      const rawNum = parseInt(String(treeIdRaw).replace("tree-", ""), 10) || 1;
+      const t = farm?.trees?.find((x: any) => x.id === treeId || x.id === treeIdRaw || x.id === String(treeIdRaw).replace("tree-", "") || x.number === rawNum);
+      if (t) {
+        setTreeObj(t);
+        setStatus(t.status || "Bearing");
+        setHealth(t.health || "Good");
+        setNotes(t.notes || "");
+        setYieldHistory(t.yieldHistory || []);
+        if (t.variety) setVariety(t.variety);
+        if (t.ageRange) setAgeRange(t.ageRange);
+        if (t.frondCount !== undefined) setFrondCount(t.frondCount);
+      } else {
+        setTreeObj({
+          id: treeId,
+          number: rawNum,
+          status: "Bearing",
+          health: "Good",
+          notes: "",
+          yieldHistory: [],
+          variety,
+          ageRange,
+          frondCount,
+        } as any);
       }
 
       // Check if IoT is live, if so auto-predict
@@ -492,11 +503,12 @@ export default function SingleTreeScreen() {
   const removeYield = (yId: string) => setYieldHistory((prev) => prev.filter((y) => y.id !== yId));
 
   const saveManualDetails = async () => {
-    if (!user || !treeObj) return;
+    if (!user) return;
     setIsUpdatingActual(true);
     try {
-      const updatedTree = { ...treeObj, status, health, notes, yieldHistory, variety, ageRange, frondCount };
-      await updateTreeData(user.uid, farmId, treeObj.id, updatedTree);
+      const currentId = treeObj?.id || treeId;
+      const updatedTree = { ...(treeObj || {}), id: currentId, status, health, notes, yieldHistory, variety, ageRange, frondCount };
+      await updateTreeData(user.uid, farmId, currentId, updatedTree);
       setTreeObj(updatedTree as any);
       Alert.alert("Saved", "Tree details saved!");
     } catch (e) {
@@ -916,42 +928,63 @@ export default function SingleTreeScreen() {
               <View className="px-5">
                 <Text className="text-sm font-bold text-slate-800 mb-3">Recommendations</Text>
                 <View className="gap-2">
-                  <View className="flex-row items-center gap-3 py-2">
-                    <View className="bg-slate-50 rounded-xl p-2 border border-slate-100">
-                      <Image source={{ uri: 'https://i.ibb.co/rQ6V9xR/potash.png' }} style={{ width: 20, height: 20 }} resizeMode="contain" />
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-[13px] font-bold text-slate-800">Add MOP (Potash)</Text>
-                      <Text className="text-xs font-semibold text-blue-600 mt-0.5">150 g / Tree</Text>
-                    </View>
-                  </View>
-                  <View className="flex-row items-center gap-3 py-2">
-                    <View className="bg-slate-50 rounded-xl p-2 border border-slate-100">
-                      <Image source={{ uri: 'https://i.ibb.co/sKq5VwD/phosphate.png' }} style={{ width: 20, height: 20 }} resizeMode="contain" />
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-[13px] font-bold text-slate-800">Add Single Super Phosphate (SSP)</Text>
-                      <Text className="text-xs font-semibold text-blue-600 mt-0.5">250 g / Tree</Text>
-                    </View>
-                  </View>
-                  <View className="flex-row items-center gap-3 py-2">
-                    <View className="bg-slate-50 rounded-xl p-2 border border-slate-100">
-                      <Image source={{ uri: 'https://i.ibb.co/3Wf2VdG/urea.png' }} style={{ width: 20, height: 20 }} resizeMode="contain" />
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-[13px] font-bold text-slate-800">Add Urea</Text>
-                      <Text className="text-xs font-semibold text-blue-600 mt-0.5">120 g / Tree</Text>
-                    </View>
-                  </View>
-                  <View className="flex-row items-center gap-3 py-2">
-                    <View className="bg-slate-50 rounded-xl p-2 border border-slate-100">
-                      <Image source={{ uri: 'https://i.ibb.co/rR6JW0dr/Moisture-irrigation.png' }} style={{ width: 20, height: 20 }} resizeMode="contain" />
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-[13px] font-bold text-slate-800">Maintain Moisture</Text>
-                      <Text className="text-xs font-semibold text-slate-500 mt-0.5">Irrigate regularly</Text>
-                    </View>
-                  </View>
+                  {Array.isArray(l.recommendations) && l.recommendations.length > 0 ? (
+                    l.recommendations.map((rec: any, idx: number) => {
+                      const text = typeof rec === 'string' ? rec : (rec.text || rec.instructions || JSON.stringify(rec));
+                      const title = typeof rec === 'object' && rec.fertilizer ? rec.fertilizer : (typeof rec === 'string' ? rec : `Recommendation #${idx + 1}`);
+                      const sub = typeof rec === 'object' && rec.amount_kg_per_palm ? `${rec.amount_kg_per_palm * 1000} g / Tree` : (typeof rec === 'object' ? rec.schedule || rec.instructions || '' : '');
+                      return (
+                        <View key={idx} className="flex-row items-center gap-3 py-2">
+                          <View className="bg-slate-50 rounded-xl p-2 border border-slate-100">
+                            <Image source={{ uri: 'https://i.ibb.co/rQ6V9xR/potash.png' }} style={{ width: 20, height: 20 }} resizeMode="contain" />
+                          </View>
+                          <View className="flex-1">
+                            <Text className="text-[13px] font-bold text-slate-800">{title}</Text>
+                            {sub ? <Text className="text-xs font-semibold text-blue-600 mt-0.5">{sub}</Text> : null}
+                          </View>
+                        </View>
+                      );
+                    })
+                  ) : (
+                    <>
+                      <View className="flex-row items-center gap-3 py-2">
+                        <View className="bg-slate-50 rounded-xl p-2 border border-slate-100">
+                          <Image source={{ uri: 'https://i.ibb.co/rQ6V9xR/potash.png' }} style={{ width: 20, height: 20 }} resizeMode="contain" />
+                        </View>
+                        <View className="flex-1">
+                          <Text className="text-[13px] font-bold text-slate-800">Add MOP (Potash)</Text>
+                          <Text className="text-xs font-semibold text-blue-600 mt-0.5">150 g / Tree</Text>
+                        </View>
+                      </View>
+                      <View className="flex-row items-center gap-3 py-2">
+                        <View className="bg-slate-50 rounded-xl p-2 border border-slate-100">
+                          <Image source={{ uri: 'https://i.ibb.co/sKq5VwD/phosphate.png' }} style={{ width: 20, height: 20 }} resizeMode="contain" />
+                        </View>
+                        <View className="flex-1">
+                          <Text className="text-[13px] font-bold text-slate-800">Add Single Super Phosphate (SSP)</Text>
+                          <Text className="text-xs font-semibold text-blue-600 mt-0.5">250 g / Tree</Text>
+                        </View>
+                      </View>
+                      <View className="flex-row items-center gap-3 py-2">
+                        <View className="bg-slate-50 rounded-xl p-2 border border-slate-100">
+                          <Image source={{ uri: 'https://i.ibb.co/3Wf2VdG/urea.png' }} style={{ width: 20, height: 20 }} resizeMode="contain" />
+                        </View>
+                        <View className="flex-1">
+                          <Text className="text-[13px] font-bold text-slate-800">Add Urea</Text>
+                          <Text className="text-xs font-semibold text-blue-600 mt-0.5">120 g / Tree</Text>
+                        </View>
+                      </View>
+                      <View className="flex-row items-center gap-3 py-2">
+                        <View className="bg-slate-50 rounded-xl p-2 border border-slate-100">
+                          <Image source={{ uri: 'https://i.ibb.co/rR6JW0dr/Moisture-irrigation.png' }} style={{ width: 20, height: 20 }} resizeMode="contain" />
+                        </View>
+                        <View className="flex-1">
+                          <Text className="text-[13px] font-bold text-slate-800">Maintain Moisture</Text>
+                          <Text className="text-xs font-semibold text-slate-500 mt-0.5">Irrigate regularly</Text>
+                        </View>
+                      </View>
+                    </>
+                  )}
                 </View>
               </View>
 
