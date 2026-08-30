@@ -26,7 +26,6 @@ export default function LabTestEntryScreen() {
 
   // Section 1: Palm Details
   const [palmId, setPalmId] = useState('');
-  const [sampleId, setSampleId] = useState('');
   const [plantAge, setPlantAge] = useState('');
   const [zone, setZone] = useState<'Wet' | 'Intermediate' | 'Dry' | null>('Wet');
   const [sampleDate, setSampleDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -51,13 +50,12 @@ export default function LabTestEntryScreen() {
   const handleNextStep = () => {
     if (
       !palmId.trim() || 
-      !sampleId.trim() || 
       !plantAge.trim() || 
       !zone || 
       !sampleDate.trim() || 
       !lastFertDate.trim()
     ) {
-      Alert.alert('Missing Fields', 'Please fill in all palm & sample details before continuing.');
+      Alert.alert('Missing Fields', 'Please fill in all required palm details before continuing.');
       return;
     }
 
@@ -74,20 +72,19 @@ export default function LabTestEntryScreen() {
     if (
       !nitrogen.trim() || 
       !phosphorus.trim() || 
-      !potassium.trim() || 
-      !magnesium.trim()
+      !potassium.trim()
     ) {
-      Alert.alert('Missing Fields', 'Please enter all soil nutrient values.');
+      Alert.alert('Missing Fields', 'Please enter Nitrogen, Phosphorus, and Potassium values.');
       return;
     }
 
     const nVal = parseFloat(nitrogen);
     const pVal = parseFloat(phosphorus);
     const kVal = parseFloat(potassium);
-    const mgVal = parseFloat(magnesium);
+    const mgVal = magnesium.trim() ? parseFloat(magnesium) : null;
     const ageVal = parseFloat(plantAge);
 
-    if (isNaN(nVal) || isNaN(pVal) || isNaN(kVal) || isNaN(mgVal)) {
+    if (isNaN(nVal) || isNaN(pVal) || isNaN(kVal) || (mgVal !== null && isNaN(mgVal))) {
       Alert.alert('Invalid Values', 'Please enter valid numeric values for all nutrients.');
       return;
     }
@@ -109,9 +106,12 @@ export default function LabTestEntryScreen() {
     else if (kVal > 1.50) evalK = 'Excess';
 
     // Mg range: 0.20 - 0.35
-    let evalMg = 'Optimal';
-    if (mgVal < 0.20) evalMg = 'Deficient';
-    else if (mgVal > 0.35) evalMg = 'Excess';
+    let evalMg = 'N/A';
+    if (mgVal !== null) {
+      evalMg = 'Optimal';
+      if (mgVal < 0.20) evalMg = 'Deficient';
+      else if (mgVal > 0.35) evalMg = 'Excess';
+    }
 
     // Fertilizer calculation (grams per palm per year)
     const isAdult = ageVal >= 4;
@@ -148,18 +148,13 @@ export default function LabTestEntryScreen() {
     finalDolomite = Math.max(0, finalDolomite);
 
     // Build overall status string
-    let defs: string[] = [];
-    if (evalN === 'Deficient') defs.push('Nitrogen');
-    if (evalP === 'Deficient') defs.push('Phosphorus');
-    if (evalK === 'Deficient') defs.push('Potassium');
-    if (evalMg === 'Deficient') defs.push('Magnesium');
+    let isHealthy = true;
+    if (evalN !== 'Optimal') isHealthy = false;
+    if (evalP !== 'Optimal') isHealthy = false;
+    if (evalK !== 'Optimal') isHealthy = false;
+    if (evalMg !== 'N/A' && evalMg !== 'Optimal') isHealthy = false;
 
-    let healthStatus = 'Optimal Health';
-    if (defs.length > 0) {
-      healthStatus = `${defs.join(' & ')} Deficiency`;
-    } else if (evalN === 'Excess' || evalP === 'Excess' || evalK === 'Excess' || evalMg === 'Excess') {
-      healthStatus = 'Excessive Nutrients';
-    }
+    let healthStatus = isHealthy ? 'Healthy Palm' : 'Fertilizer Required';
 
     // Build agronomic advice list
     let adviceList: string[] = [
@@ -190,7 +185,7 @@ export default function LabTestEntryScreen() {
         leafN: nitrogen,
         leafP: phosphorus,
         leafK: potassium,
-        leafMg: magnesium,
+        leafMg: magnesium.trim() || 'N/A',
         status: healthStatus,
         urea: finalUrea.toString(),
         erp: finalErpTsp.toString(),
@@ -200,7 +195,7 @@ export default function LabTestEntryScreen() {
         evalN: `${evalN} (N)`,
         evalP: `${evalP} (P)`,
         evalK: `${evalK} (K)`,
-        evalMg: `${evalMg} (Mg)`,
+        evalMg: evalMg === 'N/A' ? 'N/A' : `${evalMg} (Mg)`,
       }
     });
   };
@@ -215,7 +210,11 @@ export default function LabTestEntryScreen() {
         <Text style={styles.title}>Lab Test Entry</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         
         {/* Step Indicator */}
         <View style={styles.stepIndicatorContainer}>
@@ -240,7 +239,7 @@ export default function LabTestEntryScreen() {
           <View style={styles.formCard}>
             {/* Palm ID */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Palm ID</Text>
+              <Text style={styles.inputLabel}>Palm ID *</Text>
               <View style={[
                 styles.inputWrapper,
                 activeInput === 'palmId' && styles.inputWrapperFocused
@@ -258,29 +257,9 @@ export default function LabTestEntryScreen() {
               </View>
             </View>
 
-            {/* Sample ID */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Sample ID</Text>
-              <View style={[
-                styles.inputWrapper,
-                activeInput === 'sampleId' && styles.inputWrapperFocused
-              ]}>
-                <Ionicons name="flask-outline" size={18} color={activeInput === 'sampleId' ? '#2E7D32' : '#90A4AE'} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="e.g. SMP-5022"
-                  placeholderTextColor="#90A4AE"
-                  value={sampleId}
-                  onChangeText={setSampleId}
-                  onFocus={() => setActiveInput('sampleId')}
-                  onBlur={() => setActiveInput(null)}
-                />
-              </View>
-            </View>
-
             {/* Plant Age */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Plant Age (Years)</Text>
+              <Text style={styles.inputLabel}>Plant Age (Years) *</Text>
               <View style={[
                 styles.inputWrapper,
                 activeInput === 'plantAge' && styles.inputWrapperFocused
@@ -370,7 +349,7 @@ export default function LabTestEntryScreen() {
 
             {/* Last Fertilizer Date */}
             <View style={[styles.inputGroup, { marginBottom: 0 }]}>
-              <Text style={styles.inputLabel}>Last Fertilizer Application Date</Text>
+              <Text style={styles.inputLabel}>Last Fertilizer Application Date *</Text>
               {Platform.OS === 'web' ? (
                 <View style={[styles.inputWrapper, activeInput === 'lastFertDate' && styles.inputWrapperFocused]}>
                   <Ionicons name="leaf-outline" size={18} color="#2E7D32" style={styles.inputIcon} />
@@ -419,7 +398,7 @@ export default function LabTestEntryScreen() {
           <View style={styles.formCard}>
             {/* Nitrogen Input */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Nitrogen (N)</Text>
+              <Text style={styles.inputLabel}>Nitrogen (N) *</Text>
               <View style={[
                 styles.inputWrapper,
                 activeInput === 'nitrogen' && styles.inputWrapperFocused
@@ -443,7 +422,7 @@ export default function LabTestEntryScreen() {
 
             {/* Phosphorus Input */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Phosphorus (P)</Text>
+              <Text style={styles.inputLabel}>Phosphorus (P) *</Text>
               <View style={[
                 styles.inputWrapper,
                 activeInput === 'phosphorus' && styles.inputWrapperFocused
@@ -466,7 +445,7 @@ export default function LabTestEntryScreen() {
 
             {/* Potassium Input */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Potassium (K)</Text>
+              <Text style={styles.inputLabel}>Potassium (K) *</Text>
               <View style={[
                 styles.inputWrapper,
                 activeInput === 'potassium' && styles.inputWrapperFocused
@@ -489,7 +468,7 @@ export default function LabTestEntryScreen() {
 
             {/* Magnesium Input */}
             <View style={[styles.inputGroup, { marginBottom: 0 }]}>
-              <Text style={styles.inputLabel}>Magnesium (Mg)</Text>
+              <Text style={styles.inputLabel}>Magnesium (Mg) (Optional)</Text>
               <View style={[
                 styles.inputWrapper,
                 activeInput === 'magnesium' && styles.inputWrapperFocused
@@ -497,7 +476,7 @@ export default function LabTestEntryScreen() {
                 <Ionicons name="flash-outline" size={18} color={activeInput === 'magnesium' ? '#2E7D32' : '#90A4AE'} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="e.g. 0.25"
+                  placeholder="e.g. 0.25 (optional)"
                   placeholderTextColor="#90A4AE"
                   keyboardType="numeric"
                   value={magnesium}
@@ -670,11 +649,6 @@ const styles = StyleSheet.create({
   inputWrapperFocused: {
     borderColor: '#2E7D32',
     backgroundColor: '#FFFFFF',
-    shadowColor: '#2E7D32',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
   },
   inputIcon: {
     marginRight: 10,

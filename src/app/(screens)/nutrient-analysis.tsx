@@ -23,11 +23,13 @@ import GradientButton from '../../components/common/GradientButton';
 import { analyzeLeafImage } from '../../services/nutrientService';
 import api from '../../services/api';
 import { useTranslation } from 'react-i18next';
+import { useAppStore } from '../../store/appStore';
 
 export default function NutrientAnalysisScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams();
+  const language = useAppStore(state => state.language);
 
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -75,7 +77,7 @@ export default function NutrientAnalysisScreen() {
       const { latitude, longitude } = location.coords;
 
       // Call backend
-      const response = await api.post('/v1/location/agro-zone', { latitude, longitude });
+      const response = await api.post('/soil/location/agro-zone', { latitude, longitude });
       const data = response.data;
 
       if (data.success && data.zone) {
@@ -133,6 +135,16 @@ export default function NutrientAnalysisScreen() {
   const handleAnalyze = async () => {
     if (!imageUri) return;
 
+    if (!palmAge.trim()) {
+      Alert.alert('Required Field', 'Please enter the Palm Age.');
+      return;
+    }
+
+    if (!palmStage.trim()) {
+      Alert.alert('Required Field', 'Please enter the Palm Stage.');
+      return;
+    }
+
     setLoading(true);
     try {
       const result = await analyzeLeafImage(imageUri);
@@ -168,7 +180,11 @@ export default function NutrientAnalysisScreen() {
         <Text style={styles.title}>Leaf Nutrient Scan</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Info Card */}
         <View style={styles.infoCard}>
           <View style={styles.infoCardHeader}>
@@ -180,13 +196,63 @@ export default function NutrientAnalysisScreen() {
           </Text>
         </View>
 
+        {/* Guidelines Card */}
+        <View style={styles.guidelineCard}>
+          <View style={styles.guidelineHeader}>
+            <Ionicons name="camera-outline" size={20} color="#004D40" />
+            <Text style={styles.guidelineTitle}>
+              {language === 'en' ? 'Photo Capture Guidelines' : 'ඡායාරූප මාර්ගෝපදේශය'}
+            </Text>
+          </View>
+          
+          <View style={styles.guidelineSection}>
+            <View style={styles.doHeader}>
+              <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
+              <Text style={styles.doTitle}>
+                {language === 'en' ? 'Correct Way (DO):' : 'නිවැරදි ආකාරය:'}
+              </Text>
+            </View>
+            <Text style={styles.guidelineText}>
+              {language === 'en' 
+                ? '• Take a clear, close-up photo of a single leaf/frond segment.'
+                : '• ළඟින් ගත් තනි පොල් කොළයක හෝ පත්‍ර කොටසක පැහැදිලි ඡායාරූපයක් ලබාගන්න.'}
+            </Text>
+          </View>
+
+          <View style={[styles.guidelineSection, { borderTopWidth: 1, borderTopColor: '#B2DFDB', paddingTop: 10, marginTop: 10 }]}>
+            <View style={styles.dontHeader}>
+              <Ionicons name="close-circle" size={16} color="#C62828" />
+              <Text style={styles.dontTitle}>
+                {language === 'en' ? 'Avoid (DON\'T):' : 'මඟහරින්න (වැරදි ආකාර):'}
+              </Text>
+            </View>
+            <View style={styles.bulletList}>
+              <Text style={styles.guidelineText}>
+                {language === 'en' 
+                  ? '• Do not take photos from a distance showing the whole tree.' 
+                  : '• ඈත සිට මුළු පොල් ගසම පෙනෙන සේ ඡායාරූප ගැනීම.'}
+              </Text>
+              <Text style={styles.guidelineText}>
+                {language === 'en' 
+                  ? '• Do not capture the leaf pointing up against the bright sky.' 
+                  : '• අහස පසුබිම් වන සේ යට සිට ඉහළට ඡායාරූප ගැනීම.'}
+              </Text>
+              <Text style={styles.guidelineText}>
+                {language === 'en' 
+                  ? '• Avoid images with deep shadows, dark areas, or direct sun glare.' 
+                  : '• තද සෙවනැලි හෝ දැඩි හිරු එළිය පත්‍රය මත පතිත වී ඇති ඡායාරූප.'}
+              </Text>
+            </View>
+          </View>
+        </View>
+
         {/* ── Context Form Area ──────────────────────────────────────── */}
         <View style={styles.formCard}>
           <Text style={styles.formSectionTitle}>1. Palm Details</Text>
           
           {/* Palm Age Input */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Palm Age (Years)</Text>
+            <Text style={styles.inputLabel}>Palm Age (Years) *</Text>
             <View style={[
               styles.inputWrapper,
               activeInput === 'palmAge' && styles.inputWrapperFocused
@@ -212,7 +278,7 @@ export default function NutrientAnalysisScreen() {
 
           {/* Palm Stage Input */}
           <View style={[styles.inputGroup, { marginBottom: 0 }]}>
-            <Text style={styles.inputLabel}>Palm Stage</Text>
+            <Text style={styles.inputLabel}>Palm Stage *</Text>
             <View style={[
               styles.inputWrapper,
               activeInput === 'palmStage' && styles.inputWrapperFocused
@@ -477,11 +543,6 @@ const styles = StyleSheet.create({
   inputWrapperFocused: {
     borderColor: '#2E7D32',
     backgroundColor: '#FFFFFF',
-    shadowColor: '#2E7D32',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
   },
   inputIcon: {
     marginRight: 10,
@@ -729,5 +790,59 @@ const styles = StyleSheet.create({
   scanBtn: {
     marginTop: 8,
     borderRadius: 14,
+  },
+  guidelineCard: {
+    backgroundColor: '#E0F2F1',
+    borderColor: '#B2DFDB',
+    borderWidth: 1,
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 20,
+  },
+  guidelineHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  guidelineTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#004D40',
+  },
+  guidelineSection: {
+    paddingLeft: 4,
+  },
+  doHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  doTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#2E7D32',
+  },
+  dontHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  dontTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#C62828',
+  },
+  guidelineText: {
+    color: '#37474F',
+    fontSize: 12.5,
+    lineHeight: 18,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  bulletList: {
+    gap: 4,
   },
 });

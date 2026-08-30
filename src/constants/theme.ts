@@ -17,6 +17,7 @@ export const COLORS = {
   info: '#29B6F6',           // Informational Blue
   
   // Text Colors
+  text: '#F1F8E9',           // Text White-Green alias
   textPrimary: '#F1F8E9',    // Soft White-Green
   textSecondary: '#A5D6A7',  // Muted Leaf Green
   textMuted: '#81C784',      // Highly Muted Green

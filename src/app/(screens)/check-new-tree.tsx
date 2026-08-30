@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import api from '../../services/api';
 
 type SamplePoint = {
   id: number;
@@ -23,10 +24,6 @@ type SamplePoint = {
   humidity: number;
   temp: number;
 };
-
-import Constants from 'expo-constants';
-const ip = Constants.expoConfig?.hostUri?.split(':')[0] || '192.168.1.7';
-const BASE_URL = `http://${ip}:8000/api/v1/analysis`;
 
 export default function CheckNewTreeScreen() {
   const router = useRouter();
@@ -62,22 +59,17 @@ export default function CheckNewTreeScreen() {
   };
 
   const handleStartSampling = async () => {
-    // Call backend to start session
+    // Call gateway to start session
     try {
-      const res = await fetch(`${BASE_URL}/start`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tree_no: "MK-101" })
-      });
-      if (!res.ok) throw new Error("Failed to start analysis session on backend.");
-      const data = await res.json();
+      const res = await api.post('/soil/analysis/start', { tree_no: "MK-101" });
+      const data = res.data;
       setAnalysisId(data.analysis_id);
       console.log("Session started:", data.analysis_id);
 
       setPhase('SAMPLING');
       setActiveStep(1);
     } catch (err: any) {
-      Alert.alert("Backend Error", err.message);
+      Alert.alert("Backend Error", err.message || "Failed to start analysis session.");
     }
   };
 
@@ -96,39 +88,31 @@ export default function CheckNewTreeScreen() {
       // Update Local State for samples
       setSamples((prev) => prev.map((item) => (item.id === activeStep ? currentPointData : item)));
 
-      // Post reading to Backend immediately
+      // Post reading to Gateway immediately
       try {
-        const res = await fetch(`${BASE_URL}/reading`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            analysis_id: analysisId,
-            tree_no: "MK-101",
-            point_name: `point${activeStep}`,
-            reading: {
-              N: currentPointData.n,
-              P: currentPointData.p,
-              K: currentPointData.k,
-              pH: currentPointData.ph,
-              EC: currentPointData.ec,
-              moisture: currentPointData.humidity,
-              temperature: currentPointData.temp
-            }
-          })
+        await api.post('/soil/analysis/reading', {
+          analysis_id: analysisId,
+          tree_no: "MK-101",
+          point_name: `point${activeStep}`,
+          reading: {
+            N: currentPointData.n,
+            P: currentPointData.p,
+            K: currentPointData.k,
+            pH: currentPointData.ph,
+            EC: currentPointData.ec,
+            moisture: currentPointData.humidity,
+            temperature: currentPointData.temp
+          }
         });
-        if (!res.ok) {
-          const errText = await res.text();
-          throw new Error(errText);
-        }
 
-        // Only mark as collected after successful backend save
+        // Only mark as collected after successful save
         setSamplesCollected((prev) => {
           const next = [...prev];
           next[activeStep - 1] = true;
           return next;
         });
       } catch (err: any) {
-        Alert.alert("Backend Error", err.message);
+        Alert.alert("Backend Error", err.message || "Failed to save reading.");
       }
 
       setLoadingSensor(false);
@@ -139,22 +123,17 @@ export default function CheckNewTreeScreen() {
     if (activeStep < 3) {
       setActiveStep(activeStep + 1);
     } else {
-      // Trigger Complete / ML Pipeline on Backend!
+      // Trigger Complete / ML Pipeline on Gateway!
       try {
-        const res = await fetch(`${BASE_URL}/complete`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ analysis_id: analysisId, tree_no: "MK-101" })
+        const res = await api.post('/soil/analysis/complete', {
+          analysis_id: analysisId,
+          tree_no: "MK-101"
         });
-        if (!res.ok) {
-          const errText = await res.text();
-          throw new Error(errText);
-        }
-        const reportData = await res.json();
+        const reportData = res.data;
         setFinalReport(reportData);
         setPhase('REPORT');
       } catch (err: any) {
-        Alert.alert("Prediction Failed", err.message);
+        Alert.alert("Prediction Failed", err.message || "Failed to complete analysis.");
       }
     }
   };

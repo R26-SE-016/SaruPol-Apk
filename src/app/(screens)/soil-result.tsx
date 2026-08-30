@@ -82,15 +82,40 @@ export default function SoilResultScreen() {
 
   const statusCol = statusColor(healthStatus);
 
+  const translatedStatus = () => {
+    if (healthStatus === 'Healthy Palm') {
+      return language === 'en' ? 'Healthy Palm' : 'නිරෝගී ගසක්';
+    }
+    if (healthStatus === 'Fertilizer Required') {
+      return language === 'en' ? 'Fertilizer Required' : 'පොහොර නිර්දේශයක් අවශ්‍යයි';
+    }
+    return healthStatus;
+  };
+
+  const displayEval = (evStr: string) => {
+    const s = evStr?.split(' ')[0]?.toLowerCase() || 'n/a';
+    if (s === 'optimal') return language === 'en' ? 'Optimal' : 'ප්‍රශස්ත';
+    if (s === 'deficient') return language === 'en' ? 'Low' : 'අඩු';
+    if (s === 'excess') return language === 'en' ? 'High' : 'වැඩි';
+    return s.toUpperCase();
+  };
+
   const overallScore = () => {
     let score = 100;
-    const lowerStatus = healthStatus.toLowerCase();
-    if (lowerStatus.includes('severe') || lowerStatus.includes('deficiency')) {
-      // count number of deficiencies
-      const defCount = (lowerStatus.match(/&/g) || []).length + 1;
-      score = Math.max(30, 100 - defCount * 20);
-    } else if (lowerStatus.includes('excessive')) {
-      score = 75;
+    let outOfRangeCount = 0;
+    
+    const evN = evalN?.toString().toLowerCase() || '';
+    const evP = evalP?.toString().toLowerCase() || '';
+    const evK = evalK?.toString().toLowerCase() || '';
+    const evMg = evalMg?.toString().toLowerCase() || '';
+    
+    if (evN.includes('deficient') || evN.includes('excess')) outOfRangeCount++;
+    if (evP.includes('deficient') || evP.includes('excess')) outOfRangeCount++;
+    if (evK.includes('deficient') || evK.includes('excess')) outOfRangeCount++;
+    if (evMg !== 'n/a' && (evMg.includes('deficient') || evMg.includes('excess'))) outOfRangeCount++;
+    
+    if (outOfRangeCount > 0) {
+      score = Math.max(40, 100 - outOfRangeCount * 15);
     }
     return score;
   };
@@ -129,7 +154,7 @@ export default function SoilResultScreen() {
                   <Text style={styles.zoneText}>{zoneId}</Text>
                 </View>
                 <View style={[styles.statusPill, { backgroundColor: statusCol }]}>
-                  <Text style={styles.statusPillText}>{healthStatus}</Text>
+                  <Text style={styles.statusPillText}>{translatedStatus()}</Text>
                 </View>
               </View>
               <Text style={styles.methodText}>
@@ -149,7 +174,7 @@ export default function SoilResultScreen() {
                 <Text style={[styles.ringVal, { color: statusCol }]}>{overallScore()}</Text>
                 <Text style={styles.ringMax}>/100</Text>
               </View>
-              <Text style={[styles.statusLabel, { color: statusCol }]}>{healthStatus}</Text>
+              <Text style={[styles.statusLabel, { color: statusCol }]}>{translatedStatus()}</Text>
             </ResultCard>
 
             {/* 3. NUTRIENT LEVEL ANALYSIS DISPLAY */}
@@ -171,7 +196,7 @@ export default function SoilResultScreen() {
                           <Text style={[styles.npkBubbleVal, { color: col }]}>{val.toFixed(3)}%</Text>
                           <Text style={styles.npkRange}>{min}-{max}%</Text>
                           <View style={[styles.evalTag, { backgroundColor: col }]}>
-                            <Text style={styles.evalTagText}>{ev?.split(' ')[0] || 'N/A'}</Text>
+                            <Text style={styles.evalTagText}>{displayEval(ev)}</Text>
                           </View>
                         </View>
                       );
@@ -238,7 +263,7 @@ export default function SoilResultScreen() {
                             <Text style={[styles.npkBubbleVal, { color: col }]}>{val.toFixed(3)}%</Text>
                             <Text style={styles.npkRange}>{min}-{max}</Text>
                             <View style={[styles.evalTag, { backgroundColor: col }]}>
-                              <Text style={styles.evalTagText}>{ev?.split(' ')[0] || 'N/A'}</Text>
+                              <Text style={styles.evalTagText}>{displayEval(ev)}</Text>
                             </View>
                           </View>
                         );
