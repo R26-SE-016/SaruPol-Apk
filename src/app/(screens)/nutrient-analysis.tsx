@@ -53,6 +53,21 @@ export default function NutrientAnalysisScreen() {
   // Palm details
   const [palmAge, setPalmAge] = useState<string>('');
   const [palmStage, setPalmStage] = useState<string>('');
+  const [showStageDropdown, setShowStageDropdown] = useState(false);
+
+  const handleAgeChange = (text: string) => {
+    setPalmAge(text);
+    const age = parseFloat(text);
+    if (!isNaN(age)) {
+      if (age >= 0 && age <= 1.5) {
+        setPalmStage('Seedling');
+      } else if (age > 1.5 && age <= 5) {
+        setPalmStage('Young Palm');
+      } else if (age > 5) {
+        setPalmStage('Bearing Palm');
+      }
+    }
+  };
 
   const detectLocation = async () => {
     setFetchingLocation(true);
@@ -268,9 +283,12 @@ export default function NutrientAnalysisScreen() {
                 placeholder="e.g. 5"
                 placeholderTextColor="#90A4AE"
                 value={palmAge}
-                onChangeText={setPalmAge}
+                onChangeText={handleAgeChange}
                 keyboardType="numeric"
-                onFocus={() => setActiveInput('palmAge')}
+                onFocus={() => {
+                  setActiveInput('palmAge');
+                  setShowStageDropdown(false);
+                }}
                 onBlur={() => setActiveInput(null)}
               />
             </View>
@@ -279,26 +297,64 @@ export default function NutrientAnalysisScreen() {
           {/* Palm Stage Input */}
           <View style={[styles.inputGroup, { marginBottom: 0 }]}>
             <Text style={styles.inputLabel}>Palm Stage *</Text>
-            <View style={[
-              styles.inputWrapper,
-              activeInput === 'palmStage' && styles.inputWrapperFocused
-            ]}>
+            <TouchableOpacity 
+              activeOpacity={0.8}
+              onPress={() => {
+                setActiveInput(null);
+                setShowStageDropdown(!showStageDropdown);
+              }}
+              style={[
+                styles.inputWrapper,
+                showStageDropdown && styles.inputWrapperFocused
+              ]}
+            >
               <Ionicons 
                 name="flower-outline" 
                 size={18} 
-                color={activeInput === 'palmStage' ? '#2E7D32' : '#90A4AE'} 
+                color={showStageDropdown ? '#2E7D32' : '#90A4AE'} 
                 style={styles.inputIcon} 
               />
-              <TextInput 
-                style={styles.input} 
-                placeholder="e.g. Seedling, Bearing"
-                placeholderTextColor="#90A4AE"
-                value={palmStage}
-                onChangeText={setPalmStage}
-                onFocus={() => setActiveInput('palmStage')}
-                onBlur={() => setActiveInput(null)}
+              <Text style={[
+                styles.input, 
+                { color: palmStage ? '#1B2C1A' : '#90A4AE', paddingTop: Platform.OS === 'ios' ? 0 : 12 }
+              ]}>
+                {palmStage || 'Select growth stage'}
+              </Text>
+              <Ionicons 
+                name={showStageDropdown ? "chevron-up" : "chevron-down"} 
+                size={18} 
+                color="#90A4AE" 
+                style={{ marginRight: 10 }}
               />
-            </View>
+            </TouchableOpacity>
+
+            {showStageDropdown && (
+              <View style={styles.dropdownContainer}>
+                {['Seedling', 'Young Palm', 'Bearing Palm'].map((stage) => (
+                  <TouchableOpacity
+                    key={stage}
+                    style={[
+                      styles.dropdownOption,
+                      palmStage === stage && styles.dropdownOptionSelected
+                    ]}
+                    onPress={() => {
+                      setPalmStage(stage);
+                      setShowStageDropdown(false);
+                    }}
+                  >
+                    <Text style={[
+                      styles.dropdownOptionText,
+                      palmStage === stage && styles.dropdownOptionTextSelected
+                    ]}>
+                      {stage}
+                    </Text>
+                    {palmStage === stage && (
+                      <Ionicons name="checkmark" size={16} color="#2E7D32" />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
         </View>
 
@@ -428,15 +484,26 @@ export default function NutrientAnalysisScreen() {
             </View>
           )}
 
-          {/* ── Scan Trigger Button ──────────────────────────────────── */}
-          {imageUri && (
-            <GradientButton
-              title={loading ? "Analyzing..." : "Run Leaf Assessment"}
-              onPress={handleAnalyze}
-              loading={loading}
-              style={styles.scanBtn}
-            />
+          {/* Validation Error Message */}
+          {(!palmAge.trim() || !palmStage.trim() || !imageUri) && (
+            <View style={styles.errorMsgContainer}>
+              <Ionicons name="alert-circle-outline" size={16} color="#C62828" />
+              <Text style={styles.errorMsgText}>
+                {!imageUri 
+                  ? "Please select a leaf photo, enter palm age, and stage to proceed."
+                  : "Please enter both palm age and growth stage to proceed."}
+              </Text>
+            </View>
           )}
+
+          {/* ── Scan Trigger Button ──────────────────────────────────── */}
+          <GradientButton
+            title={loading ? "Analyzing..." : "Run Leaf Assessment"}
+            onPress={handleAnalyze}
+            loading={loading}
+            disabled={loading || !palmAge.trim() || !palmStage.trim() || !imageUri}
+            style={styles.scanBtn}
+          />
         </View>
 
       </ScrollView>
@@ -844,5 +911,57 @@ const styles = StyleSheet.create({
   },
   bulletList: {
     gap: 4,
+  },
+  dropdownContainer: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#EAE7DF',
+    borderWidth: 1,
+    borderRadius: 12,
+    marginTop: 6,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  dropdownOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F2EB',
+  },
+  dropdownOptionSelected: {
+    backgroundColor: '#E8F5E9',
+  },
+  dropdownOptionText: {
+    fontSize: 14,
+    color: '#1B2C1A',
+    fontWeight: '500',
+  },
+  dropdownOptionTextSelected: {
+    color: '#2E7D32',
+    fontWeight: '700',
+  },
+  errorMsgContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFEBEE',
+    borderColor: '#FFCDD2',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 12,
+    marginBottom: 8,
+    gap: 6,
+  },
+  errorMsgText: {
+    color: '#C62828',
+    fontSize: 12,
+    fontWeight: '600',
+    flex: 1,
   },
 });

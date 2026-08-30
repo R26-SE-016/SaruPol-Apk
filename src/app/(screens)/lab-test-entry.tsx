@@ -15,6 +15,9 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { COLORS, ROUNDING } from '../../constants/theme';
 import GradientButton from '../../components/common/GradientButton';
+import { getLabRecommendation } from '../../services/nutrientService';
+import { ActivityIndicator } from 'react-native';
+
 
 const { width } = Dimensions.get('window');
 
@@ -68,7 +71,9 @@ export default function LabTestEntryScreen() {
     setCurrentStep(2);
   };
 
-  const handleCheckResults = () => {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleCheckResults = async () => {
     if (
       !nitrogen.trim() || 
       !phosphorus.trim() || 
@@ -89,115 +94,49 @@ export default function LabTestEntryScreen() {
       return;
     }
 
-    // Determine evaluations
-    // N range: 1.90 - 2.10
-    let evalN = 'Optimal';
-    if (nVal < 1.90) evalN = 'Deficient';
-    else if (nVal > 2.10) evalN = 'Excess';
+    setIsLoading(true);
+    try {
+      const response = await getLabRecommendation({
+        nitrogen: nVal,
+        phosphorus: pVal,
+        potassium: kVal,
+        magnesium: mgVal,
+        palm_age: ageVal,
+        zone: zone || 'Wet',
+      });
 
-    // P range: 0.11 - 0.13
-    let evalP = 'Optimal';
-    if (pVal < 0.11) evalP = 'Deficient';
-    else if (pVal > 0.13) evalP = 'Excess';
-
-    // K range: 1.20 - 1.50
-    let evalK = 'Optimal';
-    if (kVal < 1.20) evalK = 'Deficient';
-    else if (kVal > 1.50) evalK = 'Excess';
-
-    // Mg range: 0.20 - 0.35
-    let evalMg = 'N/A';
-    if (mgVal !== null) {
-      evalMg = 'Optimal';
-      if (mgVal < 0.20) evalMg = 'Deficient';
-      else if (mgVal > 0.35) evalMg = 'Excess';
+      router.push({
+        pathname: '/(screens)/soil-result' as any,
+        params: {
+          treeNo: palmId,
+          zoneId: `${zone} Zone`,
+          method: 'Laboratory Analysis',
+          model: 'CRI Standard Expert Rules',
+          soilN: nitrogen,
+          soilP: phosphorus,
+          soilK: potassium,
+          leafN: nitrogen,
+          leafP: phosphorus,
+          leafK: potassium,
+          leafMg: magnesium.trim() || 'N/A',
+          status: response.health_status,
+          urea: response.urea.toString(),
+          erp: response.erp_or_tsp.toString(),
+          mop: response.mop.toString(),
+          dolomite: response.dolomite.toString(),
+          advice: JSON.stringify(response.agronomic_advice),
+          evalN: response.evalN,
+          evalP: response.evalP,
+          evalK: response.evalK,
+          evalMg: response.evalMg,
+        }
+      });
+    } catch (error: any) {
+      console.error("Failed to fetch recommendation from backend:", error);
+      Alert.alert("Error", "Failed to retrieve fertilizer recommendation from the backend server.");
+    } finally {
+      setIsLoading(false);
     }
-
-    // Fertilizer calculation (grams per palm per year)
-    const isAdult = ageVal >= 4;
-
-    let baseUrea = isAdult ? 800 : 470;
-    let baseErpTsp = isAdult ? (zone === 'Dry' ? 400 : 900) : (zone === 'Dry' ? 400 : 1060);
-    let baseMop = isAdult ? 1600 : 470;
-    let baseDolomite = isAdult ? 1000 : 500;
-
-    // Adjust Urea based on N
-    let finalUrea = baseUrea;
-    if (evalN === 'Deficient') finalUrea += isAdult ? 150 : 80;
-    else if (evalN === 'Excess') finalUrea -= isAdult ? 300 : 150;
-
-    // Adjust ERP/TSP based on P
-    let finalErpTsp = baseErpTsp;
-    if (evalP === 'Deficient') finalErpTsp += isAdult ? 200 : 100;
-    else if (evalP === 'Excess') finalErpTsp -= isAdult ? 300 : 150;
-
-    // Adjust MOP based on K
-    let finalMop = baseMop;
-    if (evalK === 'Deficient') finalMop += isAdult ? 500 : 250;
-    else if (evalK === 'Excess') finalMop -= isAdult ? 600 : 300;
-
-    // Adjust Dolomite based on Mg
-    let finalDolomite = baseDolomite;
-    if (evalMg === 'Deficient') finalDolomite += isAdult ? 500 : 250;
-    else if (evalMg === 'Excess') finalDolomite -= isAdult ? 400 : 200;
-
-    // Ensure non-negative values
-    finalUrea = Math.max(0, finalUrea);
-    finalErpTsp = Math.max(0, finalErpTsp);
-    finalMop = Math.max(0, finalMop);
-    finalDolomite = Math.max(0, finalDolomite);
-
-    // Build overall status string
-    let isHealthy = true;
-    if (evalN !== 'Optimal') isHealthy = false;
-    if (evalP !== 'Optimal') isHealthy = false;
-    if (evalK !== 'Optimal') isHealthy = false;
-    if (evalMg !== 'N/A' && evalMg !== 'Optimal') isHealthy = false;
-
-    let healthStatus = isHealthy ? 'Healthy Palm' : 'Fertilizer Required';
-
-    // Build agronomic advice list
-    let adviceList: string[] = [
-      'Apply fertilizer in a circular trench 1.8m away from the base of the palm.',
-      'Divide the annual dosage into two equal applications (Yala and Maha seasons).'
-    ];
-
-    if (evalN === 'Deficient') {
-      adviceList.push('Apply Urea corrective dose to correct Nitrogen deficiency.');
-    }
-    if (evalK === 'Deficient') {
-      adviceList.push('Bury coconut husks in trenches between rows to help conserve moisture and recycle Potassium.');
-    }
-    if (evalMg === 'Deficient') {
-      adviceList.push('Apply Dolomite (or Kieserite for rapid recovery) to treat Magnesium deficiency.');
-    }
-
-    router.push({
-      pathname: '/(screens)/soil-result' as any,
-      params: {
-        treeNo: palmId,
-        zoneId: `${zone} Zone`,
-        method: 'Laboratory Analysis',
-        model: 'CRI Standard Expert Rules',
-        soilN: nitrogen,
-        soilP: phosphorus,
-        soilK: potassium,
-        leafN: nitrogen,
-        leafP: phosphorus,
-        leafK: potassium,
-        leafMg: magnesium.trim() || 'N/A',
-        status: healthStatus,
-        urea: finalUrea.toString(),
-        erp: finalErpTsp.toString(),
-        mop: finalMop.toString(),
-        dolomite: finalDolomite.toString(),
-        advice: JSON.stringify(adviceList),
-        evalN: `${evalN} (N)`,
-        evalP: `${evalP} (P)`,
-        evalK: `${evalK} (K)`,
-        evalMg: evalMg === 'N/A' ? 'N/A' : `${evalMg} (Mg)`,
-      }
-    });
   };
 
   return (
@@ -493,28 +432,51 @@ export default function LabTestEntryScreen() {
 
         {/* Navigation Buttons */}
         {currentStep === 1 ? (
-          <GradientButton
-            title="Continue to Step 2"
-            onPress={handleNextStep}
-            style={styles.submitBtn}
-          />
+          <View>
+            {(!palmId.trim() || !plantAge.trim() || !lastFertDate.trim() || !zone || !sampleDate.trim()) && (
+              <View style={styles.errorMsgContainer}>
+                <Ionicons name="alert-circle-outline" size={16} color="#C62828" />
+                <Text style={styles.errorMsgText}>
+                  Please fill in all required palm details (Palm ID, Age, Last Fertilizer Date) to continue.
+                </Text>
+              </View>
+            )}
+            <GradientButton
+              title="Continue to Step 2"
+              onPress={handleNextStep}
+              disabled={!palmId.trim() || !plantAge.trim() || !lastFertDate.trim() || !zone || !sampleDate.trim()}
+              style={styles.submitBtn}
+            />
+          </View>
         ) : (
-          <View style={styles.navRow}>
-            <TouchableOpacity 
-              style={styles.backStepBtn} 
-              onPress={() => setCurrentStep(1)}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="arrow-back" size={20} color="#2E7D32" />
-              <Text style={styles.backStepText}>Back</Text>
-            </TouchableOpacity>
+          <View>
+            {(!nitrogen.trim() || !phosphorus.trim() || !potassium.trim()) && (
+              <View style={styles.errorMsgContainer}>
+                <Ionicons name="alert-circle-outline" size={16} color="#C62828" />
+                <Text style={styles.errorMsgText}>
+                  Please enter Nitrogen, Phosphorus, and Potassium values to recommend fertilizer.
+                </Text>
+              </View>
+            )}
+            <View style={styles.navRow}>
+              <TouchableOpacity 
+                style={styles.backStepBtn} 
+                onPress={() => setCurrentStep(1)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="arrow-back" size={20} color="#2E7D32" />
+                <Text style={styles.backStepText}>Back</Text>
+              </TouchableOpacity>
 
-            <View style={{ flex: 1 }}>
-              <GradientButton
-                title="Recommend Fertilizer"
-                onPress={handleCheckResults}
-                style={styles.submitBtnNoMargin}
-              />
+              <View style={{ flex: 1 }}>
+                <GradientButton
+                  title="Recommend Fertilizer"
+                  onPress={handleCheckResults}
+                  style={styles.submitBtnNoMargin}
+                  loading={isLoading}
+                  disabled={isLoading || !nitrogen.trim() || !phosphorus.trim() || !potassium.trim()}
+                />
+              </View>
             </View>
           </View>
         )}
@@ -750,5 +712,23 @@ const styles = StyleSheet.create({
   submitBtnNoMargin: {
     borderRadius: 16,
     marginBottom: 0,
+  },
+  errorMsgContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFEBEE',
+    borderColor: '#FFCDD2',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 4,
+    marginBottom: 14,
+    gap: 6,
+  },
+  errorMsgText: {
+    color: '#C62828',
+    fontSize: 12,
+    fontWeight: '600',
+    flex: 1,
   },
 });

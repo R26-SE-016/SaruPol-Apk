@@ -77,3 +77,96 @@ export const analyzeLeafImage = async (imageUri: string): Promise<NutrientAnalys
     throw new Error(error.message || 'An unexpected error occurred.');
   }
 };
+
+export interface SaveScanPayload {
+  user_id: string;
+  palm_age: string;
+  palm_stage: string;
+  zone: string;
+  image_uri: string;
+  prediction: NutrientPrediction | null;
+  recommendation: ImageRecommendation | null;
+}
+
+export interface SavedNutrientScan {
+  id: string;
+  user_id: string;
+  palm_age: string;
+  palm_stage: string;
+  zone: string;
+  image_uri: string;
+  prediction: NutrientPrediction | null;
+  recommendation: ImageRecommendation | null;
+  timestamp: string;
+}
+
+export interface DeficiencyDetail {
+  id: string;
+  nameEn: string;
+  chemicalSymbol: string;
+  criticalRange: string;
+  overview: string;
+  symptoms: string[];
+  causes: string[];
+  correctiveMeasures: string[];
+  themeColor: string;
+  description: string;
+  advice: string;
+}
+
+/**
+ * Saves a leaf nutrient scan result to Firestore.
+ */
+export const saveNutrientScan = async (payload: SaveScanPayload): Promise<{ success: boolean; message: string; id: string }> => {
+  const response = await api.post('/soil/nutrient-analysis/scans', payload);
+  return response.data;
+};
+
+/**
+ * Fetches the leaf nutrient scan history for a user from Firestore.
+ */
+export const getNutrientScans = async (userId: string): Promise<SavedNutrientScan[]> => {
+  const response = await api.get('/soil/nutrient-analysis/scans', { params: { user_id: userId } });
+  return response.data;
+};
+
+/**
+ * Fetches the dynamic deficiency details from Firestore.
+ */
+export const getDeficiencies = async (): Promise<DeficiencyDetail[]> => {
+  const response = await api.get('/soil/nutrient-analysis/deficiencies');
+  return response.data;
+};
+
+export interface LabRecommendationRequest {
+  nitrogen: number;
+  phosphorus: number;
+  potassium: number;
+  magnesium?: number | null;
+  palm_age: number;
+  zone: string;
+}
+
+export interface LabRecommendationResponse {
+  urea: number;
+  erp_or_tsp: number;
+  mop: number;
+  dolomite: number;
+  phosphate_type: string;
+  evalN: string;
+  evalP: string;
+  evalK: string;
+  evalMg: string;
+  health_status: string;
+  agronomic_advice: string[];
+}
+
+/**
+ * Fetches fertilizer recommendation for lab test entries from the backend.
+ */
+export const getLabRecommendation = async (payload: LabRecommendationRequest): Promise<LabRecommendationResponse> => {
+  const response = await api.post('/soil/nutrient-analysis/lab-recommendation', payload);
+  return response.data;
+};
+
+
