@@ -432,30 +432,51 @@ export default function LabTestEntryScreen() {
 
         {/* Navigation Buttons */}
         {currentStep === 1 ? (
-          <GradientButton
-            title="Continue to Step 2"
-            onPress={handleNextStep}
-            style={styles.submitBtn}
-          />
+          <View>
+            {(!palmId.trim() || !plantAge.trim() || !lastFertDate.trim() || !zone || !sampleDate.trim()) && (
+              <View style={styles.errorMsgContainer}>
+                <Ionicons name="alert-circle-outline" size={16} color="#C62828" />
+                <Text style={styles.errorMsgText}>
+                  Please fill in all required palm details (Palm ID, Age, Last Fertilizer Date) to continue.
+                </Text>
+              </View>
+            )}
+            <GradientButton
+              title="Continue to Step 2"
+              onPress={handleNextStep}
+              disabled={!palmId.trim() || !plantAge.trim() || !lastFertDate.trim() || !zone || !sampleDate.trim()}
+              style={styles.submitBtn}
+            />
+          </View>
         ) : (
-          <View style={styles.navRow}>
-            <TouchableOpacity 
-              style={styles.backStepBtn} 
-              onPress={() => setCurrentStep(1)}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="arrow-back" size={20} color="#2E7D32" />
-              <Text style={styles.backStepText}>Back</Text>
-            </TouchableOpacity>
+          <View>
+            {(!nitrogen.trim() || !phosphorus.trim() || !potassium.trim()) && (
+              <View style={styles.errorMsgContainer}>
+                <Ionicons name="alert-circle-outline" size={16} color="#C62828" />
+                <Text style={styles.errorMsgText}>
+                  Please enter Nitrogen, Phosphorus, and Potassium values to recommend fertilizer.
+                </Text>
+              </View>
+            )}
+            <View style={styles.navRow}>
+              <TouchableOpacity 
+                style={styles.backStepBtn} 
+                onPress={() => setCurrentStep(1)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="arrow-back" size={20} color="#2E7D32" />
+                <Text style={styles.backStepText}>Back</Text>
+              </TouchableOpacity>
 
-            <View style={{ flex: 1 }}>
-              <GradientButton
-                title="Recommend Fertilizer"
-                onPress={handleCheckResults}
-                style={styles.submitBtnNoMargin}
-                loading={isLoading}
-                disabled={isLoading}
-              />
+              <View style={{ flex: 1 }}>
+                <GradientButton
+                  title="Recommend Fertilizer"
+                  onPress={handleCheckResults}
+                  style={styles.submitBtnNoMargin}
+                  loading={isLoading}
+                  disabled={isLoading || !nitrogen.trim() || !phosphorus.trim() || !potassium.trim()}
+                />
+              </View>
             </View>
           </View>
         )}
@@ -691,5 +712,23 @@ const styles = StyleSheet.create({
   submitBtnNoMargin: {
     borderRadius: 16,
     marginBottom: 0,
+  },
+  errorMsgContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFEBEE',
+    borderColor: '#FFCDD2',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 4,
+    marginBottom: 14,
+    gap: 6,
+  },
+  errorMsgText: {
+    color: '#C62828',
+    fontSize: 12,
+    fontWeight: '600',
+    flex: 1,
   },
 });

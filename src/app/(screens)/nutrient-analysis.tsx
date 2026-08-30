@@ -484,15 +484,26 @@ export default function NutrientAnalysisScreen() {
             </View>
           )}
 
-          {/* ── Scan Trigger Button ──────────────────────────────────── */}
-          {imageUri && (
-            <GradientButton
-              title={loading ? "Analyzing..." : "Run Leaf Assessment"}
-              onPress={handleAnalyze}
-              loading={loading}
-              style={styles.scanBtn}
-            />
+          {/* Validation Error Message */}
+          {(!palmAge.trim() || !palmStage.trim() || !imageUri) && (
+            <View style={styles.errorMsgContainer}>
+              <Ionicons name="alert-circle-outline" size={16} color="#C62828" />
+              <Text style={styles.errorMsgText}>
+                {!imageUri 
+                  ? "Please select a leaf photo, enter palm age, and stage to proceed."
+                  : "Please enter both palm age and growth stage to proceed."}
+              </Text>
+            </View>
           )}
+
+          {/* ── Scan Trigger Button ──────────────────────────────────── */}
+          <GradientButton
+            title={loading ? "Analyzing..." : "Run Leaf Assessment"}
+            onPress={handleAnalyze}
+            loading={loading}
+            disabled={loading || !palmAge.trim() || !palmStage.trim() || !imageUri}
+            style={styles.scanBtn}
+          />
         </View>
 
       </ScrollView>
@@ -934,5 +945,23 @@ const styles = StyleSheet.create({
   dropdownOptionTextSelected: {
     color: '#2E7D32',
     fontWeight: '700',
+  },
+  errorMsgContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFEBEE',
+    borderColor: '#FFCDD2',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 12,
+    marginBottom: 8,
+    gap: 6,
+  },
+  errorMsgText: {
+    color: '#C62828',
+    fontSize: 12,
+    fontWeight: '600',
+    flex: 1,
   },
 });
