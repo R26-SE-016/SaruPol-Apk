@@ -67,7 +67,9 @@ export default function FarmDetailScreen() {
 
   const treeZoneMap = useMemo(() => {
     const m = new Map<number, Zone>();
-    currentZones.forEach((z) => z.treeNumbers.forEach((n) => m.set(n, z)));
+    currentZones?.forEach((z) => {
+      if (z.treeNumbers) z.treeNumbers.forEach((n) => m.set(n, z));
+    });
     return m;
   }, [currentZones]);
 
@@ -186,39 +188,14 @@ export default function FarmDetailScreen() {
           </View>
         </View>
 
-        <TouchableOpacity onPress={() => router.push(`/yield/${farm.id}/mapper`)} className="bg-white rounded-2xl border border-slate-100 p-4 items-center justify-center flex-row gap-3 shadow-sm">
-          <Image source={{ uri: 'https://i.ibb.co/gL251tyR/3d-map.png' }} style={{ width: 32, height: 32, resizeMode: 'contain' }} />
-          <Text className="text-sm font-bold text-slate-800">Interactive 3D Map View</Text>
-        </TouchableOpacity>
-
         {/* Feature Shortcuts */}
         <View className="flex-row gap-2">
-          <Shortcut icon={<Image source={{ uri: 'https://i.ibb.co/21Yzy5fW/iot-sensor.png' }} style={{ width: 42, height: 42, resizeMode: 'contain' }} />} label={t("yield.telemetry")} onPress={() => router.push(`/yield/${farm.id}/telemetry`)} />
+          <Shortcut icon={<Image source={{ uri: 'https://i.ibb.co/21Yzy5fW/iot-sensor.png' }} style={{ width: 42, height: 42, resizeMode: 'contain' }} />} label="Device" onPress={() => router.push(`/yield/${farm.id}/telemetry`)} />
           <Shortcut icon={<Image source={{ uri: 'https://i.ibb.co/gbSQjznt/coconut-fruit.png' }} style={{ width: 42, height: 42, resizeMode: 'contain' }} />} label="Yield" onPress={() => router.push(`/yield/${farm.id}/analytics`)} />
           <Shortcut icon={<Image source={{ uri: 'https://i.ibb.co/wFK2YRww/log-harvest.png' }} style={{ width: 42, height: 42, resizeMode: 'contain' }} />} label={t("yield.logs")} onPress={() => router.push(`/yield/${farm.id}/logs`)} />
-          <Shortcut icon={<Image source={{ uri: 'https://i.ibb.co/GffY8kpj/ai-analysis.png' }} style={{ width: 42, height: 42, resizeMode: 'contain' }} />} label={t("yield.analytics")} onPress={() => router.push(`/yield/${farm.id}/analytics`)} />
+          <Shortcut icon={<Image source={{ uri: 'https://i.ibb.co/Dg6V1tk1/zone.png' }} style={{ width: 42, height: 42, resizeMode: 'contain' }} />} label="Zones" onPress={() => router.push(`/yield/${farm.id}/zones`)} />
         </View>
 
-        {/* Section B: Live Environment Grid */}
-        <View className="bg-white rounded-2xl p-4 border border-slate-100">
-          <View className="flex-row items-center justify-between mb-3">
-            <View className="flex-row items-center gap-2">
-              <CloudRain size={16} color="#1e7550" />
-              <Text className="text-sm font-bold text-slate-800">
-                Live Environment <Text className={`text-xs font-normal ${env.source === 'iot' ? 'text-green-600' : 'text-amber-600'}`}>({env.source === 'iot' ? 'Realtime IoT' : 'Weather API'})</Text>
-              </Text>
-            </View>
-          </View>
-          <View className="flex-row flex-wrap gap-3">
-            <EnvWidget icon={<Image source={{ uri: 'https://i.ibb.co/zTH989xR/temperature-gauge.png' }} style={{ width: 40, height: 40, resizeMode: 'contain' }} />} label={t("yield.airTemp")} value={env.temperature != null ? `${Math.round(env.temperature)}°` : "—"} />
-            <EnvWidget icon={<Image source={{ uri: 'https://i.ibb.co/whDGSFxM/raindrop-percentage.png' }} style={{ width: 40, height: 40, resizeMode: 'contain' }} />} label={t("yield.humidity")} value={env.humidity != null ? `${Math.round(env.humidity)}%` : "—"} />
-            <EnvWidget icon={<Image source={{ uri: 'https://i.ibb.co/B2NrzxH3/cloud-rain.png' }} style={{ width: 40, height: 40, resizeMode: 'contain' }} />} label={t("yield.rainfall")} value={env.precipitation != null ? `${env.precipitation}mm` : "—"} />
-            <EnvWidget icon={<Wind size={40} color="#0d9488" />} label={t("yield.wind")} value={env.windSpeed != null ? `${env.windSpeed}` : "—"} />
-            <EnvWidget icon={<Image source={{ uri: 'https://i.ibb.co/zHfw1qrH/soil-moisture.png' }} style={{ width: 40, height: 40, resizeMode: 'contain' }} />} label={t("yield.soilMoisture")} value={env.soilMoisture != null ? `${Math.round(env.soilMoisture)}%` : "—"} />
-            {(() => { const W = weatherInfo(env.weatherCode ?? -1); const WIcon = W.icon; return <EnvWidget icon={<Ionicons name={WIcon as any} size={40} color={WEATHER_HEX[W.color] ?? "#64748b"} />} label={t("yield.weather")} value={env.weatherCode != null ? W.label : "—"} />; })()}
-          </View>
-          {usedFallbackCoords && <Text className="text-[11px] text-amber-600 mt-3 text-center">Using fallback location (Colombo) for weather. Edit farm to save coordinates.</Text>}
-        </View>
 
         {/* Section C: Live CDA Market Intelligence Card */}
         <MarketRevenueCard locationName={farm.locationName || "Colombo"} predictedNuts={displayPredictedYield} />
@@ -277,75 +254,8 @@ export default function FarmDetailScreen() {
           </View>
         )}
 
-        {/* Section E.5: Farm Zones */}
-        <View className="mb-4 mt-2">
-          <View className="flex-row items-center justify-between mb-3 px-1">
-            <View className="flex-row items-center gap-2">
-              <Layers size={16} color="#64748b" />
-              <Text className="text-sm font-bold text-slate-600 tracking-wider uppercase">ZONES</Text>
-            </View>
-            <TouchableOpacity onPress={() => router.push(`/yield/${farm.id}/add-zone`)} className="flex-row items-center gap-1">
-              <Plus size={14} color="#059669" />
-              <Text className="text-sm font-bold text-emerald-700">Add Zone</Text>
-            </TouchableOpacity>
-          </View>
 
-          <View className="gap-3">
-            {currentZones.length > 0 ? currentZones.map(zone => {
-              const zoneTrees = farmData.trees.filter(t => zone.treeNumbers.includes(t.number));
-              const zHealth = aggregateHealth(zoneTrees);
-              const isGood = zHealth.pct >= 60;
-              
-              return (
-                <View key={zone.id} className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-100 relative pl-2">
-                  <View className="absolute left-0 top-0 bottom-0 w-[5px]" style={{ backgroundColor: zone.color }} />
-                  <View className="p-4">
-                    <View className="flex-row justify-between items-center mb-1">
-                      <Text className="text-base font-bold text-slate-800">{zone.name}</Text>
-                      <View className={`px-2 py-0.5 rounded-full ${isGood ? 'bg-green-100' : 'bg-orange-100'}`}>
-                        <Text className={`text-[10px] font-bold ${isGood ? 'text-green-700' : 'text-orange-700'}`}>
-                          {zHealth.health} - {Math.round(zHealth.pct)}%
-                        </Text>
-                      </View>
-                    </View>
-                    <Text className="text-xs text-slate-400 font-medium mb-3">
-                      {zone.treeNumbers.length} trees - {zone.treeNumbers.map(n => `#${String(n).padStart(2, '0')}`).join(', ')}
-                    </Text>
-                    <View className="flex-row gap-5 mt-1">
-                      <TouchableOpacity onPress={() => router.push(`/yield/${farm.id}/add-zone?zoneId=${zone.id}`)} className="flex-row items-center gap-1.5">
-                        <Pencil size={12} color="#64748b" />
-                        <Text className="text-[11px] font-bold text-slate-500">Edit</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity 
-                        onPress={() => {
-                          if (!user) return;
-                          Alert.alert("Delete Zone", "Are you sure you want to delete this zone?", [
-                            { text: "Cancel", style: "cancel" },
-                            { text: "Delete", style: "destructive", onPress: () => deleteZone(user.uid, farm.id, zone.id) }
-                          ])
-                        }} 
-                        className="flex-row items-center gap-1.5"
-                      >
-                        <Trash2 size={12} color="#ef4444" />
-                        <Text className="text-[11px] font-bold text-red-500">Delete</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </View>
-              );
-            }) : (
-              <View className="py-6 items-center justify-center bg-white rounded-xl border border-slate-100 border-dashed shadow-sm">
-                <Text className="text-sm text-slate-400 font-semibold text-center mb-2">{t("yield.noZones")}</Text>
-                <TouchableOpacity onPress={() => router.push(`/yield/${farm.id}/add-zone`)} className="bg-emerald-50 border border-emerald-200 px-4 py-2 rounded-lg shadow-sm">
-                  <Text className="text-xs font-bold text-emerald-700">Create First Zone</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        </View>
 
-        {/* Section F: Field Care Recommendations & Actions */}
-        <SmartAdvisory trees={farmData.trees} zones={currentZones} farmName={farm.name} />
 
       </ScrollView>
     </View>
@@ -363,7 +273,7 @@ function MetricCard({ icon, label, value, unit, badge }: { icon: React.ReactNode
         {badge && <View>{badge}</View>}
       </View>
       <Text className="text-[11px] text-slate-500 font-medium uppercase tracking-wider">{label}</Text>
-      <Text className="text-xl font-bold text-slate-800 mt-1">{value} <Text className="text-sm font-semibold text-slate-500">{unit}</Text></Text>
+      <Text className="text-3xl font-black text-slate-800 mt-1">{value} <Text className="text-base font-semibold text-slate-500">{unit}</Text></Text>
     </LinearGradient>
   );
 }
@@ -396,7 +306,7 @@ function SmartAdvisory({ trees, zones, farmName }: { trees: Tree[]; zones: Zone[
           </View>
           <Text className="text-sm font-bold text-slate-800">Field Care Recommendations</Text>
         </View>
-        <Text className="text-xs text-slate-500">No health records updated for this farm yet. Tap 3D Map to inspect trees.</Text>
+        <Text className="text-xs text-slate-500">No health records updated for this farm yet. Tap on trees to inspect them.</Text>
       </View>
     );
   }
@@ -477,14 +387,12 @@ function Shortcut({ icon, label, onPress }: { icon: React.ReactNode; label: stri
   return (
     <TouchableOpacity
       onPress={onPress}
-      style={{ flex: 1, elevation: 2, shadowColor: '#000', shadowOffset: {width: 0, height: 1}, shadowOpacity: 0.05, shadowRadius: 3 }}
+      className="flex-1 items-center gap-2"
     >
-      <LinearGradient colors={['#F0FDF4', '#FFFFFF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} className="rounded-2xl p-3 border border-green-50 items-center">
-        <View className="items-center justify-center mb-3">
-          {icon}
-        </View>
-        <Text className="text-[11px] font-bold text-slate-700 text-center leading-tight">{label}</Text>
-      </LinearGradient>
+      <View className="w-[60px] h-[60px] bg-white rounded-[20px] border border-slate-100 items-center justify-center" style={{ elevation: 2, shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.04, shadowRadius: 4 }}>
+        {icon}
+      </View>
+      <Text className="text-[11px] font-bold text-slate-600 text-center">{label}</Text>
     </TouchableOpacity>
   );
 }

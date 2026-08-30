@@ -66,6 +66,6 @@ export const logHarvestPrediction = async (input: any) => {
 };
 
 export const fetchCDARates = async () => {
-  const response = await api.get('/cda-rates');
+  const response = await api.get('yield/cda-rates');
   return response.data;
 };

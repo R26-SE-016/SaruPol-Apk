@@ -1,5 +1,5 @@
 export type TreeStatus = "Young" | "Bearing" | "Diseased" | "NonBearing";
-export type TreeHealth = "Good" | "Average" | "Weak";
+export type TreeHealth = "Good" | "Average" | "Weak" | "Need Attention";
 
 export interface YieldRecord {
   id: string;
@@ -28,6 +28,9 @@ export interface Tree {
   yieldHistory: YieldRecord[];
   notes: string;
   sensorData?: TreeSensorData;
+  variety?: string;
+  ageRange?: string;
+  frondCount?: number;
 }
 
 export interface FarmData {

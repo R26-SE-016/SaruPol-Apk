@@ -4,7 +4,7 @@ import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Platform, A
 import { Search, X, MapPin, ChevronRight, ArrowLeft } from "lucide-react-native";
 import { useYieldApp } from "@/store/YieldAppContext";
 import { LinearGradient } from "expo-linear-gradient";
-import { predictDashboardYield } from "@/services/yieldService";
+import { useUnifiedFarmYield } from "@/hooks/useUnifiedFarmYield";
 import { fetchHarvestLogs } from "@/services/yieldFarmDb";
 import type { Farm } from "@/types/yield";
 
@@ -14,8 +14,7 @@ export default function YieldFarmsListScreen() {
   const onSelectFarm = (id: string) => router.push(('/(tabs)/yield/' + id) as any);
   const { farms, user } = useYieldApp();
   const [searchQuery, setSearchQuery] = useState("");
-  const [farmPredictions, setFarmPredictions] = useState<Record<string, number>>({});
-  const [loadingPredictions, setLoadingPredictions] = useState<Record<string, boolean>>({});
+  const { unifiedYields, isPredicting: isUnifiedPredicting } = useUnifiedFarmYield(user?.uid, farms);
 
   const filteredFarms = useMemo(() => {
     return farms.filter(f =>
@@ -34,40 +33,6 @@ export default function YieldFarmsListScreen() {
     const daysLeft = Math.ceil((nextPick - Date.now()) / (24 * 60 * 60 * 1000));
     return daysLeft > 45 ? 45 : daysLeft;
   }, []);
-
-  useEffect(() => {
-    if (!user || farms.length === 0) return;
-    farms.forEach(async (farm) => {
-      if (farmPredictions[farm.id] !== undefined) return;
-      setLoadingPredictions(prev => ({ ...prev, [farm.id]: true }));
-      try {
-        const rawLogs = await fetchHarvestLogs(user.uid, farm.id);
-        const logs = rawLogs.map((l: any) => ({
-          id: l.id,
-          date: l.date || l.timestamp,
-          actual_yield_nuts: l.nutCount || 0,
-          predicted_yield_nuts: l.predicted_yield_nuts || 0
-        }));
-        logs.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-        const result = await predictDashboardYield({
-          uid: user.uid,
-          farm_id: farm.id,
-          estate: farm.locationName || "Makandura",
-          trees_count: farm.totalTrees || 40,
-          last_harvest_yield: farm.lastHarvestYield || null,
-          actual_harvest_logs: logs
-        });
-        if (result && result.predicted_next_pick_yield_nuts !== undefined) {
-          setFarmPredictions(prev => ({ ...prev, [farm.id]: result.predicted_next_pick_yield_nuts }));
-        }
-      } catch (e) {
-        console.error("Prediction failed for farm", farm.id, e);
-      } finally {
-        setLoadingPredictions(prev => ({ ...prev, [farm.id]: false }));
-      }
-    });
-  }, [farms, user]);
 
   return (
     <View className="flex-1 bg-slate-50">
@@ -102,8 +67,8 @@ export default function YieldFarmsListScreen() {
           {filteredFarms.map((farm) => {
             const isOnline = farm.deviceIds && farm.deviceIds.length > 0;
             const daysLeft = getDaysLeft(farm);
-            const predictedNuts = farmPredictions[farm.id];
-            const isPredicting = loadingPredictions[farm.id];
+            const predictedNuts = unifiedYields[farm.id];
+            const isPredicting = isUnifiedPredicting;
 
             return (
               <View key={farm.id} className="bg-white rounded-[24px] p-4 border border-slate-100 mb-2" style={{ shadowColor: '#12211C', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.06, shadowRadius: 25, elevation: 5 }}>

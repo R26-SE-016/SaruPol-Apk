@@ -1,43 +1,15 @@
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { useState, useEffect, useCallback } from "react";
-import { useTranslation } from "react-i18next";
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
-import {
-  Thermometer, Droplets, Waves, Sun, Cpu, Wifi, Battery, RefreshCw, AlertCircle,
-  Wind, CloudSun, CloudRain,
-} from "lucide-react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { Image } from "react-native";
+import { useState, useEffect } from "react";
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Image } from "react-native";
+import { ArrowLeft, MoreVertical, RefreshCw, Wifi, Battery, CheckCircle2, CloudRain, Thermometer, Droplets, Server, Activity } from "lucide-react-native";
 import { useYieldApp } from "@/store/YieldAppContext";
-import { YieldScreenHeader } from "@/components/yield/YieldScreenHeader";
 import { useYieldHybridTelemetry, resolveEnvValues } from "@/hooks/useYieldHybridTelemetry";
-import { weatherInfo, shortDayName, isToday } from "@/services/weatherService";
 
-
-
-/* Map weather service Tailwind color classes to hex values for RN icon color props */
-const WEATHER_COLOR_MAP: Record<string, string> = {
-  "text-amber-500": "#f59e0b",
-  "text-sky-500": "#0ea5e9",
-  "text-sky-600": "#0284c7",
-  "text-slate-400": "#94a3b8",
-  "text-slate-500": "#64748b",
-  "text-blue-600": "#2563eb",
-  "text-blue-700": "#1d4ed8",
-  "text-violet-600": "#7c3aed",
-  "text-violet-700": "#6d28d9",
-};
-
-function weatherColor(tailwindClass: string): string {
-  return WEATHER_COLOR_MAP[tailwindClass] ?? "#94a3b8";
-}
-
-export default function telemetryScreen() {
-  const { t } = useTranslation();
+export default function DeviceScreen() {
   const router = useRouter();
   const { id: farmIdRaw } = useLocalSearchParams();
   const farmId = Array.isArray(farmIdRaw) ? farmIdRaw[0] : (farmIdRaw || null);
-  const { user, farms, setCurrentFarmId, currentFarmId, currentZones } = useYieldApp();
+  const { farms, currentFarmId, setCurrentFarmId } = useYieldApp();
   
   useEffect(() => {
     if (farmId && currentFarmId !== farmId) {
@@ -46,154 +18,208 @@ export default function telemetryScreen() {
   }, [farmId, currentFarmId, setCurrentFarmId]);
 
   const farm = farms.find((f) => f.id === farmId);
-  const deviceId = farm?.deviceId ?? "—";
-  const { telemetry, weather, source, deviceLive, usedFallbackCoords, loading, error, refresh } =
-    useYieldHybridTelemetry(farm ?? null);
+  const deviceId = String(farm?.deviceIds?.[0] || farm?.deviceId || "—");
+  const { telemetry, weather, source, loading, refresh } = useYieldHybridTelemetry(farm ?? null);
+  const [dataSource, setDataSource] = useState<"sensor" | "api">("sensor");
 
-  const env = resolveEnvValues(telemetry, weather, source);
+  // Always use API for rainfall as requested by user. 
+  // Temperature & Humidity switch between API and Sensor based on toggle.
+  const env = {
+    temperature: dataSource === "api" && weather ? weather.temp : (telemetry?.temperature ?? null),
+    humidity: dataSource === "api" && weather ? weather.humidity : (telemetry?.humidity ?? null),
+    precipitation: weather?.precipitation ?? 0
+  };
 
   if (loading && !weather && !telemetry) {
     return (
-      <View className="flex-1 bg-slate-50 items-center justify-center">
-        <View className="items-center">
-          <ActivityIndicator size="large" color="#1e7550" />
-          <Text className="text-sm text-slate-500 mt-3">Fetching live data…</Text>
-        </View>
+      <View key="loading" className="flex-1 bg-slate-50 items-center justify-center">
+        <ActivityIndicator size="large" color="#1e7550" />
+        <Text className="text-sm text-slate-500 mt-3">Loading device data…</Text>
       </View>
     );
   }
 
-  const cards = [
-    { label: "Air Temperature", value: env.temperature, unit: "°C", icon: <Image source={{ uri: 'https://i.ibb.co/zTH989xR/temperature-gauge.png' }} style={{ width: 40, height: 40, resizeMode: 'contain' }} />, color: "#f97316", bg: "bg-orange-50", text: "text-orange-600" },
-    { label: "Air Humidity", value: env.humidity, unit: "%", icon: <Image source={{ uri: 'https://i.ibb.co/whDGSFxM/raindrop-percentage.png' }} style={{ width: 40, height: 40, resizeMode: 'contain' }} />, color: "#0ea5e9", bg: "bg-sky-50", text: "text-sky-600" },
-    { label: "Wind Speed", value: env.windSpeed, unit: "km/h", icon: <Wind size={40} color="#0d9488" />, color: "#14b8a6", bg: "bg-teal-50", text: "text-teal-600" },
-    { label: "Precipitation", value: env.precipitation, unit: "mm", icon: <Image source={{ uri: 'https://i.ibb.co/B2NrzxH3/cloud-rain.png' }} style={{ width: 40, height: 40, resizeMode: 'contain' }} />, color: "#3b82f6", bg: "bg-blue-50", text: "text-blue-600" },
-  ];
-
-  // IoT-only cards (only shown when device is live)
-  const iotCards = [
-    { label: t("yield.soilMoisture"), value: env.soilMoisture, unit: "%", icon: <Image source={{ uri: 'https://i.ibb.co/zHfw1qrH/soil-moisture.png' }} style={{ width: 40, height: 40, resizeMode: 'contain' }} />, color: "#10b981", bg: "bg-emerald-50", text: "text-emerald-600" },
-    { label: "Light Intensity", value: env.lightIntensity, unit: "Lux", icon: <Sun size={40} color="#d97706" />, color: "#f59e0b", bg: "bg-amber-50", text: "text-amber-600" },
-  ];
-
-  const WInfo = weatherInfo(env.weatherCode ?? -1);
-  const WIcon = WInfo.icon;
+  const isLive = source === "iot" || !!weather;
 
   return (
-    <View className="flex-1 bg-slate-50">
-      <YieldScreenHeader
-        title="Live Telemetry"
-        subtitle={`${source === "iot" ? "ESP32 sensor + Open-Meteo" : "Open-Meteo Live API"} · ${deviceId}`}
-        onBack={() => router.back()}
-        right={
-          <TouchableOpacity onPress={refresh} className="p-2 rounded-lg active:bg-slate-100">
-            <RefreshCw size={18} color="#64748b" />
+    <View key="content" className="flex-1 bg-slate-50">
+      {/* Header */}
+      <View className="bg-[#0C3B2E] pt-12 pb-4 px-4 flex-row items-center justify-between">
+        <View className="flex-row items-center gap-3">
+          <TouchableOpacity onPress={() => router.back()} className="p-1 -ml-1">
+            <ArrowLeft size={24} color="#fff" />
           </TouchableOpacity>
-        }
-      />
-
-      <ScrollView className="flex-1">
-        <View className="px-4 mt-4 pb-24 gap-4">
-          
-          {/* Multiple Devices Selector */}
-          {farm?.deviceIds && farm.deviceIds.length > 1 && (
-            <View className="mb-2">
-              <Text className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Select Device</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View className="flex-row gap-2">
-                  {farm.deviceIds.map((dId) => (
-                    <TouchableOpacity 
-                      key={dId} 
-                      className={`px-4 py-2 rounded-full border ${dId === deviceId ? 'bg-forest-600 border-forest-700' : 'bg-white border-slate-200'}`}
-                    >
-                      <Text className={`font-semibold text-sm ${dId === deviceId ? 'text-white' : 'text-slate-600'}`}>{dId}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </ScrollView>
-            </View>
-          )}
-
-          {source === "iot" ? (
-            <View className="flex-row items-start gap-2 bg-green-50 border border-green-200 rounded-xl p-3">
-              <View className="mt-0.5 flex-shrink-0"><Wifi size={16} color="#16a34a" /></View>
-              <View className="flex-1">
-                <Text className="text-sm font-bold text-green-800">Connected to {deviceId}</Text>
-                <Text className="text-xs text-green-700 mt-0.5">Live sensor data is streaming correctly.</Text>
-              </View>
-            </View>
-          ) : (
-            <View className="flex-row items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-4">
-              <View className="mt-0.5 flex-shrink-0"><AlertCircle size={20} color="#d97706" /></View>
-              <View className="flex-1">
-                <Text className="text-sm font-bold text-amber-800">No Data Received from {deviceId}</Text>
-                <Text className="text-xs text-amber-700 mt-1">Please check the power supply or Wi-Fi connection for this device.</Text>
-              </View>
-            </View>
-          )}
-
-          {source === "iot" && telemetry ? (
-            <View className="gap-3 mt-2">
-              <MetricRow 
-                icon={<Battery size={24} color="#10b981" />} 
-                label="Battery Level & Power" 
-                value={`${telemetry.batteryLevel}% — Solar Powered`} 
-                subtext="Battery is healthy and charging normally"
-              />
-              <MetricRow 
-                icon={<Wifi size={24} color="#0284c7" />} 
-                label="Signal Strength" 
-                value={`Wi-Fi: Strong`} 
-                subtext="Stable connection to farm network"
-              />
-              <MetricRow 
-                icon={<RefreshCw size={24} color="#6366f1" />} 
-                label="Last Synced Timestamp" 
-                value={`Last updated ${telemetry.lastSync}`} 
-                subtext="Data is flowing smoothly"
-              />
-
-              {telemetry.batteryLevel < 20 && (
-                <View className="flex-row items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-4 mt-2">
-                  <AlertCircle size={20} color="#dc2626" />
-                  <View className="flex-1">
-                    <Text className="text-sm font-bold text-red-800">Critical Battery Alert</Text>
-                    <Text className="text-xs text-red-600 mt-1">Battery is below 20%. Please check solar panel for debris or shading.</Text>
-                  </View>
-                </View>
-              )}
-              
-              {env.soilMoisture != null && (
-                <View className="mt-2 bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex-row items-center justify-between">
-                  <View className="flex-row items-center gap-3">
-                    <Image source={{ uri: 'https://i.ibb.co/zHfw1qrH/soil-moisture.png' }} style={{ width: 40, height: 40, resizeMode: 'contain' }} />
-                    <View>
-                      <Text className="text-sm font-bold text-slate-800">{t("yield.soilMoisture")}</Text>
-                      <Text className="text-xs text-slate-500">Live reading from root zone</Text>
-                    </View>
-                  </View>
-                  <Text className="text-2xl font-bold text-emerald-600">{Math.round(env.soilMoisture)}%</Text>
-                </View>
-              )}
-            </View>
-          ) : null}
+          <View>
+            <Text className="text-white text-[19px] font-bold">Device</Text>
+            <Text className="text-emerald-100 text-xs mt-0.5">Active Farm: {farm?.name || "Sigiriya state"}</Text>
+          </View>
         </View>
-      </ScrollView>
-    </View>
-  );
-}
+      </View>
 
-function MetricRow({ icon, label, value, subtext }: { icon: React.ReactNode; label: string; value: string; subtext?: string }) {
-  return (
-    <View className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex-row items-center gap-4">
-      <View className="w-12 h-12 rounded-xl bg-slate-50 items-center justify-center">
-        {icon}
-      </View>
-      <View className="flex-1">
-        <Text className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{label}</Text>
-        <Text className="text-base font-bold text-slate-800 mt-0.5">{value}</Text>
-        {subtext && <Text className="text-[10px] text-slate-500 mt-1">{subtext}</Text>}
-      </View>
+      <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ gap: 16, paddingBottom: 100 }}>
+        {/* Top Card */}
+        <View className="bg-white rounded-3xl p-4 border border-slate-100 shadow-sm">
+          <View className="flex-row items-center gap-4">
+            <View className="w-24 h-24 bg-[#F2FAF6] rounded-full items-center justify-center relative border-[6px] border-white shadow-sm overflow-visible" style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 2 }}>
+              <Image source={{ uri: 'https://i.ibb.co/HDHPBzpp/device.png' }} style={{ width: 64, height: 64, resizeMode: 'contain' }} />
+              {isLive && (
+                <View className="absolute bottom-0 right-0 w-7 h-7 bg-[#16a34a] border-4 border-white rounded-full items-center justify-center">
+                  <CheckCircle2 size={14} color="#fff" strokeWidth={3} />
+                </View>
+              )}
+            </View>
+            <View className="flex-1">
+              <Text className="text-xs font-semibold text-slate-500 mb-1">Device ID</Text>
+              <View className="flex-row items-center gap-3 mb-2">
+                <Text className="text-3xl font-black text-slate-800">{deviceId}</Text>
+                {isLive && (
+                  <View className="bg-green-50 px-2.5 py-1 rounded-full flex-row items-center gap-1.5 border border-green-100">
+                    <View className="w-2 h-2 bg-green-500 rounded-full" />
+                    <Text className="text-[10px] font-bold text-green-700 uppercase tracking-wider">Active</Text>
+                  </View>
+                )}
+              </View>
+              <View className="flex-row items-center gap-1.5">
+                <Text className="text-[11px] text-slate-500">Last updated: {telemetry?.lastSync || "Just now"}</Text>
+                <TouchableOpacity onPress={refresh} className="ml-1"><RefreshCw size={12} color="#16a34a" /></TouchableOpacity>
+              </View>
+            </View>
+          </View>
+          <View className="mt-5 bg-[#F0FDF4] rounded-xl p-3 flex-row items-center gap-2 border border-[#DCFCE7]">
+            <View className="w-6 h-6 bg-white rounded-full items-center justify-center shadow-sm" style={{ elevation: 1 }}>
+               <Wifi size={12} color="#16a34a" />
+            </View>
+            <Text className="text-xs font-bold text-[#166534]">Device is online and working properly</Text>
+          </View>
+        </View>
+
+        {/* Environment Data */}
+        <View className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm">
+          <View className="flex-row items-center justify-between mb-5">
+            <View className="flex-row items-center gap-2">
+              <View className="w-8 h-8 bg-green-50 rounded-full items-center justify-center">
+                <Image source={{ uri: 'https://i.ibb.co/21Yzy5fW/iot-sensor.png' }} style={{ width: 16, height: 16, resizeMode: 'contain', tintColor: '#16a34a' }} />
+              </View>
+              <Text className="text-sm font-bold text-slate-800">Environment Data</Text>
+            </View>
+            <View className="flex-row items-center gap-1">
+              <Text className="text-[10px] font-bold text-green-600">Updated just now</Text>
+              <RefreshCw size={12} color="#16a34a" />
+            </View>
+          </View>
+          
+          {/* Data Source Toggle */}
+          <View className="flex-row bg-slate-100 p-1 rounded-xl mb-5">
+            <TouchableOpacity 
+              onPress={() => setDataSource("sensor")}
+              className={`flex-1 py-2 rounded-lg items-center justify-center ${dataSource === "sensor" ? "bg-white" : ""}`}
+            >
+              <Text className={`text-xs font-bold ${dataSource === "sensor" ? "text-green-800" : "text-slate-500"}`}>Live Sensor</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={() => setDataSource("api")}
+              className={`flex-1 py-2 rounded-lg items-center justify-center ${dataSource === "api" ? "bg-white" : ""}`}
+            >
+              <Text className={`text-xs font-bold ${dataSource === "api" ? "text-green-800" : "text-slate-500"}`}>Weather API</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View className="flex-row justify-between items-center border-t border-slate-100 pt-5">
+            <View className="items-center flex-1 border-r border-slate-100">
+              <View className="flex-row items-center gap-2 mb-2">
+                <Thermometer size={24} color="#ef4444" />
+                <View className="flex-row items-baseline">
+                  <Text className="text-2xl font-black text-slate-800">
+                    {env.temperature != null && !isNaN(Number(env.temperature)) ? Math.round(Number(env.temperature)) : "—"}
+                  </Text>
+                  <Text className="text-xs font-bold text-slate-500 ml-0.5">°C</Text>
+                </View>
+              </View>
+              <Text className="text-[10px] text-slate-500 font-semibold">Air Temperature</Text>
+            </View>
+            
+            <View className="items-center flex-1 border-r border-slate-100">
+              <View className="flex-row items-center gap-2 mb-2">
+                <Droplets size={24} color="#0ea5e9" />
+                <View className="flex-row items-baseline">
+                  <Text className="text-2xl font-black text-slate-800">
+                    {env.humidity != null && !isNaN(Number(env.humidity)) ? Math.round(Number(env.humidity)) : "—"}
+                  </Text>
+                  <Text className="text-xs font-bold text-slate-500 ml-0.5">%</Text>
+                </View>
+              </View>
+              <Text className="text-[10px] text-slate-500 font-semibold">Humidity</Text>
+            </View>
+            
+            <View className="items-center flex-1">
+              <View className="flex-row items-center gap-2 mb-2">
+                <CloudRain size={24} color="#3b82f6" />
+                <View className="flex-row items-baseline">
+                  <Text className="text-2xl font-black text-slate-800">
+                    {env.precipitation != null && !isNaN(Number(env.precipitation)) ? Number(env.precipitation).toFixed(1) : "0"}
+                  </Text>
+                  <Text className="text-xs font-bold text-slate-500 ml-0.5">mm</Text>
+                </View>
+              </View>
+              <Text className="text-[10px] text-slate-500 font-semibold">Rainfall</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Device Status */}
+        <View className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm">
+          <View className="flex-row items-center gap-2 mb-5">
+            <Activity size={18} color="#16a34a" />
+            <Text className="text-sm font-bold text-slate-800">Device Status</Text>
+          </View>
+          
+          <View className="gap-4">
+            <View className="flex-row items-center justify-between border-b border-slate-50 pb-3">
+              <View className="flex-row items-center gap-3">
+                <View className="w-8 h-8 bg-slate-50 rounded-full items-center justify-center"><Activity size={16} color="#64748b" /></View>
+                <Text className="text-xs font-semibold text-slate-600">Device Power</Text>
+              </View>
+              <Text className="text-sm font-bold text-emerald-600">ON</Text>
+            </View>
+            
+            <View className="flex-row items-center justify-between border-b border-slate-50 pb-3">
+              <View className="flex-row items-center gap-3">
+                <View className="w-8 h-8 bg-slate-50 rounded-full items-center justify-center"><Wifi size={16} color="#64748b" /></View>
+                <Text className="text-xs font-semibold text-slate-600">Connection</Text>
+              </View>
+              <Text className="text-sm font-bold text-emerald-600">Strong ( - 65 dBm )</Text>
+            </View>
+            
+            <View className="flex-row items-center justify-between border-b border-slate-50 pb-3">
+              <View className="flex-row items-center gap-3">
+                <View className="w-8 h-8 bg-slate-50 rounded-full items-center justify-center"><Battery size={16} color="#64748b" /></View>
+                <Text className="text-xs font-semibold text-slate-600">Battery Level</Text>
+              </View>
+              <View className="flex-row items-center gap-2 bg-emerald-50 px-2 py-1 rounded-md">
+                <Text className="text-xs font-bold text-emerald-700">{telemetry?.batteryLevel || 87}%</Text>
+                <Battery size={14} color="#16a34a" />
+              </View>
+            </View>
+            
+            <View className="flex-row items-center justify-between border-b border-slate-50 pb-3">
+              <View className="flex-row items-center gap-3">
+                <View className="w-8 h-8 bg-slate-50 rounded-full items-center justify-center"><Server size={16} color="#64748b" /></View>
+                <Text className="text-xs font-semibold text-slate-600">Data Storage</Text>
+              </View>
+              <Text className="text-xs font-bold text-slate-800">65% used</Text>
+            </View>
+            
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center gap-3">
+                <View className="w-8 h-8 bg-slate-50 rounded-full items-center justify-center"><CheckCircle2 size={16} color="#64748b" /></View>
+                <Text className="text-xs font-semibold text-slate-600">System Health</Text>
+              </View>
+              <Text className="text-xs font-bold text-emerald-600">Good</Text>
+            </View>
+          </View>
+        </View>
+
+      </ScrollView>
     </View>
   );
 }

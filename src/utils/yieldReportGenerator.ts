@@ -42,8 +42,8 @@ export async function exportReportPDF(data: ReportData): Promise<void> {
   const hasRecs = hasHealthRecords(trees);
   const allHealthy = allTreesHealthy(trees);
 
-  const dist = { Good: 0, Average: 0, Weak: 0 };
-  trees.forEach((t) => { dist[t.health]++; });
+  const dist: Record<string, number> = { Good: 0, Average: 0, Weak: 0, "Need Attention": 0 };
+  trees.forEach((t) => { if (dist[t.health] !== undefined) dist[t.health]++; });
 
   const byZone = new Map<string, typeof advisories>();
   for (const a of advisories) {
