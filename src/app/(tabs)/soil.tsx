@@ -18,168 +18,171 @@ export default function SoilDashboard() {
   const router = useRouter();
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Top Header Section Card */}
-      <View style={styles.headerCard}>
-        <View style={styles.headerGreenAccent} />
-        <View style={styles.headerTextGroup}>
-          <Text style={styles.headerTitle}>Nutrition Checker</Text>
-          <Text style={styles.headerSubtitle}>
-            Monitor and manage plant nutrients
-          </Text>
+    <View style={styles.container}>
+      {/* Top Header Section Card (FIXED) */}
+      <View style={styles.fixedHeaderContainer}>
+        <View style={styles.headerCard}>
+          <View style={styles.headerGreenAccent} />
+          <View style={styles.headerTextGroup}>
+            <Text style={styles.headerTitle}>Nutrition Checker</Text>
+            <Text style={styles.headerSubtitle}>
+              Monitor and manage plant nutrients
+            </Text>
+          </View>
         </View>
       </View>
 
-      {/* Promo Banner Section */}
-      <TouchableOpacity
-        style={styles.promoBannerContainer}
-        activeOpacity={0.95}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        <ImageBackground
-          source={require('../../../assets/images/coconut_promo_bg.png')}
-          style={styles.promoBannerBackground}
-          imageStyle={styles.promoBannerImage}
+        {/* Promo Banner Section */}
+        <TouchableOpacity
+          style={styles.promoBannerContainer}
+          activeOpacity={0.95}
         >
-          <LinearGradient
-            colors={['rgba(27, 44, 26, 0.95)', 'rgba(27, 44, 26, 0.55)', 'rgba(0, 0, 0, 0)']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.promoBannerOverlay}
+          <ImageBackground
+            source={require('../../../assets/images/coconut_promo_bg.png')}
+            style={styles.promoBannerBackground}
+            imageStyle={styles.promoBannerImage}
           >
+            <LinearGradient
+              colors={['rgba(27, 44, 26, 0.95)', 'rgba(27, 44, 26, 0.55)', 'rgba(0, 0, 0, 0)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.promoBannerOverlay}
+            >
 
-          </LinearGradient>
-        </ImageBackground>
-      </TouchableOpacity>
-
-      {/* 4 Parameter Cards Row/Grid (N, P, K, Magnesium) */}
-      <View style={styles.cardsGrid}>
-        {/* Nitrogen Card */}
-        <MetricCard
-          icon="leaf-outline"
-          label="Nitrogen"
-          value="1.9 - 2.1"
-          unit="mg/kg"
-          status="Optimal"
-          currentVal={2}
-          minVal={0}
-          maxVal={5}
-          targetText="CRI Recommendation range"
-        />
-
-        {/* Phosphorus Card */}
-        <MetricCard
-          icon="layers-outline"
-          label="Phosphorus"
-          value="0.11 - 0.13"
-          unit="mg/kg"
-          status="Optimal"
-          currentVal={0.12}
-          minVal={0}
-          maxVal={0.5}
-          targetText="CRI Recommendation range"
-        />
-
-        {/* Potassium Card */}
-        <MetricCard
-          icon="cube-outline"
-          label="Potassium"
-          value="1.2 - 1.5"
-          unit="mg/kg"
-          status="Optimal"
-          currentVal={1.35}
-          minVal={0}
-          maxVal={3}
-          targetText="CRI Recommendation range"
-        />
-
-        {/* Magnesium Card */}
-        <MetricCard
-          icon="nutrition-outline"
-          label="Magnesium"
-          value="0.20 - 0.35"
-          unit="mg/kg"
-          status="Optimal"
-          currentVal={0.25}
-          minVal={0}
-          maxVal={1.0}
-          targetText="CRI Recommendation range"
-        />
-      </View>
-
-      <Text style={styles.sectionHeader}>Nutrient Diagnostic Tools</Text>
-      <View style={styles.sectionContainer}>
-
-        {/* Tool 1: Leaf Nutrient Scan */}
-        <TouchableOpacity
-          style={styles.nutrientBtn}
-          activeOpacity={0.85}
-          onPress={() => router.push('/(screens)/nutrient-analysis' as any)}
-        >
-          <View style={styles.nutrientBtnContent}>
-            <View style={styles.iconCircleGreen}>
-              <Ionicons name="camera" size={20} color="#4CAF50" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.nutrientBtnTitle}>
-                Leaf Nutrient Scan
-              </Text>
-              <Text style={styles.nutrientBtnSub}>
-                Analyze Leaf images for Nitrogen & Boron deficiencies instantly
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#4CAF50" />
-          </View>
+            </LinearGradient>
+          </ImageBackground>
         </TouchableOpacity>
 
-        {/* Tool 2: Enter Lab Test Results */}
-        <TouchableOpacity
-          style={styles.labBtn}
-          activeOpacity={0.85}
-          onPress={() => router.push('/(screens)/lab-test-entry' as any)}
-        >
-          <View style={styles.nutrientBtnContent}>
-            <View style={styles.iconCircleBlue}>
-              <Ionicons name="flask" size={20} color="#005A9C" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.nutrientBtnTitle, { color: '#005A9C' }]}>
-                Lab Test Results
-              </Text>
-              <Text style={styles.nutrientBtnSub}>
-                Enter laboratory soil reports to calculate precise corrective plans
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#005A9C" />
-          </View>
-        </TouchableOpacity>
+        {/* Section Header for Leaf Analysis Range */}
+        <Text style={styles.cardsSectionHeader}>CRI Recommendation Range for 14th Leaf</Text>
 
-        {/* Tool 3: Coconut Deficiencies Guide */}
-        <TouchableOpacity
-          style={styles.deficiencyBtn}
-          activeOpacity={0.85}
-          onPress={() => router.push('/(screens)/deficiencies' as any)}
-        >
-          <View style={styles.nutrientBtnContent}>
-            <View style={styles.iconCircleOrange}>
-              <Ionicons name="book" size={20} color="#FF6D00" />
+        {/* 4 Parameter Cards Row/Grid (N, P, K, Magnesium) */}
+        <View style={styles.cardsGrid}>
+          {/* Nitrogen Card */}
+          <MetricCard
+            icon="leaf-outline"
+            label="Nitrogen"
+            value="1.9 - 2.1"
+            unit="%"
+            status="Optimal"
+            currentVal={2}
+            minVal={0}
+            maxVal={5}
+          />
+
+          {/* Phosphorus Card */}
+          <MetricCard
+            icon="layers-outline"
+            label="Phosphorus"
+            value="0.11 - 0.13"
+            unit="%"
+            status="Optimal"
+            currentVal={0.12}
+            minVal={0}
+            maxVal={0.5}
+          />
+
+          {/* Potassium Card */}
+          <MetricCard
+            icon="cube-outline"
+            label="Potassium"
+            value="1.2 - 1.5"
+            unit="%"
+            status="Optimal"
+            currentVal={1.35}
+            minVal={0}
+            maxVal={3}
+          />
+
+          {/* Magnesium Card */}
+          <MetricCard
+            icon="nutrition-outline"
+            label="Magnesium"
+            value="0.20 - 0.35"
+            unit="%"
+            status="Optimal"
+            currentVal={0.25}
+            minVal={0}
+            maxVal={1.0}
+          />
+        </View>
+
+        <Text style={styles.sectionHeader}>Nutrient Diagnostic Tools</Text>
+        <View style={styles.sectionContainer}>
+
+          {/* Tool 1: Leaf Nutrient Scan */}
+          <TouchableOpacity
+            style={styles.nutrientBtn}
+            activeOpacity={0.85}
+            onPress={() => router.push('/(screens)/nutrient-analysis' as any)}
+          >
+            <View style={styles.nutrientBtnContent}>
+              <View style={styles.iconCircleGreen}>
+                <Ionicons name="camera" size={20} color="#4CAF50" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.nutrientBtnTitle}>
+                  Leaf Nutrient Scan
+                </Text>
+                <Text style={styles.nutrientBtnSub}>
+                  Analyze Leaf images for Nitrogen & Boron deficiencies instantly
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#4CAF50" />
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.nutrientBtnTitle, { color: '#FF6D00' }]}>
-                Coconut Deficiencies Guide
-              </Text>
-              <Text style={styles.nutrientBtnSub}>
-                Browse visual symptoms and official CRI corrective measures
-              </Text>
+          </TouchableOpacity>
+
+          {/* Tool 2: Enter Lab Test Results */}
+          <TouchableOpacity
+            style={styles.labBtn}
+            activeOpacity={0.85}
+            onPress={() => router.push('/(screens)/lab-test-entry' as any)}
+          >
+            <View style={styles.nutrientBtnContent}>
+              <View style={styles.iconCircleBlue}>
+                <Ionicons name="flask" size={20} color="#005A9C" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.nutrientBtnTitle, { color: '#005A9C' }]}>
+                  Lab Test Results
+                </Text>
+                <Text style={styles.nutrientBtnSub}>
+                  Enter laboratory soil reports to calculate precise corrective plans
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#005A9C" />
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#FF6D00" />
-          </View>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+          </TouchableOpacity>
+
+          {/* Tool 3: Coconut Deficiencies Guide */}
+          <TouchableOpacity
+            style={styles.deficiencyBtn}
+            activeOpacity={0.85}
+            onPress={() => router.push('/(screens)/deficiencies' as any)}
+          >
+            <View style={styles.nutrientBtnContent}>
+              <View style={styles.iconCircleOrange}>
+                <Ionicons name="book" size={20} color="#FF6D00" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.nutrientBtnTitle, { color: '#FF6D00' }]}>
+                  Coconut Deficiencies Guide
+                </Text>
+                <Text style={styles.nutrientBtnSub}>
+                  Browse visual symptoms and official CRI corrective measures
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#FF6D00" />
+            </View>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -315,10 +318,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F7F7F4',
   },
-  content: {
+  fixedHeaderContainer: {
     paddingTop: Platform.OS === 'ios' ? 56 : 28,
     paddingHorizontal: 16,
+    backgroundColor: '#F7F7F4',
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
     paddingBottom: 40,
+    paddingTop: 0,
   },
   headerCard: {
     backgroundColor: '#FFFFFF',
@@ -444,6 +452,16 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.03,
     shadowRadius: 6,
     elevation: 2,
+  },
+  cardsSectionHeader: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#78909C',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginTop: 14,
+    marginBottom: 8,
+    paddingLeft: 4,
   },
   sectionHeader: {
     fontSize: 12,

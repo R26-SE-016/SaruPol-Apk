@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -8,13 +8,16 @@ import {
   Image,
   Platform,
   Dimensions,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, ROUNDING } from '../../constants/theme';
 import GradientButton from '../../components/common/GradientButton';
-import { NutrientAnalysisResponse } from '../../services/nutrientService';
+import { NutrientAnalysisResponse, saveNutrientScan, getDeficiencies } from '../../services/nutrientService';
 import { getStandardRecommendation } from '../../services/fertilizerTables';
+import { useAppStore } from '../../store/appStore';
 
 const { width } = Dimensions.get('window');
 
@@ -45,6 +48,7 @@ const DEFICIENCY_EXPLANATIONS: Record<string, { chemicalSymbol: string; themeCol
   }
 };
 
+
 export default function NutrientResultScreen() {
   const router = useRouter();
   const { data, imageUri, palmAge, palmStage, zone } = useLocalSearchParams<{ 
@@ -55,6 +59,64 @@ export default function NutrientResultScreen() {
     zone?: string;
   }>();
   
+  const { user, isGuest, isConnected } = useAppStore();
+  const [isSaving, setIsSaving] = useState(false);
+  const [deficiencies, setDeficiencies] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchRules = async () => {
+      try {
+        const data = await getDeficiencies();
+        if (data && data.length > 0) {
+          setDeficiencies(data);
+        }
+      } catch (err) {
+        console.warn("Failed to fetch deficiencies. Using offline local fallback.");
+      }
+    };
+    fetchRules();
+  }, []);
+
+  const handleSaveResults = async () => {
+    if (isGuest || !user) {
+      Alert.alert(
+        "Guest Mode",
+        "You are in guest mode. Scan results will only be saved to local history.",
+        [{ text: "OK", onPress: () => router.navigate('/(tabs)/soil') }]
+      );
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      if (isConnected) {
+        await saveNutrientScan({
+          user_id: user.id.toString(),
+          palm_age: palmAge || '8',
+          palm_stage: palmStage || 'adult',
+          zone: zone || 'wet',
+          image_uri: imageUri || '',
+          prediction: result?.prediction || null,
+          recommendation: result?.recommendation || null,
+        });
+        Alert.alert("Success", "Scan results saved successfully to your cloud profile.", [
+          { text: "OK", onPress: () => router.navigate('/(tabs)/soil') }
+        ]);
+      } else {
+        Alert.alert("Offline", "You are offline. Results will be synced when you reconnect.", [
+          { text: "OK", onPress: () => router.navigate('/(tabs)/soil') }
+        ]);
+      }
+    } catch (error: any) {
+      console.error("Failed to save scan result:", error);
+      Alert.alert("Save Failed", "Failed to save results to Firebase. Navigating back to soil tab.", [
+        { text: "OK", onPress: () => router.navigate('/(tabs)/soil') }
+      ]);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const criRecommendation = getStandardRecommendation(palmAge || '', palmStage || '', zone || '');
   
   let result: NutrientAnalysisResponse | null = null;
@@ -145,7 +207,17 @@ export default function NutrientResultScreen() {
 
     // 3. DEFICIENCY (Boron, Nitrogen, etc.)
     const nutrientKey = (prediction.nutrient || '').trim().toLowerCase();
-    const exp = DEFICIENCY_EXPLANATIONS[nutrientKey];
+    
+    // Find matching deficiency in our fetched list
+    const dbDeficiency = deficiencies.find(d => d.id.toLowerCase() === nutrientKey);
+    
+    // Map db data or fallback to local static data
+    const exp = dbDeficiency ? {
+      chemicalSymbol: dbDeficiency.chemicalSymbol,
+      themeColor: dbDeficiency.themeColor,
+      description: dbDeficiency.description || dbDeficiency.overview,
+      advice: dbDeficiency.advice || dbDeficiency.correctiveMeasures?.join('\n')
+    } : DEFICIENCY_EXPLANATIONS[nutrientKey];
 
     return (
       <View>
@@ -273,12 +345,14 @@ export default function NutrientResultScreen() {
         </TouchableOpacity>
 
         <GradientButton 
-          title="Done & Save Results" 
-          onPress={() => router.navigate('/(tabs)/soil')} 
-          style={styles.doneBtn} 
+          title={isSaving ? "Saving..." : "Done & Save Results"} 
+          onPress={handleSaveResults} 
+          style={styles.doneBtn}
+          disabled={isSaving}
         />
         
       </ScrollView>
+
     </View>
   );
 }

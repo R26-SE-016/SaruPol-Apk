@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -8,27 +8,23 @@ import {
   Image,
   Platform,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/theme';
+import { getDeficiencies, DeficiencyDetail } from '../../services/nutrientService';
 
 const { width } = Dimensions.get('window');
 
-interface DeficiencyDetail {
-  id: string;
-  nameEn: string;
-  chemicalSymbol: string;
-  criticalRange: string;
-  overview: string;
-  symptoms: string[];
-  causes: string[];
-  correctiveMeasures: string[];
-  image: any;
-  themeColor: string;
-}
+const LOCAL_DEFICIENCY_IMAGES: Record<string, any> = {
+  nitrogen: require('../../../assets/nutrition/Nitrogen.png'),
+  potassium: require('../../../assets/nutrition/Potassium.png'),
+  magnesium: require('../../../assets/nutrition/Magnesium.png'),
+  boron: require('../../../assets/nutrition/Boron.png'),
+};
 
-const DEFICIENCIES_DATA: DeficiencyDetail[] = [
+const LOCAL_DEFICIENCIES_DATA: DeficiencyDetail[] = [
   {
     id: 'nitrogen',
     nameEn: 'Nitrogen Deficiency',
@@ -53,8 +49,9 @@ const DEFICIENCIES_DATA: DeficiencyDetail[] = [
       'Grow cover crops (like Mucuna bracteata) in the interspaces to fix atmospheric nitrogen.',
       'Practice proper mulching with coconut husks in the 1.8m manure circle to retain soil moisture and reduce nitrogen volatilization.'
     ],
-    image: require('../../../assets/nutrition/Nitrogen.png'),
     themeColor: '#4CAF50',
+    description: 'Nitrogen deficiency causes general yellowing (chlorosis) of older leaves first, progressing to the younger leaves. The growth rate slows down, fronds become shorter, and the crown becomes thin, significantly dropping nut size and yield.',
+    advice: 'Apply an additional 100-200g of Urea per palm depending on the growth stage. Incorporate organic manure, compost, or cover crops (like Mucuna) to naturally raise soil organic matter and mulch the base.'
   },
   {
     id: 'potassium',
@@ -79,8 +76,9 @@ const DEFICIENCIES_DATA: DeficiencyDetail[] = [
       'Bury coconut husks and fronds in trenches between rows (husk burial). Coconut husks are rich in potassium and store moisture.',
       'Ensure balanced fertilizer application since excess calcium/magnesium can inhibit potassium uptake.'
     ],
-    image: require('../../../assets/nutrition/Potassium.png'),
     themeColor: '#FF9800',
+    description: 'Potassium deficiency is common in sandy soils. It shows as orange-yellow chlorotic spots on older leaves, with leaflet margins and tips exhibiting burning/necrosis. Midribs weaken and fronds hang down or break prematurely.',
+    advice: 'Apply an additional 500g of Muriate of Potash (MOP) per adult palm per year. Bury coconut husks and fronds in trenches between rows to recycle potassium and preserve moisture.'
   },
   {
     id: 'magnesium',
@@ -103,8 +101,9 @@ const DEFICIENCIES_DATA: DeficiencyDetail[] = [
       'For young palms showing symptoms: Apply 0.5 kg of Kieserite half-yearly.',
       'For long-term prevention: Apply 1 kg of Dolomite per palm per year. Apply dolomite at least 2 weeks before or after applying chemical fertilizers.'
     ],
-    image: require('../../../assets/nutrition/Magnesium.png'),
     themeColor: '#009688',
+    description: 'Magnesium deficiency is characterized by a V-shaped yellowing on older leaves, where leaflet margins turn bright orange-yellow while the midrib area remains green. Photosynthesis is severely reduced, affecting root and nut growth.',
+    advice: 'For severe cases: Apply 1 kg Kieserite (Magnesium Sulphate) per adult palm half-yearly (apply NPK to one half of the circle and Kieserite to the other). For long-term prevention, apply 1 kg Dolomite per palm per year.'
   },
   {
     id: 'boron',
@@ -130,14 +129,34 @@ const DEFICIENCIES_DATA: DeficiencyDetail[] = [
       'Ensure the soil is moist during application to facilitate uptake.',
       'Caution: Apply strictly according to recommended rates, as boron has a narrow range between deficiency and toxicity.'
     ],
-    image: require('../../../assets/nutrition/Boron.png'),
     themeColor: '#E91E63',
+    description: 'Boron deficiency manifests as \'Hook Leaf\' on emerging fronds where leaflet tips are bent and rigid. Spear leaves fail to open, inflorescences become necrotic, and the palm produces flat-sided, barren nuts due to poor cell division.',
+    advice: 'Apply 20g of Sodium Tetraborate (Borax) per mature or young palm at 6-month intervals until symptoms disappear. Seedlings should receive 10g Borax.'
   }
 ];
 
 export default function DeficienciesScreen() {
   const router = useRouter();
+  const [deficiencies, setDeficiencies] = useState<DeficiencyDetail[]>(LOCAL_DEFICIENCIES_DATA);
   const [selectedDeficiency, setSelectedDeficiency] = useState<DeficiencyDetail | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const loadDeficienciesData = async () => {
+      setIsLoading(true);
+      try {
+        const data = await getDeficiencies();
+        if (data && data.length > 0) {
+          setDeficiencies(data);
+        }
+      } catch (err) {
+        console.warn('Failed to load deficiencies from Firebase, using local offline fallback:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadDeficienciesData();
+  }, []);
 
   const handleBack = () => {
     if (selectedDeficiency) {
@@ -145,6 +164,10 @@ export default function DeficienciesScreen() {
     } else {
       router.back();
     }
+  };
+
+  const getDeficiencyImage = (id: string) => {
+    return LOCAL_DEFICIENCY_IMAGES[id.toLowerCase()] || LOCAL_DEFICIENCY_IMAGES['nitrogen'];
   };
 
   return (
@@ -167,7 +190,7 @@ export default function DeficienciesScreen() {
             {/* Image banner */}
             <View style={styles.imageContainer}>
               <Image
-                source={selectedDeficiency.image}
+                source={getDeficiencyImage(selectedDeficiency.id)}
                 style={styles.detailImage}
                 resizeMode="cover"
               />
@@ -233,38 +256,46 @@ export default function DeficienciesScreen() {
             </Text>
           </View>
 
-          <View style={styles.grid}>
-            {DEFICIENCIES_DATA.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.card}
-                activeOpacity={0.9}
-                onPress={() => setSelectedDeficiency(item)}
-              >
-                <View style={styles.cardImageContainer}>
-                  <Image source={item.image} style={styles.cardImage} resizeMode="cover" />
-                  <View style={[styles.cardSymbolBadge, { backgroundColor: item.themeColor }]}>
-                    <Text style={styles.cardSymbolText}>{item.chemicalSymbol}</Text>
+          {isLoading ? (
+            <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+              <ActivityIndicator size="large" color={COLORS.primary} />
+              <Text style={{ marginTop: 12, color: '#666', fontSize: 14 }}>Loading deficiency guidelines...</Text>
+            </View>
+          ) : (
+            <View style={styles.grid}>
+              {deficiencies.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.card}
+                  activeOpacity={0.9}
+                  onPress={() => setSelectedDeficiency(item)}
+                >
+                  <View style={styles.cardImageContainer}>
+                    <Image source={getDeficiencyImage(item.id)} style={styles.cardImage} resizeMode="cover" />
+                    <View style={[styles.cardSymbolBadge, { backgroundColor: item.themeColor }]}>
+                      <Text style={styles.cardSymbolText}>{item.chemicalSymbol}</Text>
+                    </View>
                   </View>
-                </View>
 
-                <View style={styles.cardBody}>
-                  <Text style={styles.cardNameEn}>{item.nameEn}</Text>
-                  <Text style={styles.cardRange}>Range: {item.criticalRange}</Text>
+                  <View style={styles.cardBody}>
+                    <Text style={styles.cardNameEn}>{item.nameEn}</Text>
+                    <Text style={styles.cardRange}>Range: {item.criticalRange}</Text>
 
-                  <View style={styles.cardFooter}>
-                    <Text style={[styles.learnMoreText, { color: COLORS.primary }]}>Learn More</Text>
-                    <Ionicons name="arrow-forward" size={16} color={COLORS.primary} />
+                    <View style={styles.cardFooter}>
+                      <Text style={[styles.learnMoreText, { color: COLORS.primary }]}>Learn More</Text>
+                      <Ionicons name="arrow-forward" size={16} color={COLORS.primary} />
+                    </View>
                   </View>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </ScrollView>
       )}
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
@@ -316,13 +347,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 12,
+    flexDirection: 'column',
+    gap: 16,
   },
   card: {
-    width: (width - 44) / 2,
+    width: '100%',
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
@@ -336,7 +365,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   cardImageContainer: {
-    height: 110,
+    height: 140,
     position: 'relative',
     backgroundColor: '#F3F2EB',
   },
