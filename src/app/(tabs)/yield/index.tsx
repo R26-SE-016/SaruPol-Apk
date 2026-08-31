@@ -224,31 +224,7 @@ export default function YieldDashboardScreen() {
     (f.locationName && f.locationName.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  let daysRemaining = 45;
-  
-  if (currentFarm) {
-    let bestDateStr = currentFarm.lastHarvestDate || currentFarm.createdAt;
-    
-    // If we have recent harvest logs, check if they are newer
-    if (recentHarvestLogs && recentHarvestLogs.length > 0 && recentHarvestLogs[0]?.date) {
-      const logDate = new Date(recentHarvestLogs[0].date).getTime();
-      const currBest = bestDateStr ? new Date(bestDateStr).getTime() : 0;
-      
-      if (!isNaN(logDate) && logDate > currBest) {
-        bestDateStr = recentHarvestLogs[0].date;
-      }
-    }
-    
-    if (bestDateStr) {
-      const lastTime = new Date(bestDateStr).getTime();
-      if (!isNaN(lastTime)) {
-        const nextPick = lastTime + (45 * 24 * 60 * 60 * 1000);
-        const diff = Math.ceil((nextPick - Date.now()) / (24 * 60 * 60 * 1000));
-        // Sanity bound check to avoid crazy numbers if device clock is wrong
-        daysRemaining = diff > 45 ? 45 : (diff < -365 ? -365 : diff);
-      }
-    }
-  }
+  const daysRemaining = currentFarm ? getDaysLeft(currentFarm) : 45;
 
   return (
     <View className="flex-1 bg-slate-50">

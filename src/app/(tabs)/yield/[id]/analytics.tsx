@@ -153,46 +153,22 @@ export default function analyticsScreen() {
   // Calculate Next Harvest Date
   let nextDateFormatted = "Unknown";
   let daysRemaining = 45;
-  let mostRecentHarvestDate = new Date();
-  let hasHarvestData = false;
 
-  if (farm?.lastHarvestDate) {
-    const last = new Date(farm.lastHarvestDate);
-    if (!isNaN(last.getTime())) {
-      mostRecentHarvestDate = last;
-      hasHarvestData = true;
-    }
-  }
-
-  if (pastLogs.length > 0) {
-    const latestLogDate = new Date(pastLogs[0].date);
-    if (!isNaN(latestLogDate.getTime())) {
-      if (!hasHarvestData || latestLogDate > mostRecentHarvestDate) {
-        mostRecentHarvestDate = latestLogDate;
-        hasHarvestData = true;
+  if (farm) {
+    const lastStr = farm.lastHarvestDate || farm.createdAt;
+    if (lastStr) {
+      const last = new Date(lastStr).getTime();
+      if (!isNaN(last)) {
+        const nextPick = last + (45 * 24 * 60 * 60 * 1000);
+        const daysLeft = Math.ceil((nextPick - Date.now()) / (24 * 60 * 60 * 1000));
+        daysRemaining = daysLeft > 45 ? 45 : daysLeft;
+        nextDateFormatted = new Date(nextPick).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       }
+    } else {
+      const next = new Date();
+      next.setDate(next.getDate() + 45);
+      nextDateFormatted = next.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     }
-  }
-
-  if (hasHarvestData) {
-    const next = new Date(mostRecentHarvestDate.getTime());
-    next.setDate(next.getDate() + 45);
-    
-    const now = new Date();
-    const diffTime = next.getTime() - now.getTime();
-    daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    nextDateFormatted = next.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  } else {
-    // Default current date + 45 days if no history
-    const next = new Date();
-    next.setDate(next.getDate() + 45);
-    
-    const now = new Date();
-    const diffTime = next.getTime() - now.getTime();
-    daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    nextDateFormatted = next.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
   const nextPickNuts = prediction.predicted_next_pick_yield_nuts || 0;
@@ -210,8 +186,21 @@ export default function analyticsScreen() {
     largePct = Math.round((latestLog.large / total) * 100) || 0;
   }
 
-  // Progress Bar Width
-  const progressPct = Math.max(0, Math.min(100, Math.round(((45 - daysRemaining) / 45) * 100)));
+  // Calculate Progress Bar Width dynamically based on dates
+  let progressPct = 0;
+  if (farm) {
+    const lastStr = farm.lastHarvestDate || farm.createdAt;
+    if (lastStr) {
+      const lastTime = new Date(lastStr).getTime();
+      if (!isNaN(lastTime)) {
+        const expectedTime = lastTime + (45 * 24 * 60 * 60 * 1000); // 45-day cycle
+        const now = Date.now();
+        const totalDuration = expectedTime - lastTime;
+        const elapsed = now - lastTime;
+        progressPct = Math.max(0, Math.min(100, Math.round((elapsed / totalDuration) * 100)));
+      }
+    }
+  }
 
   // Dynamic Chart Logic
   const chartLogs = [...pastLogs].reverse().slice(-7); // Last 7 chronological
