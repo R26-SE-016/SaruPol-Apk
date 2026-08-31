@@ -51,14 +51,24 @@ export function useYieldHybridTelemetry(farm: Farm | null): HybridTelemetry {
         const v = res.data?.latest;
         if (v) {
           const currentLastSeen = v.last_seen ? new Date(v.last_seen).getTime() : (v.timestamp ? new Date(v.timestamp).getTime() : Date.now());
+          let bootStr = "Unknown";
+          if (v.unixTime && v.uptimeMinutes != null) {
+            const bootDate = new Date((v.unixTime - v.uptimeMinutes * 60) * 1000);
+            bootStr = bootDate.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+          }
+
           setTelemetry({
-            temperature: v.temperature ?? v.temp ?? null,
-            humidity: v.humidity ?? null,
-            soilMoisture: v.soilMoisture ?? v.soil_moisture ?? null,
-            lightIntensity: v.lightIntensity ?? v.light ?? null,
+            temperature: v.temperatureC ?? v.temperature ?? v.temp ?? null,
+            humidity: v.humidityPercent ?? v.humidity ?? null,
+            soilMoisture: v.soilMoisturePercent ?? v.soilMoisture ?? v.soil_moisture ?? null,
+            lightIntensity: v.lightLux ?? v.lightIntensity ?? v.light ?? null,
             lastSync: new Date(currentLastSeen).toLocaleTimeString(),
-            connectionMode: v.connectionMode ?? "WIFI",
+            connectionMode: v.networkType ?? v.connectionMode ?? "WIFI",
             batteryLevel: v.batteryLevel ?? 0,
+            signalStrength: v.signalStrength ?? 0,
+            status: v.status ?? (v.temperatureC ? "board_alive" : "unknown"),
+            uptimeMinutes: v.uptimeMinutes ?? 0,
+            lastBootTime: bootStr,
           });
 
           if (Date.now() - currentLastSeen < 180000) {

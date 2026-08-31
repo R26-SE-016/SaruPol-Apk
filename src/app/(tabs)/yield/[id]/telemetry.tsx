@@ -1,7 +1,7 @@
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Image } from "react-native";
-import { ArrowLeft, MoreVertical, RefreshCw, Wifi, Battery, CheckCircle2, CloudRain, Thermometer, Droplets, Server, Activity } from "lucide-react-native";
+import { ArrowLeft, MoreVertical, RefreshCw, Wifi, WifiOff, Battery, CheckCircle2, CloudRain, Thermometer, Droplets, Server, Activity } from "lucide-react-native";
 import { useYieldApp } from "@/store/YieldAppContext";
 import { useYieldHybridTelemetry, resolveEnvValues } from "@/hooks/useYieldHybridTelemetry";
 
@@ -19,7 +19,7 @@ export default function DeviceScreen() {
 
   const farm = farms.find((f) => f.id === farmId);
   const deviceId = String(farm?.deviceIds?.[0] || farm?.deviceId || "—");
-  const { telemetry, weather, source, loading, refresh } = useYieldHybridTelemetry(farm ?? null);
+  const { telemetry, weather, source, loading, refresh, deviceLive } = useYieldHybridTelemetry(farm ?? null);
   const [dataSource, setDataSource] = useState<"sensor" | "api">("sensor");
 
   // Always use API for rainfall as requested by user. 
@@ -38,8 +38,6 @@ export default function DeviceScreen() {
       </View>
     );
   }
-
-  const isLive = source === "iot" || !!weather;
 
   return (
     <View key="content" className="flex-1 bg-slate-50">
@@ -62,9 +60,13 @@ export default function DeviceScreen() {
           <View className="flex-row items-center gap-4">
             <View className="w-24 h-24 bg-[#F2FAF6] rounded-full items-center justify-center relative border-[6px] border-white shadow-sm overflow-visible" style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 2 }}>
               <Image source={{ uri: 'https://i.ibb.co/HDHPBzpp/device.png' }} style={{ width: 64, height: 64, resizeMode: 'contain' }} />
-              {isLive && (
+              {deviceLive ? (
                 <View className="absolute bottom-0 right-0 w-7 h-7 bg-[#16a34a] border-4 border-white rounded-full items-center justify-center">
                   <CheckCircle2 size={14} color="#fff" strokeWidth={3} />
+                </View>
+              ) : (
+                <View className="absolute bottom-0 right-0 w-7 h-7 bg-slate-400 border-4 border-white rounded-full items-center justify-center">
+                  <WifiOff size={12} color="#fff" strokeWidth={3} />
                 </View>
               )}
             </View>
@@ -72,10 +74,15 @@ export default function DeviceScreen() {
               <Text className="text-xs font-semibold text-slate-500 mb-1">Device ID</Text>
               <View className="flex-row items-center gap-3 mb-2">
                 <Text className="text-3xl font-black text-slate-800">{deviceId}</Text>
-                {isLive && (
+                {deviceLive ? (
                   <View className="bg-green-50 px-2.5 py-1 rounded-full flex-row items-center gap-1.5 border border-green-100">
                     <View className="w-2 h-2 bg-green-500 rounded-full" />
                     <Text className="text-[10px] font-bold text-green-700 uppercase tracking-wider">Active</Text>
+                  </View>
+                ) : (
+                  <View className="bg-slate-50 px-2.5 py-1 rounded-full flex-row items-center gap-1.5 border border-slate-200">
+                    <View className="w-2 h-2 bg-slate-400 rounded-full" />
+                    <Text className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Inactive</Text>
                   </View>
                 )}
               </View>
@@ -85,11 +92,13 @@ export default function DeviceScreen() {
               </View>
             </View>
           </View>
-          <View className="mt-5 bg-[#F0FDF4] rounded-xl p-3 flex-row items-center gap-2 border border-[#DCFCE7]">
+          <View className={`mt-5 rounded-xl p-3 flex-row items-center gap-2 border ${deviceLive ? 'bg-[#F0FDF4] border-[#DCFCE7]' : 'bg-red-50 border-red-100'}`}>
             <View className="w-6 h-6 bg-white rounded-full items-center justify-center shadow-sm" style={{ elevation: 1 }}>
-               <Wifi size={12} color="#16a34a" />
+               {deviceLive ? <Wifi size={12} color="#16a34a" /> : <WifiOff size={12} color="#dc2626" />}
             </View>
-            <Text className="text-xs font-bold text-[#166534]">Device is online and working properly</Text>
+            <Text className={`text-xs font-bold ${deviceLive ? 'text-[#166534]' : 'text-red-700'}`}>
+              {deviceLive ? "Device is online and working properly" : "Device is offline or inactive"}
+            </Text>
           </View>
         </View>
 
@@ -102,10 +111,10 @@ export default function DeviceScreen() {
               </View>
               <Text className="text-sm font-bold text-slate-800">Environment Data</Text>
             </View>
-            <View className="flex-row items-center gap-1">
-              <Text className="text-[10px] font-bold text-green-600">Updated just now</Text>
+            <TouchableOpacity onPress={refresh} className="flex-row items-center gap-1">
+              <Text className="text-[10px] font-bold text-green-600">Refresh Data</Text>
               <RefreshCw size={12} color="#16a34a" />
-            </View>
+            </TouchableOpacity>
           </View>
           
           {/* Data Source Toggle */}
@@ -164,6 +173,35 @@ export default function DeviceScreen() {
               <Text className="text-[10px] text-slate-500 font-semibold">Rainfall</Text>
             </View>
           </View>
+          
+          {/* Second Row for Soil Moisture and Light Intensity */}
+          <View className="flex-row justify-between items-center border-t border-slate-100 mt-5 pt-5">
+            <View className="items-center flex-1 border-r border-slate-100">
+              <View className="flex-row items-center gap-2 mb-2">
+                <Image source={{ uri: 'https://i.ibb.co/21Yzy5fW/iot-sensor.png' }} style={{ width: 24, height: 24, resizeMode: 'contain', tintColor: '#84cc16' }} />
+                <View className="flex-row items-baseline">
+                  <Text className="text-2xl font-black text-slate-800">
+                    {telemetry?.soilMoisture != null ? telemetry.soilMoisture : "—"}
+                  </Text>
+                  <Text className="text-xs font-bold text-slate-500 ml-0.5">%</Text>
+                </View>
+              </View>
+              <Text className="text-[10px] text-slate-500 font-semibold">Soil Moisture</Text>
+            </View>
+            
+            <View className="items-center flex-1">
+              <View className="flex-row items-center gap-2 mb-2">
+                <Image source={{ uri: 'https://i.ibb.co/HDHPBzpp/device.png' }} style={{ width: 24, height: 24, resizeMode: 'contain', tintColor: '#f59e0b' }} />
+                <View className="flex-row items-baseline">
+                  <Text className="text-2xl font-black text-slate-800">
+                    {telemetry?.lightIntensity != null ? telemetry.lightIntensity : "—"}
+                  </Text>
+                  <Text className="text-xs font-bold text-slate-500 ml-0.5">Lux</Text>
+                </View>
+              </View>
+              <Text className="text-[10px] text-slate-500 font-semibold">Light Intensity</Text>
+            </View>
+          </View>
         </View>
 
         {/* Device Status */}
@@ -177,44 +215,42 @@ export default function DeviceScreen() {
             <View className="flex-row items-center justify-between border-b border-slate-50 pb-3">
               <View className="flex-row items-center gap-3">
                 <View className="w-8 h-8 bg-slate-50 rounded-full items-center justify-center"><Activity size={16} color="#64748b" /></View>
-                <Text className="text-xs font-semibold text-slate-600">Device Power</Text>
+                <Text className="text-xs font-semibold text-slate-600">Uptime</Text>
               </View>
-              <Text className="text-sm font-bold text-emerald-600">ON</Text>
+              <Text className="text-sm font-bold text-emerald-600">
+                {telemetry?.uptimeMinutes != null ? `${telemetry.uptimeMinutes} mins` : "—"}
+              </Text>
             </View>
             
             <View className="flex-row items-center justify-between border-b border-slate-50 pb-3">
               <View className="flex-row items-center gap-3">
                 <View className="w-8 h-8 bg-slate-50 rounded-full items-center justify-center"><Wifi size={16} color="#64748b" /></View>
-                <Text className="text-xs font-semibold text-slate-600">Connection</Text>
+                <Text className="text-xs font-semibold text-slate-600">Connection ({telemetry?.connectionMode || "Unknown"})</Text>
               </View>
-              <Text className="text-sm font-bold text-emerald-600">Strong ( - 65 dBm )</Text>
+              <Text className="text-sm font-bold text-emerald-600">
+                {telemetry?.signalStrength != null ? `${telemetry.signalStrength} dBm` : "—"}
+              </Text>
             </View>
             
+
             <View className="flex-row items-center justify-between border-b border-slate-50 pb-3">
               <View className="flex-row items-center gap-3">
-                <View className="w-8 h-8 bg-slate-50 rounded-full items-center justify-center"><Battery size={16} color="#64748b" /></View>
-                <Text className="text-xs font-semibold text-slate-600">Battery Level</Text>
+                <View className="w-8 h-8 bg-slate-50 rounded-full items-center justify-center"><Activity size={16} color="#64748b" /></View>
+                <Text className="text-xs font-semibold text-slate-600">Started At</Text>
               </View>
-              <View className="flex-row items-center gap-2 bg-emerald-50 px-2 py-1 rounded-md">
-                <Text className="text-xs font-bold text-emerald-700">{telemetry?.batteryLevel || 87}%</Text>
-                <Battery size={14} color="#16a34a" />
-              </View>
+              <Text className="text-xs font-bold text-slate-800">
+                {telemetry?.lastBootTime || "—"}
+              </Text>
             </View>
-            
-            <View className="flex-row items-center justify-between border-b border-slate-50 pb-3">
-              <View className="flex-row items-center gap-3">
-                <View className="w-8 h-8 bg-slate-50 rounded-full items-center justify-center"><Server size={16} color="#64748b" /></View>
-                <Text className="text-xs font-semibold text-slate-600">Data Storage</Text>
-              </View>
-              <Text className="text-xs font-bold text-slate-800">65% used</Text>
-            </View>
-            
+
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center gap-3">
                 <View className="w-8 h-8 bg-slate-50 rounded-full items-center justify-center"><CheckCircle2 size={16} color="#64748b" /></View>
-                <Text className="text-xs font-semibold text-slate-600">System Health</Text>
+                <Text className="text-xs font-semibold text-slate-600">Device Status</Text>
               </View>
-              <Text className="text-xs font-bold text-emerald-600">Good</Text>
+              <Text className="text-xs font-bold text-emerald-600 uppercase">
+                {telemetry?.status?.replace("_", " ") || "Unknown"}
+              </Text>
             </View>
           </View>
         </View>

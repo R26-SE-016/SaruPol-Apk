@@ -12,7 +12,7 @@ import {
 import Svg, { Polyline, Circle as SvgCircle, G, Line, Text as SvgText } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
 import { useYieldApp } from "@/store/YieldAppContext";
-import { deleteFarm, subscribeTrees, fetchHarvestLogs } from "@/services/yieldFarmDb";
+import { deleteFarm, subscribeTrees, fetchHarvestLogs, fetchDevicePresence } from "@/services/yieldFarmDb";
 import { predictDashboardYield } from "@/services/yieldService";
 import { useUnifiedFarmYield } from "@/hooks/useUnifiedFarmYield";
 import { buildFarmData, aggregateHealth, healthColor } from "@/utils/yieldTreeFactory";
@@ -148,6 +148,25 @@ export default function YieldDashboardScreen() {
     return buildFarmData(currentFarm.perches, currentFarm.totalTrees, currentFarm.treeLayout, storedTrees);
   }, [currentFarm, storedTrees]);
 
+  const farmsDeviceIdsStr = useMemo(() => JSON.stringify(farms.map(f => f.deviceIds?.[0] || f.deviceId || "")), [farms]);
+
+  useEffect(() => {
+    let active = true;
+    const loadStatuses = async () => {
+      const map: Record<string, boolean> = {};
+      for (const f of farms) {
+        if (f.deviceIds && f.deviceIds.length > 0) {
+          map[f.deviceIds[0]] = await fetchDevicePresence(f.deviceIds[0]);
+        } else if (f.deviceId) {
+          map[f.deviceId] = await fetchDevicePresence(f.deviceId);
+        }
+      }
+      if (active) setDeviceStatusMap(map);
+    };
+    loadStatuses();
+    return () => { active = false; };
+  }, [farmsDeviceIdsStr]); // Use stable stringified dependency to avoid infinite loops
+
   const metrics = useMemo(() => {
     if (!farmData) return null;
     const { health, pct } = aggregateHealth(farmData.trees);
@@ -186,7 +205,10 @@ export default function YieldDashboardScreen() {
 
   // Calculate Global Sums
   const totalFarms = farms.length;
-  const totalExpectedYield = farms.reduce((acc, f) => acc + (f.lastHarvestYield ? f.lastHarvestYield : (f.totalTrees * 6)), 0);
+  const totalExpectedYield = farms.reduce((acc, f) => {
+    const yieldForFarm = allFarmYields[f.id] !== undefined ? allFarmYields[f.id] : (f.lastHarvestYield ? f.lastHarvestYield : (f.totalTrees * 6));
+    return acc + yieldForFarm;
+  }, 0);
   let globalActiveCount = 0;
   let globalTotalDevices = 0;
   farms.forEach(f => {
@@ -202,36 +224,7 @@ export default function YieldDashboardScreen() {
     (f.locationName && f.locationName.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  let daysRemaining = 45;
-  let hasHarvestData = false;
-  let mostRecentHarvestDate = new Date();
-
-  if (currentFarm?.lastHarvestDate) {
-    const last = new Date(currentFarm.lastHarvestDate);
-    if (!isNaN(last.getTime())) {
-      mostRecentHarvestDate = last;
-      hasHarvestData = true;
-    }
-  }
-
-  if (recentHarvestLogs.length > 0) {
-    const latestLogDate = new Date(recentHarvestLogs[0].date);
-    if (!isNaN(latestLogDate.getTime())) {
-      if (!hasHarvestData || latestLogDate > mostRecentHarvestDate) {
-        mostRecentHarvestDate = latestLogDate;
-        hasHarvestData = true;
-      }
-    }
-  }
-
-  if (hasHarvestData) {
-    const next = new Date(mostRecentHarvestDate.getTime());
-    next.setDate(next.getDate() + 45);
-    const now = new Date();
-    daysRemaining = Math.ceil((next.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  } else {
-    daysRemaining = 45;
-  }
+  const daysRemaining = currentFarm ? getDaysLeft(currentFarm) : 45;
 
   return (
     <View className="flex-1 bg-slate-50">
@@ -470,7 +463,7 @@ export default function YieldDashboardScreen() {
             <View className="gap-4">
               {filteredFarms.slice(0, 3).map((farm) => {
                 const fd = buildFarmData(farm.perches, farm.totalTrees, farm.treeLayout, {});
-                const isOnline = farm.deviceIds && farm.deviceIds.length > 0;
+                const isOnline = (farm.deviceIds && farm.deviceIds.length > 0 && deviceStatusMap[farm.deviceIds[0]]) || (farm.deviceId && deviceStatusMap[farm.deviceId]) || false;
                 
                 return (
                   <View key={farm.id} className="bg-white rounded-[24px] p-4 border border-slate-100 mb-2" style={{ shadowColor: '#12211C', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.06, shadowRadius: 25, elevation: 5 }}>
