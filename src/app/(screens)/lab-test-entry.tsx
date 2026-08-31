@@ -17,12 +17,14 @@ import { COLORS, ROUNDING } from '../../constants/theme';
 import GradientButton from '../../components/common/GradientButton';
 import { getLabRecommendation } from '../../services/nutrientService';
 import { ActivityIndicator } from 'react-native';
+import { useAppStore } from '../../store/appStore';
 
 
 const { width } = Dimensions.get('window');
 
 export default function LabTestEntryScreen() {
   const router = useRouter();
+  const addHistoryItem = useAppStore(state => state.addHistoryItem);
 
   // Multi-step state
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
@@ -104,6 +106,64 @@ export default function LabTestEntryScreen() {
         palm_age: ageVal,
         zone: zone || 'Wet',
       });
+
+      // Save to local history
+      try {
+        await addHistoryItem({
+          type: 'soil',
+          input: {
+            treeNo: palmId,
+            zoneId: `${zone} Zone`,
+            method: 'Laboratory Analysis',
+            model: 'CRI Standard Expert Rules',
+            soilN: nitrogen,
+            soilP: phosphorus,
+            soilK: potassium,
+            leafN: nitrogen,
+            leafP: phosphorus,
+            leafK: potassium,
+            leafMg: magnesium.trim() || 'N/A',
+            // legacy fallbacks
+            pH: 0.0,
+            N: nVal,
+            P: pVal,
+            K: kVal,
+            Organic_Carbon: 0.0,
+            EC: 0.0
+          },
+          result: {
+            health_score: (() => {
+              let outOfRange = 0;
+              const evN = response.evalN?.toString().toLowerCase() || '';
+              const evP = response.evalP?.toString().toLowerCase() || '';
+              const evK = response.evalK?.toString().toLowerCase() || '';
+              const evMg = response.evalMg?.toString().toLowerCase() || '';
+              if (evN.includes('deficient') || evN.includes('excess') || evN.includes('low') || evN.includes('high')) outOfRange++;
+              if (evP.includes('deficient') || evP.includes('excess') || evP.includes('low') || evP.includes('high')) outOfRange++;
+              if (evK.includes('deficient') || evK.includes('excess') || evK.includes('low') || evK.includes('high')) outOfRange++;
+              if (evMg !== 'n/a' && (evMg.includes('deficient') || evMg.includes('excess') || evMg.includes('low') || evMg.includes('high'))) outOfRange++;
+              return outOfRange > 0 ? Math.max(40, 100 - outOfRange * 15) : 100;
+            })(),
+            fertility: response.health_status,
+            deficiencies: [],
+            optimal_ranges: {},
+            fertilizer_plan: [],
+            // New format params
+            status: response.health_status,
+            urea: response.urea,
+            erp: response.erp_or_tsp,
+            mop: response.mop,
+            dolomite: response.dolomite,
+            advice: response.agronomic_advice,
+            evalN: response.evalN,
+            evalP: response.evalP,
+            evalK: response.evalK,
+            evalMg: response.evalMg,
+          }
+        });
+      } catch (histErr) {
+        console.error("Failed to save lab result to history:", histErr);
+      }
 
       router.push({
         pathname: '/(screens)/soil-result' as any,

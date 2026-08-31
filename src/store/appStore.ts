@@ -12,7 +12,8 @@ export interface User {
 
 export interface PredictionHistoryItem {
   id: string;
-  type: 'yield' | 'pathology' | 'soil';
+  userId?: string;
+  type: 'yield' | 'pathology' | 'soil' | 'leaf_scan';
   date: string;
   input: any;
   result: any;
@@ -86,9 +87,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   addHistoryItem: async (item) => {
+    const currentUser = get().user;
+    const currentUserId = get().isGuest || !currentUser ? 'guest' : currentUser.id.toString();
+
     const newItem: PredictionHistoryItem = {
       ...item,
       id: Math.random().toString(36).substring(2, 9),
+      userId: currentUserId,
       date: new Date().toISOString(),
       synced: get().isConnected && !get().isGuest
     };
@@ -99,8 +104,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   clearHistory: async () => {
-    await AsyncStorage.removeItem(STORAGE_KEYS.HISTORY);
-    set({ history: [] });
+    const currentUser = get().user;
+    const currentUserId = get().isGuest || !currentUser ? 'guest' : currentUser.id.toString();
+    const remainingHistory = get().history.filter(item => item.userId && item.userId !== currentUserId);
+    await AsyncStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(remainingHistory));
+    set({ history: remainingHistory });
   },
 
   loadPersistedData: async () => {

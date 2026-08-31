@@ -24,120 +24,9 @@ const LOCAL_DEFICIENCY_IMAGES: Record<string, any> = {
   boron: require('../../../assets/nutrition/Boron.png'),
 };
 
-const LOCAL_DEFICIENCIES_DATA: DeficiencyDetail[] = [
-  {
-    id: 'nitrogen',
-    nameEn: 'Nitrogen Deficiency',
-    chemicalSymbol: 'N',
-    criticalRange: '1.80% - 2.00%',
-    overview: 'Nitrogen is a primary macronutrient essential for vegetative growth, leaf production, and chlorophyll synthesis. When deficient, the palm cannot photosynthesize efficiently, leading to reduced vigor and stunted growth.',
-    symptoms: [
-      'General yellowing (chlorosis) of the older leaves first, which slowly spreads to the younger ones.',
-      'Leaflets turn pale green to golden yellow.',
-      'The growth rate of the palm slows down, and fronds become shorter.',
-      'Thin crowns and slender trunks develop over time.',
-      'Nut size and yield drop significantly.'
-    ],
-    causes: [
-      'Acidic soil conditions which limit nitrogen availability.',
-      'Heavy leaching in sandy/gravelly soils during monsoon seasons.',
-      'Low soil organic matter and poor biological activity.'
-    ],
-    correctiveMeasures: [
-      'Apply an additional 100-200g of Urea per palm depending on the growth stage (under CRI A7 Guidelines).',
-      'Incorporate organic manure or compost around the manure circle to naturally raise soil organic matter.',
-      'Grow cover crops (like Mucuna bracteata) in the interspaces to fix atmospheric nitrogen.',
-      'Practice proper mulching with coconut husks in the 1.8m manure circle to retain soil moisture and reduce nitrogen volatilization.'
-    ],
-    themeColor: '#4CAF50',
-    description: 'Nitrogen deficiency causes general yellowing (chlorosis) of older leaves first, progressing to the younger leaves. The growth rate slows down, fronds become shorter, and the crown becomes thin, significantly dropping nut size and yield.',
-    advice: 'Apply an additional 100-200g of Urea per palm depending on the growth stage. Incorporate organic manure, compost, or cover crops (like Mucuna) to naturally raise soil organic matter and mulch the base.'
-  },
-  {
-    id: 'potassium',
-    nameEn: 'Potassium Deficiency',
-    chemicalSymbol: 'K',
-    criticalRange: '1.20% - 1.50%',
-    overview: 'Potassium is the most heavily extracted nutrient by coconut palms. It regulates stomatal opening, water relations, carbohydrate translocation, and directly influences nut size, weight, and copra quality.',
-    symptoms: [
-      'Orange-yellow chlorotic spots appear on older leaves first.',
-      'Leaflet margins and tips show necrosis (scorching or burning) that moves inwards.',
-      'Midribs and petioles become weak, causing older fronds to hang down or break prematurely.',
-      'Yield decreases rapidly with smaller nut sizes and thin, fiberless husks.',
-      'Increased susceptibility to droughts and pest attacks.'
-    ],
-    causes: [
-      'Highly leached sandy or gravelly soils where potassium is easily washed away.',
-      'Acidic soils or soils with low cation exchange capacity.',
-      'Harvesting nuts repeatedly without replacing the extracted potassium.'
-    ],
-    correctiveMeasures: [
-      'Apply an additional 500g of Muriate of Potash (MOP) per adult palm per year (CRI A7 Guidance).',
-      'Bury coconut husks and fronds in trenches between rows (husk burial). Coconut husks are rich in potassium and store moisture.',
-      'Ensure balanced fertilizer application since excess calcium/magnesium can inhibit potassium uptake.'
-    ],
-    themeColor: '#FF9800',
-    description: 'Potassium deficiency is common in sandy soils. It shows as orange-yellow chlorotic spots on older leaves, with leaflet margins and tips exhibiting burning/necrosis. Midribs weaken and fronds hang down or break prematurely.',
-    advice: 'Apply an additional 500g of Muriate of Potash (MOP) per adult palm per year. Bury coconut husks and fronds in trenches between rows to recycle potassium and preserve moisture.'
-  },
-  {
-    id: 'magnesium',
-    nameEn: 'Magnesium Deficiency',
-    chemicalSymbol: 'Mg',
-    criticalRange: '0.20% - 0.35%',
-    overview: 'Magnesium is the central component of the chlorophyll molecule, making it essential for photosynthesis. Deficiency leads to direct yellowing of mature leaves and significantly reduces starch synthesis.',
-    symptoms: [
-      'Classic "V-shaped" yellowing on older leaves; leaflet margins turn bright orange-yellow while the area near the midrib remains green.',
-      'Translucent yellow spotting on leaflets exposed to direct sunlight.',
-      'Leaf tips become necrotic and die back in severe stages.',
-      'Healthy young green leaves are only found at the center of the crown.'
-    ],
-    causes: [
-      'Highly acidic, sandy soils prone to leaching.',
-      'Excessive application of Potassium or Ammonium fertilizers which competitively inhibits Magnesium uptake.'
-    ],
-    correctiveMeasures: [
-      'For severe cases: Apply 1 kg of Kieserite (Magnesium Sulphate) per adult palm half-yearly. Apply Kieserite to one half of the manure circle and NPK to the other half.',
-      'For young palms showing symptoms: Apply 0.5 kg of Kieserite half-yearly.',
-      'For long-term prevention: Apply 1 kg of Dolomite per palm per year. Apply dolomite at least 2 weeks before or after applying chemical fertilizers.'
-    ],
-    themeColor: '#009688',
-    description: 'Magnesium deficiency is characterized by a V-shaped yellowing on older leaves, where leaflet margins turn bright orange-yellow while the midrib area remains green. Photosynthesis is severely reduced, affecting root and nut growth.',
-    advice: 'For severe cases: Apply 1 kg Kieserite (Magnesium Sulphate) per adult palm half-yearly (apply NPK to one half of the circle and Kieserite to the other). For long-term prevention, apply 1 kg Dolomite per palm per year.'
-  },
-  {
-    id: 'boron',
-    nameEn: 'Boron Deficiency',
-    chemicalSymbol: 'B',
-    criticalRange: '8 - 10 ppm',
-    overview: 'Boron is a vital micronutrient required for cell division, cell wall development, pollen germination, and sugar transport. Deficiency causes severe malformations in growing tissues.',
-    symptoms: [
-      '"Hook Leaf": Young emerging fronds show leaflets with bent, rigid tips that cannot be straightened.',
-      'Spear leaves fail to open properly or appear crinkled ("crown choke").',
-      'The crown may exhibit a zigzag or serrated silhouette.',
-      'Deformed, flat-sided, or undersized nuts (barren nuts).',
-      'Severe button shedding and necrotic inflorescence.'
-    ],
-    causes: [
-      'Leached sandy soils or highly alkaline soils.',
-      'Extended drought periods which restrict water movement and boron transport in the soil.',
-      'Imbalanced soil chemistry.'
-    ],
-    correctiveMeasures: [
-      'Apply 20g of Sodium Tetraborate (Borax) per mature or young palm at 6-month intervals until symptoms disappear (CRI A7 Guidance).',
-      'For seedlings: Apply 10g of Borax at 6-month intervals.',
-      'Ensure the soil is moist during application to facilitate uptake.',
-      'Caution: Apply strictly according to recommended rates, as boron has a narrow range between deficiency and toxicity.'
-    ],
-    themeColor: '#E91E63',
-    description: 'Boron deficiency manifests as \'Hook Leaf\' on emerging fronds where leaflet tips are bent and rigid. Spear leaves fail to open, inflorescences become necrotic, and the palm produces flat-sided, barren nuts due to poor cell division.',
-    advice: 'Apply 20g of Sodium Tetraborate (Borax) per mature or young palm at 6-month intervals until symptoms disappear. Seedlings should receive 10g Borax.'
-  }
-];
-
 export default function DeficienciesScreen() {
   const router = useRouter();
-  const [deficiencies, setDeficiencies] = useState<DeficiencyDetail[]>(LOCAL_DEFICIENCIES_DATA);
+  const [deficiencies, setDeficiencies] = useState<DeficiencyDetail[]>([]);
   const [selectedDeficiency, setSelectedDeficiency] = useState<DeficiencyDetail | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -180,6 +69,13 @@ export default function DeficienciesScreen() {
         <Text style={styles.title}>
           {selectedDeficiency ? selectedDeficiency.nameEn : 'Coconut Deficiencies'}
         </Text>
+        <TouchableOpacity 
+          style={{ padding: 8 }} 
+          onPress={() => router.replace('/(tabs)/soil')}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="home-outline" size={22} color="#2E7D32" />
+        </TouchableOpacity>
       </View>
 
       {selectedDeficiency ? (
@@ -243,6 +139,28 @@ export default function DeficienciesScreen() {
                   <Text style={styles.adviceText}>{measure}</Text>
                 </View>
               ))}
+
+              {/* Go to Dashboard Action */}
+              <TouchableOpacity
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  backgroundColor: '#2E7D32',
+                  paddingVertical: 14,
+                  borderRadius: 12,
+                  marginTop: 24,
+                  elevation: 2,
+                }}
+                onPress={() => router.replace('/(tabs)/soil')}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="home" size={18} color="#FFFFFF" />
+                <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700' }}>
+                  Go to Dashboard
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
         </ScrollView>

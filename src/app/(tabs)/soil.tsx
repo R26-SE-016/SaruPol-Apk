@@ -180,6 +180,28 @@ export default function SoilDashboard() {
               <Ionicons name="chevron-forward" size={20} color="#FF6D00" />
             </View>
           </TouchableOpacity>
+
+          {/* Tool 4: View Activity History */}
+          <TouchableOpacity
+            style={styles.historyBtn}
+            activeOpacity={0.85}
+            onPress={() => router.push('/(screens)/history' as any)}
+          >
+            <View style={styles.nutrientBtnContent}>
+              <View style={styles.iconCirclePurple}>
+                <Ionicons name="document-text" size={20} color="#7B1FA2" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.nutrientBtnTitle, { color: '#7B1FA2' }]}>
+                  Activity History
+                </Text>
+                <Text style={styles.nutrientBtnSub}>
+                  View all historical records of leaf nutrient scans and lab tests
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#7B1FA2" />
+            </View>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>
@@ -452,6 +474,29 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.03,
     shadowRadius: 6,
     elevation: 2,
+  },
+  historyBtn: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#EAE7DF',
+    borderLeftWidth: 6,
+    borderLeftColor: '#7B1FA2',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  iconCirclePurple: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#F3E5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   cardsSectionHeader: {
     fontSize: 12,
