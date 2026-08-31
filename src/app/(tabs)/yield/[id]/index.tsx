@@ -228,32 +228,6 @@ export default function FarmDetailScreen() {
           <Text className="text-white text-sm font-bold">Export Telemetry & Yield Report (PDF)</Text>
         </TouchableOpacity>
 
-        {(weather as any) && (weather as any).daily && (weather as any).daily.length > 0 && (
-          <View className="bg-white rounded-2xl p-4 border border-slate-100">
-            <View className="flex-row items-center gap-2 mb-3">
-              <CalendarDays size={16} color="#1e7550" />
-              <Text className="text-sm font-bold text-slate-800">7-Day Forecast</Text>
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View className="flex-row gap-2">
-                {(weather as any).daily.map((d: any) => {
-                  const info = weatherInfo(d.weatherCode);
-                  const WIcon = info.icon;
-                  return (
-                    <View key={d.date} className={`w-16 rounded-xl border p-2 items-center ${isToday(d.date) ? "border-forest-300 bg-forest-50" : "border-slate-100 bg-slate-50"}`}>
-                      <Text className="text-[10px] font-bold text-slate-500">{shortDayName(d.date)}</Text>
-                      <View className="my-1"><Ionicons name={WIcon as any} size={22} color={WEATHER_HEX[info.color] ?? "#94a3b8"} /></View>
-                      <Text className="text-[11px] font-bold text-slate-800">{Math.round(d.tempMax)}°</Text>
-                      <Text className="text-[10px] text-slate-400">{Math.round(d.tempMin)}°</Text>
-                      {d.rainSum > 0 && <Text className="text-[9px] text-sky-500 font-semibold mt-0.5">{d.rainSum}mm</Text>}
-                    </View>
-                  );
-                })}
-              </View>
-            </ScrollView>
-          </View>
-        )}
-
 
 
 
