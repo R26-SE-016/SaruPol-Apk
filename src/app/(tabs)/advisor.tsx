@@ -950,7 +950,7 @@ export default function AdvisorScreen() {
       <Modal visible={showDemoPanel} animationType="fade" transparent={true} onRequestClose={() => setShowDemoPanel(false)}>
         <View style={{ flex: 1, flexDirection: 'row' }}>
           <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }} onPress={() => setShowDemoPanel(false)} activeOpacity={1} />
-          <View style={{ width: 320, backgroundColor: COLORS.surface, paddingTop: Platform.OS === 'ios' ? 60 : 40, borderTopLeftRadius: 30, borderBottomLeftRadius: 30, shadowColor: '#000', shadowOffset: { width: -10, height: 0 }, shadowOpacity: 0.5, shadowRadius: 30, elevation: 20 }}>
+          <View style={{ width: 320, backgroundColor: COLORS.surface, paddingTop: Platform.OS === 'ios' ? 60 : 40, borderTopLeftRadius: 20, borderBottomLeftRadius: 20, elevation: 5 }}>
             {/* Header / Close Button Row */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, marginBottom: 20 }}>
               <TouchableOpacity onPress={handleStartNewChat} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.primary, paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20 }}>
@@ -973,16 +973,16 @@ export default function AdvisorScreen() {
                     {language === 'ta' ? 'மண்டலம்' : language === 'si' ? 'ස්ථාන කලාපය' : 'Location Zone'}
                   </Text>
                 </View>
-                <View style={{ flexDirection: 'column', gap: 2 }}>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'space-between' }}>
                   {[
                     { id: 'auto', label: 'Auto (GPS)' },
                     { id: 'Wet Zone', label: 'Wet Zone' },
                     { id: 'Intermediate Zone', label: 'Intermediate Zone' },
                     { id: 'Dry Zone', label: 'Dry Zone' }
                   ].map(item => (
-                    <TouchableOpacity key={item.id} onPress={() => setZoneOverride(item.id as any)} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6, paddingHorizontal: 12, backgroundColor: zoneOverride === item.id ? COLORS.glassBackground : 'rgba(255,255,255,0.03)', borderRadius: 10, borderWidth: 1, borderColor: zoneOverride === item.id ? COLORS.primaryLight : 'transparent' }} activeOpacity={0.7}>
-                      <Text style={{ color: zoneOverride === item.id ? COLORS.textPrimary : COLORS.textSecondary, fontSize: 13, fontWeight: zoneOverride === item.id ? '600' : '500' }}>{getLocName(item.label, language)}</Text>
-                      {zoneOverride === item.id && <Ionicons name="checkmark-circle" size={16} color={COLORS.primaryLight} />}
+                    <TouchableOpacity key={item.id} onPress={() => setZoneOverride(item.id as any)} style={{ width: '48%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, paddingHorizontal: 10, backgroundColor: zoneOverride === item.id ? 'rgba(76, 175, 80, 0.3)' : 'rgba(255,255,255,0.08)', borderRadius: 10, borderWidth: 1, borderColor: zoneOverride === item.id ? COLORS.primaryLight : 'transparent' }} activeOpacity={0.7}>
+                      <Text style={{ color: zoneOverride === item.id ? COLORS.textPrimary : COLORS.textSecondary, fontSize: 12, fontWeight: zoneOverride === item.id ? '600' : '500', flex: 1 }}>{getLocName(item.label, language)}</Text>
+                      {zoneOverride === item.id && <Ionicons name="checkmark-circle" size={14} color={COLORS.primaryLight} />}
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -996,15 +996,15 @@ export default function AdvisorScreen() {
                     {language === 'ta' ? 'தற்போதைய பருவம்' : language === 'si' ? 'වත්මන් කන්නය' : 'Current Season'}
                   </Text>
                 </View>
-                <View style={{ flexDirection: 'column', gap: 2 }}>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'flex-start' }}>
                   {[
                     { id: 'auto', label: 'Auto (Date)' },
                     { id: 'Yala', label: 'Yala Season' },
                     { id: 'Maha', label: 'Maha Season' }
                   ].map(item => (
-                    <TouchableOpacity key={item.id} onPress={() => setSeasonOverride(item.id as any)} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6, paddingHorizontal: 12, backgroundColor: seasonOverride === item.id ? COLORS.glassBackground : 'rgba(255,255,255,0.03)', borderRadius: 10, borderWidth: 1, borderColor: seasonOverride === item.id ? COLORS.primaryLight : 'transparent' }} activeOpacity={0.7}>
-                      <Text style={{ color: seasonOverride === item.id ? COLORS.textPrimary : COLORS.textSecondary, fontSize: 13, fontWeight: seasonOverride === item.id ? '600' : '500' }}>{getSeasonName(item.label, language)}</Text>
-                      {seasonOverride === item.id && <Ionicons name="checkmark-circle" size={16} color={COLORS.primaryLight} />}
+                    <TouchableOpacity key={item.id} onPress={() => setSeasonOverride(item.id as any)} style={{ width: '48%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, paddingHorizontal: 10, backgroundColor: seasonOverride === item.id ? 'rgba(76, 175, 80, 0.3)' : 'rgba(255,255,255,0.08)', borderRadius: 10, borderWidth: 1, borderColor: seasonOverride === item.id ? COLORS.primaryLight : 'transparent' }} activeOpacity={0.7}>
+                      <Text style={{ color: seasonOverride === item.id ? COLORS.textPrimary : COLORS.textSecondary, fontSize: 12, fontWeight: seasonOverride === item.id ? '600' : '500', flex: 1 }}>{getSeasonName(item.label, language)}</Text>
+                      {seasonOverride === item.id && <Ionicons name="checkmark-circle" size={14} color={COLORS.primaryLight} />}
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -1030,7 +1030,7 @@ export default function AdvisorScreen() {
                     </Text>
                   ) : (
                     chatHistory.map(session => (
-                      <View key={session.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 16, backgroundColor: sessionId === session.id ? COLORS.glassBackground : 'rgba(255,255,255,0.03)', borderRadius: 12, borderWidth: 1, borderColor: sessionId === session.id ? COLORS.primaryLight : 'transparent' }}>
+                      <View key={session.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 16, backgroundColor: sessionId === session.id ? 'rgba(76, 175, 80, 0.3)' : 'rgba(255,255,255,0.08)', borderRadius: 12, borderWidth: 1, borderColor: sessionId === session.id ? COLORS.primaryLight : 'transparent' }}>
                         <TouchableOpacity style={{ flex: 1, marginRight: 10 }} onPress={() => handleLoadSession(session)}>
                           <Text style={{ color: sessionId === session.id ? COLORS.textPrimary : COLORS.textSecondary, fontSize: 14, fontWeight: sessionId === session.id ? '600' : '500' }} numberOfLines={1}>{session.topic}</Text>
                           <Text style={{ color: COLORS.textMuted, fontSize: 11, marginTop: 4 }}>
@@ -1098,7 +1098,7 @@ export default function AdvisorScreen() {
                 </View>
               </View>
             ) : (
-              <GlassCard style={[styles.botBubble, msg.isMultiLlm && styles.botBubbleMultiLlm]}>
+              <View style={[styles.botBubble, msg.isMultiLlm && styles.botBubbleMultiLlm]}>
                 {/* Bot Header with Sender & Listen/Audio Button */}
                 <View style={styles.botBubbleHeader}>
                   <View style={styles.botSenderRow}>
@@ -1123,7 +1123,7 @@ export default function AdvisorScreen() {
                       <Ionicons
                         name={activeAudioMsgId === msg.id ? "volume-mute-outline" : "volume-medium-outline"}
                         size={14}
-                        color={activeAudioMsgId === msg.id ? COLORS.primaryLight : COLORS.textSecondary}
+                        color={activeAudioMsgId === msg.id ? COLORS.primaryLight : '#2E7D32'}
                         style={{ marginRight: 4 }}
                       />
                     )}
@@ -1394,7 +1394,7 @@ export default function AdvisorScreen() {
                 <View style={styles.botBubbleFooter}>
                   <Text style={styles.botTime}>{msg.timestamp}</Text>
                 </View>
-              </GlassCard>
+              </View>
             )}
           </View>
         ))}
@@ -1402,12 +1402,12 @@ export default function AdvisorScreen() {
         {/* Loading Spinner for Response */}
         {loading && (
           <View style={styles.loadingRow}>
-            <GlassCard style={styles.loadingCard}>
+            <View style={styles.loadingCard}>
               <ActivityIndicator color={COLORS.primaryLight} size="small" />
               <Text style={styles.loadingText}>
                 {language === 'ta' ? 'தகவல் தளத்தை தேடுகிறது...' : language === 'si' ? 'විශ්ලේෂණය කරමින් පවතී...' : 'Searching knowledge base...'}
               </Text>
-            </GlassCard>
+            </View>
           </View>
         )}
       </ScrollView>
@@ -1474,7 +1474,7 @@ export default function AdvisorScreen() {
             numberOfLines={2}
           />
           <TouchableOpacity onPress={() => handleSend(inputText)} style={styles.sendButton} disabled={loading}>
-            <Ionicons name={editingMsgId ? "checkmark" : "send"} size={20} color={COLORS.textPrimary} />
+            <Ionicons name={editingMsgId ? "checkmark" : "send"} size={20} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
         {isTranscribedFromVoice && (
@@ -1497,7 +1497,7 @@ export default function AdvisorScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#FFFFFF',
   },
   header: {
     flexDirection: 'row',
@@ -1700,9 +1700,18 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomLeftRadius: 0,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
+    borderWidth: 1,
+    borderRadius: ROUNDING.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   botText: {
-    color: COLORS.textPrimary,
+    color: '#1E293B',
     fontSize: 15,
     lineHeight: 22,
   },
@@ -1719,7 +1728,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   sourceText: {
-    color: COLORS.textSecondary,
+    color: '#475569',
     fontSize: 11,
     lineHeight: 16,
   },
@@ -1742,7 +1751,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingBottom: 6,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+    borderBottomColor: '#F1F5F9',
   },
   botSenderRow: {
     flexDirection: 'row',
@@ -1757,7 +1766,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   botTime: {
-    color: COLORS.textMuted,
+    color: '#64748B',
     fontSize: 10,
   },
   botBubbleFooter: {
@@ -1769,12 +1778,12 @@ const styles = StyleSheet.create({
   audioButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 3,
-    paddingHorizontal: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
     borderRadius: ROUNDING.full,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: '#E8F5E9',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(46, 125, 50, 0.3)',
   },
   audioButtonActive: {
     backgroundColor: 'rgba(76, 175, 80, 0.18)',
@@ -1788,7 +1797,8 @@ const styles = StyleSheet.create({
     color: COLORS.primaryLight,
   },
   audioInactiveText: {
-    color: COLORS.textSecondary,
+    color: '#2E7D32',
+    fontWeight: '600',
   },
   loadingRow: {
     flexDirection: 'row',
@@ -1800,9 +1810,18 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 12,
     paddingHorizontal: 16,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
+    borderWidth: 1,
+    borderRadius: ROUNDING.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   loadingText: {
-    color: COLORS.textMuted,
+    color: '#64748B',
     fontSize: 13,
   },
   suggestionsWrapper: {
@@ -1847,8 +1866,8 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(27, 94, 32, 0.08)',
-    borderColor: 'rgba(76, 175, 80, 0.25)',
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
     borderWidth: 1,
     borderRadius: ROUNDING.full,
     paddingHorizontal: 8,
@@ -1856,16 +1875,16 @@ const styles = StyleSheet.create({
   },
   inputContainerHighlighted: {
     borderColor: COLORS.healthy,
-    backgroundColor: 'rgba(76, 175, 80, 0.18)',
+    backgroundColor: '#F0FDF4',
     shadowColor: COLORS.healthy,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.15,
     shadowRadius: 6,
-    elevation: 4,
+    elevation: 2,
   },
   textInput: {
     flex: 1,
-    color: COLORS.textPrimary,
+    color: '#1E293B',
     fontSize: 15,
     height: '100%',
     paddingHorizontal: 10,
@@ -1895,7 +1914,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(27, 94, 32, 0.2)',
+    backgroundColor: COLORS.surfaceLight,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
@@ -2017,15 +2036,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: '#F1F5F9',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: ROUNDING.full,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: '#E2E8F0',
   },
   latencyChipText: {
-    color: COLORS.textSecondary,
+    color: '#475569',
     fontSize: 9,
     fontWeight: '600',
   },
@@ -2052,11 +2071,11 @@ const styles = StyleSheet.create({
   },
   // Inline Consensus
   inlineConsensus: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: '#F8FAFC',
     borderRadius: ROUNDING.sm,
     padding: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: '#E2E8F0',
   },
   inlineConsensusHeader: {
     flexDirection: 'row',
@@ -2065,7 +2084,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   inlineConsensusLabel: {
-    color: COLORS.textSecondary,
+    color: '#475569',
     fontSize: 11,
   },
   inlineConsensusScore: {
@@ -2084,7 +2103,7 @@ const styles = StyleSheet.create({
   },
   // Inline Sections
   inlineSectionTitle: {
-    color: COLORS.textSecondary,
+    color: '#475569',
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -2092,11 +2111,11 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   inlineModelRow: {
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    backgroundColor: '#FFFFFF',
     borderRadius: ROUNDING.sm,
     padding: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: '#E2E8F0',
   },
   inlineModelRowBest: {
     borderColor: 'rgba(76, 175, 80, 0.3)',
@@ -2126,7 +2145,7 @@ const styles = StyleSheet.create({
     borderRadius: ROUNDING.full,
   },
   inlineModelAnswer: {
-    color: COLORS.textPrimary,
+    color: '#1E293B',
     fontSize: 12,
     lineHeight: 18,
   },
@@ -2150,7 +2169,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   inlineJudgmentText: {
-    color: COLORS.textPrimary,
+    color: '#1E293B',
     fontSize: 12,
     lineHeight: 18,
   },
@@ -2193,11 +2212,11 @@ const styles = StyleSheet.create({
   },
   // Multi-LLM Reliability Card Styles (Part 4)
   multiLlmReliabilityCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: '#F8FAFC',
     borderRadius: ROUNDING.sm,
     padding: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: '#E2E8F0',
   },
   multiLlmReliabilityHeader: {
     flexDirection: 'row',
@@ -2213,7 +2232,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   multiLlmReliabilityTitle: {
-    color: COLORS.textSecondary,
+    color: '#475569',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -2233,20 +2252,20 @@ const styles = StyleSheet.create({
   },
   multiLlmMetricPill: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: '#FFFFFF',
     borderRadius: ROUNDING.sm,
     padding: 6,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: '#E2E8F0',
   },
   multiLlmMetricLabel: {
-    color: COLORS.textSecondary,
+    color: '#475569',
     fontSize: 10,
     marginBottom: 2,
   },
   multiLlmMetricVal: {
-    color: COLORS.textPrimary,
+    color: '#1E293B',
     fontSize: 12,
     fontWeight: '800',
   },

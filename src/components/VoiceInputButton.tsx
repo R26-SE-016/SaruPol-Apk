@@ -392,11 +392,11 @@ export default function VoiceInputButton({
         )}
 
         {state === 'IDLE' && (
-          <Ionicons name="mic" size={size * 0.52} color={COLORS.textPrimary} />
+          <Ionicons name="mic" size={size * 0.52} color="#1B5E20" />
         )}
 
         {state === 'RECORDING' && (
-          <Ionicons name="mic" size={size * 0.54} color={COLORS.textPrimary} />
+          <Ionicons name="mic" size={size * 0.54} color="#1B5E20" />
         )}
 
         {state === 'PROCESSING' && (
@@ -418,9 +418,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   button: {
-    backgroundColor: 'rgba(76, 175, 80, 0.25)',
+    backgroundColor: '#E8F5E9',
     borderWidth: 1,
-    borderColor: 'rgba(76, 175, 80, 0.45)',
+    borderColor: 'rgba(76, 175, 80, 0.3)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.healthy,
   },
   listeningText: {
-    color: COLORS.textPrimary,
+    color: '#1B5E20',
     fontSize: 11,
     fontWeight: '700',
   },
