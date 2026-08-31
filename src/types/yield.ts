@@ -73,6 +73,10 @@ export interface TelemetryData {
   lastSync: string;
   connectionMode: "WIFI" | "GSM";
   batteryLevel: number;
+  signalStrength?: number;
+  status?: string;
+  uptimeMinutes?: number;
+  lastBootTime?: string;
 }
 
 export interface HarvestLog {
