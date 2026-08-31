@@ -30,6 +30,13 @@ export default function CriRecommendationScreen() {
           <Ionicons name="arrow-back" size={24} color="#1B2C1A" />
         </TouchableOpacity>
         <Text style={styles.title}>CRI Recommendation</Text>
+        <TouchableOpacity 
+          style={{ padding: 8, marginLeft: 'auto' }} 
+          onPress={() => router.replace('/(tabs)/soil')}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="home-outline" size={22} color="#2E7D32" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -181,6 +188,33 @@ export default function CriRecommendationScreen() {
                 </View>
               </View>
             </View>
+
+            {/* Go to Dashboard Action Button */}
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                backgroundColor: '#2E7D32',
+                paddingVertical: 14,
+                borderRadius: 14,
+                marginTop: 24,
+                marginBottom: 12,
+                shadowColor: '#2E7D32',
+                shadowOffset: { width: 0, height: 3 },
+                shadowOpacity: 0.2,
+                shadowRadius: 6,
+                elevation: 3,
+              }}
+              onPress={() => router.replace('/(tabs)/soil')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="home" size={20} color="#FFFFFF" />
+              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700' }}>
+                Go to Dashboard
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
       </ScrollView>

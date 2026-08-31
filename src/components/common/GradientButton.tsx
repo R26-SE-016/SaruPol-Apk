@@ -68,24 +68,21 @@ export default function GradientButton({
 const styles = StyleSheet.create({
   touchable: {
     borderRadius: ROUNDING.md,
-    overflow: 'hidden',
-    ...SHADOWS.soft,
   },
   gradient: {
+    borderRadius: ROUNDING.md,
     paddingVertical: 14,
     paddingHorizontal: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
   text: {
-    color: COLORS.textPrimary,
+    color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 16,
     letterSpacing: 0.5,
   },
   disabled: {
     opacity: 0.65,
-    elevation: 0,
-    shadowOpacity: 0,
   },
 });

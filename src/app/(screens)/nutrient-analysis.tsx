@@ -30,6 +30,7 @@ export default function NutrientAnalysisScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const language = useAppStore(state => state.language);
+  const addHistoryItem = useAppStore(state => state.addHistoryItem);
 
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -163,6 +164,22 @@ export default function NutrientAnalysisScreen() {
     setLoading(true);
     try {
       const result = await analyzeLeafImage(imageUri);
+
+      // Save to local history
+      try {
+        await addHistoryItem({
+          type: 'leaf_scan',
+          input: {
+            imageUri: imageUri,
+            palmAge: palmAge,
+            palmStage: palmStage,
+            zone: gpsZone || manualZone || '',
+          },
+          result: result
+        });
+      } catch (histErr) {
+        console.error("Failed to save leaf scan to history:", histErr);
+      }
 
       router.push({
         pathname: '/(screens)/nutrient-result' as any,
