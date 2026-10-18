@@ -172,7 +172,9 @@ export default function VoiceInputButton({
     }
 
     // If user hasn't spoken at all after initial wait timeout (12s), auto-stop
-    if (!hasSpokenRef.current && elapsed > INITIAL_SILENCE_TIMEOUT_MS) {
+    // (only when metering is available — expo-av on web gives no metering)
+    const hasMetering = status.metering !== undefined && status.metering !== null;
+    if (hasMetering && !hasSpokenRef.current && elapsed > INITIAL_SILENCE_TIMEOUT_MS) {
       void stopRecordingAndTranscribe();
       return;
     }
