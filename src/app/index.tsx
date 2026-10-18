@@ -1,13 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, ScrollView, Image, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../store/appStore';
 import api from '../services/api';
-import { COLORS, ROUNDING } from '../constants/theme';
-import GlassCard from '../components/common/GlassCard';
+import { ROUNDING } from '../constants/theme';
 import InputField from '../components/common/InputField';
 import GradientButton from '../components/common/GradientButton';
+
+const PALETTE = {
+  bg: '#F8FAF8',
+  cardBg: '#FFFFFF',
+  cardBorder: '#E8EDE8',
+  brandDark: '#142817',
+  brandPrimary: '#15803D',
+  brandEmerald: '#16A34A',
+  brandLight: '#DCFCE7',
+  brandSubtle: '#F0FDF4',
+  textPrimary: '#0F172A',
+  textSecondary: '#475569',
+  textMuted: '#64748B',
+  textLight: '#94A3B8',
+};
 
 export default function WelcomeScreen() {
   const { t } = useTranslation();
@@ -23,13 +39,11 @@ export default function WelcomeScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    // If user is already authenticated or is in guest mode from previous session, redirect to home tab
+    // If user is already authenticated, redirect to home tab
     if (token) {
       router.replace('/(tabs)/home');
-    } else if (!isGuest) {
-      // Not a guest and no token means they need to sign in
     }
-  }, [token, isGuest]);
+  }, [token]);
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
@@ -89,30 +103,43 @@ export default function WelcomeScreen() {
     router.push('/(screens)/guest-info');
   };
 
-  const toggleLanguage = () => {
-    setLanguage(language === 'en' ? 'si' : 'en');
-  };
-
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.container}
     >
-      <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
-        {/* Language Selection Header */}
-        <View style={styles.langHeader}>
-          <TouchableOpacity onPress={toggleLanguage} style={styles.langButton}>
-            <Text style={styles.langText}>
-              {language === 'en' ? 'සිංහල 🇱🇰' : 'English 🇬🇧'}
-            </Text>
-          </TouchableOpacity>
+      <StatusBar style="dark" />
+
+      <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        {/* Top Header with Language Selector */}
+        <View style={styles.topHeader}>
+          {/* Segmented language toggle */}
+          <View style={styles.langSelectorRow}>
+            {(['en', 'si', 'ta'] as const).map((lang) => (
+              <TouchableOpacity
+                key={lang}
+                style={[
+                  styles.langToggle,
+                  language === lang && styles.langToggleActive
+                ]}
+                onPress={() => setLanguage(lang)}
+                activeOpacity={0.7}
+              >
+                <Text style={[
+                  styles.langToggleText,
+                  language === lang && styles.langToggleTextActive
+                ]}>
+                  {lang === 'en' ? 'EN' : lang === 'si' ? 'සිං' : 'த'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         {/* Branding Hero */}
         <View style={styles.hero}>
           <View style={styles.logoContainer}>
-            {/* Soft decorative background glow */}
-            <View style={styles.glow} />
+            <View style={styles.logoOuterRing} />
             <Image
               source={require('../../assets/images/sarupol_logo.png')}
               style={styles.logo}
@@ -120,46 +147,92 @@ export default function WelcomeScreen() {
           </View>
           <Text style={styles.appName}>{t('common.appName')}</Text>
           <Text style={styles.tagline}>
-            {language === 'en'
-              ? 'Precision technology for your plantation'
-              : 'ඔබේ වගාබිමට නිවැරදි තාක්ෂණික මගපෙන්වීම'}
+            {language === 'ta'
+              ? 'உங்கள் தென்னை தோட்டத்திற்கான துல்லிய தொழில்நுட்பம்'
+              : language === 'si'
+              ? 'ඔබේ වගාබිමට නිවැරදි තාක්ෂණික මගපෙන්වීම'
+              : 'Precision technology for your plantation'}
           </Text>
         </View>
 
-        {/* Auth Form GlassCard */}
-        <GlassCard style={styles.formCard}>
-          <Text style={styles.formTitle}>
-            {isRegisterMode ? t('auth.registerTitle') : t('auth.loginTitle')}
-          </Text>
+        {/* Auth Form Card */}
+        <View style={styles.formCard}>
+          {/* Segmented Sign In / Sign Up Switcher */}
+          <View style={styles.segmentContainer}>
+            <TouchableOpacity
+              style={[styles.segmentBtn, !isRegisterMode && styles.segmentBtnActive]}
+              onPress={() => {
+                setIsRegisterMode(false);
+                setErrors({});
+              }}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.segmentBtnText, !isRegisterMode && styles.segmentBtnTextActive]}>
+                {language === 'ta' ? 'உள்நுழைவு' : language === 'si' ? 'පිවිසෙන්න' : 'Sign In'}
+              </Text>
+            </TouchableOpacity>
 
+            <TouchableOpacity
+              style={[styles.segmentBtn, isRegisterMode && styles.segmentBtnActive]}
+              onPress={() => {
+                setIsRegisterMode(true);
+                setErrors({});
+              }}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.segmentBtnText, isRegisterMode && styles.segmentBtnTextActive]}>
+                {language === 'ta' ? 'பதிவுசெய்க' : language === 'si' ? 'ලියාපදිංචි වන්න' : 'Sign Up'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Form Header Info */}
+          <View style={styles.formHeader}>
+            <Text style={styles.formTitle}>
+              {isRegisterMode ? t('auth.registerTitle') : t('auth.loginTitle')}
+            </Text>
+            <Text style={styles.formSubtitle}>
+              {isRegisterMode
+                ? (language === 'ta' ? 'புதிய கணக்கை உருவாக்க விபரங்களை உள்ளிடவும்' : language === 'si' ? 'නව ගිණුමක් සෑදීමට තොරතුරු ඇතුළත් කරන්න' : 'Fill details below to create your account')
+                : (language === 'ta' ? 'தொடர உங்கள் விபரங்களுடன் உள்நுழையவும்' : language === 'si' ? 'ඉදිරියට යාමට ඔබගේ ගිණුමට පිවිසෙන්න' : 'Enter credentials to access your farm copilot')}
+            </Text>
+          </View>
+
+          {/* Name Field (Sign Up only) */}
           {isRegisterMode && (
             <InputField
-              label={t('auth.namePlaceholder')}
+              label={language === 'ta' ? 'முழு பெயர்' : language === 'si' ? 'සම්පූර්ණ නම' : 'Full Name'}
               value={name}
               onChangeText={setName}
               placeholder="Ex: Jayasinghe"
+              icon="person-outline"
               error={errors.name}
             />
           )}
 
+          {/* Email Field */}
           <InputField
-            label={t('auth.emailPlaceholder')}
+            label={language === 'ta' ? 'மின்னஞ்சல் முகவரி' : language === 'si' ? 'විද්‍යුත් තැපෑල' : 'Email Address'}
             value={email}
             onChangeText={setEmail}
-            placeholder="farmer@sarupol.com"
+            placeholder="farmer@sarupol.lk"
             keyboardType="email-address"
+            icon="mail-outline"
             error={errors.email}
           />
 
+          {/* Password Field */}
           <InputField
-            label={t('auth.passwordPlaceholder')}
+            label={language === 'ta' ? 'கடவுச்சொல்' : language === 'si' ? 'මුරපදය' : 'Password'}
             value={password}
             onChangeText={setPassword}
             placeholder="••••••••"
             secureTextEntry
+            icon="lock-closed-outline"
             error={errors.password}
           />
 
+          {/* Submit Button */}
           <GradientButton
             title={isRegisterMode ? t('auth.registerBtn') : t('auth.loginBtn')}
             onPress={handleAuth}
@@ -167,22 +240,42 @@ export default function WelcomeScreen() {
             style={styles.submitBtn}
           />
 
+          {/* Switch Link */}
           <TouchableOpacity
             onPress={() => {
               setIsRegisterMode(!isRegisterMode);
               setErrors({});
             }}
             style={styles.switchButton}
+            activeOpacity={0.7}
           >
             <Text style={styles.switchText}>
               {isRegisterMode ? t('auth.hasAccount') : t('auth.noAccount')}
             </Text>
           </TouchableOpacity>
-        </GlassCard>
+        </View>
 
-        {/* Guest Action */}
-        <TouchableOpacity onPress={handleGuestMode} style={styles.guestButton}>
-          <Text style={styles.guestText}>{t('auth.guestBtn')} →</Text>
+        {/* Divider */}
+        <View style={styles.dividerRow}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>
+            {language === 'ta' ? 'அல்லது' : language === 'si' ? 'හෝ' : 'OR'}
+          </Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        {/* Guest Action Card Button */}
+        <TouchableOpacity onPress={handleGuestMode} style={styles.guestButton} activeOpacity={0.8}>
+          <View style={styles.guestButtonLeft}>
+            <View style={styles.guestIconWrap}>
+              <Ionicons name="leaf-outline" size={18} color={PALETTE.brandEmerald} />
+            </View>
+            <View>
+              <Text style={styles.guestTitle}>{t('auth.guestBtn')}</Text>
+              <Text style={styles.guestSubtitle}>Explore without signing in</Text>
+            </View>
+          </View>
+          <Ionicons name="arrow-forward" size={18} color={PALETTE.brandEmerald} />
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -192,103 +285,253 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: PALETTE.bg,
   },
   scrollContainer: {
     flexGrow: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: 22,
+    paddingTop: Platform.OS === 'ios' ? 54 : 36,
     paddingBottom: 40,
+  },
+  topHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  langSelectorRow: {
+    flexDirection: 'row',
+    gap: 2,
+    backgroundColor: '#F1F5F2',
+    padding: 3,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E5EBE5',
+  },
+  langToggle: {
+    paddingVertical: 5,
+    paddingHorizontal: 9,
+    borderRadius: 16,
+    minWidth: 30,
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  langHeader: {
-    alignSelf: 'flex-end',
-    marginTop: Platform.OS === 'ios' ? 50 : 20,
-    marginBottom: 10,
-  },
-  langButton: {
-    backgroundColor: 'rgba(27, 94, 32, 0.25)',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: ROUNDING.full,
+  langToggleActive: {
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: 'rgba(76, 175, 80, 0.3)',
+    borderColor: 'rgba(21, 128, 61, 0.25)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 1,
+      },
+    }),
   },
-  langText: {
-    color: COLORS.textPrimary,
-    fontWeight: 'bold',
-    fontSize: 14,
+  langToggleText: {
+    color: PALETTE.textSecondary,
+    fontWeight: '700',
+    fontSize: 11,
+  },
+  langToggleTextActive: {
+    color: PALETTE.brandEmerald,
+    fontWeight: '800',
   },
   hero: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
   },
   logoContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    overflow: 'hidden',
-    marginBottom: 16,
-    position: 'relative',
+    width: 86,
+    height: 86,
+    borderRadius: 43,
+    marginBottom: 14,
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
   },
-  glow: {
+  logoOuterRing: {
     position: 'absolute',
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: COLORS.primaryLight,
-    opacity: 0.3,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 1.5,
+    borderColor: 'rgba(22, 163, 74, 0.2)',
+    backgroundColor: PALETTE.brandLight,
   },
   logo: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 74,
+    height: 74,
+    borderRadius: 37,
   },
   appName: {
-    color: COLORS.textPrimary,
+    color: PALETTE.textPrimary,
     fontSize: 28,
     fontWeight: '900',
-    letterSpacing: 1,
+    letterSpacing: -0.5,
   },
   tagline: {
-    color: COLORS.textSecondary,
-    fontSize: 14,
+    color: PALETTE.textMuted,
+    fontSize: 13,
     textAlign: 'center',
-    marginTop: 6,
+    marginTop: 4,
     paddingHorizontal: 20,
+    lineHeight: 18,
+    fontWeight: '500',
   },
   formCard: {
-    paddingVertical: 20,
+    backgroundColor: PALETTE.cardBg,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: PALETTE.cardBorder,
+    padding: 22,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#142817',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.05,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  segmentContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#F1F5F2',
+    padding: 3,
+    borderRadius: 16,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: '#E5EBE5',
+  },
+  segmentBtn: {
+    flex: 1,
+    paddingVertical: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 13,
+  },
+  segmentBtnActive: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'rgba(21, 128, 61, 0.2)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 1,
+      },
+    }),
+  },
+  segmentBtnText: {
+    color: PALETTE.textSecondary,
+    fontSize: 13.5,
+    fontWeight: '700',
+  },
+  segmentBtnTextActive: {
+    color: PALETTE.brandEmerald,
+    fontWeight: '800',
+  },
+  formHeader: {
+    marginBottom: 18,
   },
   formTitle: {
-    color: COLORS.textPrimary,
+    color: PALETTE.textPrimary,
     fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  formSubtitle: {
+    color: PALETTE.textLight,
+    fontSize: 12.5,
+    marginTop: 3,
+    fontWeight: '500',
+    lineHeight: 17,
   },
   submitBtn: {
-    marginTop: 10,
+    marginTop: 8,
   },
   switchButton: {
     marginTop: 16,
     alignItems: 'center',
+    paddingVertical: 4,
   },
   switchText: {
-    color: COLORS.primaryLight,
-    fontSize: 14,
-    fontWeight: '600',
+    color: PALETTE.brandEmerald,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+    gap: 12,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E2E8F0',
+  },
+  dividerText: {
+    color: PALETTE.textLight,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   guestButton: {
-    marginTop: 24,
+    backgroundColor: PALETTE.cardBg,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: PALETTE.cardBorder,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    justifyContent: 'space-between',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.03,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 1,
+      },
+    }),
   },
-  guestText: {
-    color: COLORS.textSecondary,
-    fontSize: 15,
-    fontWeight: 'bold',
-    textDecorationLine: 'underline',
+  guestButtonLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  guestIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: PALETTE.brandLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  guestTitle: {
+    color: PALETTE.textPrimary,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  guestSubtitle: {
+    color: PALETTE.textLight,
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 1,
   },
 });
