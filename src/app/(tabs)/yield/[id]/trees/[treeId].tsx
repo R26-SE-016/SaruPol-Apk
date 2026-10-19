@@ -187,6 +187,10 @@ export default function SingleTreeScreen() {
         setManualPh(String(tData.sensorData.ph ?? 6.2));
         setManualMoisture(String(tData.sensorData.soilMoisture ?? 45));
       }
+      if (tData.variety) setVariety(tData.variety);
+      if (tData.ageRange) setAgeRange(tData.ageRange);
+      if (tData.frondCount !== undefined) setFrondCount(tData.frondCount);
+
 
       // Load tree object from farm context
       const farm: any = farms.find((f: any) => f.id === farmId);
@@ -380,6 +384,9 @@ export default function SingleTreeScreen() {
         latest: newHistoryEntry,
         status: healthStats.status,
         health: healthStats.health,
+        variety,
+        ageRange,
+        frondCount,
       } as any);
       await saveTreeHistory(user.uid, farmId, treeId, newHistoryEntry as any);
 

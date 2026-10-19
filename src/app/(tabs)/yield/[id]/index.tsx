@@ -146,15 +146,15 @@ export default function FarmDetailScreen() {
           <ArrowLeft size={24} color="#fff" />
         </TouchableOpacity>
         
-        <View className="flex-1">
-          <Text className="text-white text-base font-bold">Active Farm: {farm.name}</Text>
+        <View className="flex-1 min-w-0 pr-2">
+          <Text className="text-white text-base font-bold" numberOfLines={1} ellipsizeMode="tail">Active Farm: {farm.name}</Text>
           <View className="flex-row items-center mt-0.5 gap-1.5">
-            <View className={`w-2 h-2 rounded-full ${deviceLive ? "bg-green-400" : "bg-red-400"}`} />
-            <Text className="text-forest-100 text-xs font-semibold">Device Status: {deviceIdStr}</Text>
+            <View className={`w-2 h-2 rounded-full shrink-0 ${deviceLive ? "bg-green-400" : "bg-red-400"}`} />
+            <Text className="text-forest-100 text-xs font-semibold" numberOfLines={1} ellipsizeMode="tail">Device Status: {deviceIdStr}</Text>
           </View>
         </View>
 
-        <TouchableOpacity onPress={() => router.push(`/yield/add-farm?id=${farm.id}`)} className="flex-row items-center gap-1.5 bg-white/15 px-3 py-1.5 rounded-lg">
+        <TouchableOpacity onPress={() => router.push(`/yield/add-farm?id=${farm.id}`)} className="flex-row items-center gap-1.5 bg-white/15 px-3 py-1.5 rounded-lg shrink-0">
           <Pencil size={12} color="#fff" />
           <Text className="text-white text-xs font-bold">Edit Farm Details</Text>
         </TouchableOpacity>

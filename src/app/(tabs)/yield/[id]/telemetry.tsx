@@ -57,46 +57,54 @@ export default function DeviceScreen() {
       <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ gap: 16, paddingBottom: 100 }}>
         {/* Top Card */}
         <View className="bg-white rounded-3xl p-4 border border-slate-100 shadow-sm">
-          <View className="flex-row items-center gap-4">
-            <View className="w-24 h-24 bg-[#F2FAF6] rounded-full items-center justify-center relative border-[6px] border-white shadow-sm overflow-visible" style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 2 }}>
-              <Image source={{ uri: 'https://i.ibb.co/HDHPBzpp/device.png' }} style={{ width: 64, height: 64, resizeMode: 'contain' }} />
+          <View className="flex-row items-center gap-3.5">
+            <View className="w-20 h-20 bg-[#F2FAF6] rounded-full items-center justify-center relative border-[4px] border-white shadow-sm overflow-visible shrink-0" style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 2 }}>
+              <Image source={{ uri: 'https://i.ibb.co/HDHPBzpp/device.png' }} style={{ width: 52, height: 52, resizeMode: 'contain' }} />
               {deviceLive ? (
-                <View className="absolute bottom-0 right-0 w-7 h-7 bg-[#16a34a] border-4 border-white rounded-full items-center justify-center">
-                  <CheckCircle2 size={14} color="#fff" strokeWidth={3} />
+                <View className="absolute bottom-0 right-0 w-6 h-6 bg-[#16a34a] border-2 border-white rounded-full items-center justify-center">
+                  <CheckCircle2 size={12} color="#fff" strokeWidth={3} />
                 </View>
               ) : (
-                <View className="absolute bottom-0 right-0 w-7 h-7 bg-slate-400 border-4 border-white rounded-full items-center justify-center">
-                  <WifiOff size={12} color="#fff" strokeWidth={3} />
+                <View className="absolute bottom-0 right-0 w-6 h-6 bg-slate-400 border-2 border-white rounded-full items-center justify-center">
+                  <WifiOff size={11} color="#fff" strokeWidth={3} />
                 </View>
               )}
             </View>
-            <View className="flex-1">
-              <Text className="text-xs font-semibold text-slate-500 mb-1">Device ID</Text>
-              <View className="flex-row items-center gap-3 mb-2">
-                <Text className="text-3xl font-black text-slate-800">{deviceId}</Text>
+            <View className="flex-1 min-w-0">
+              <View className="flex-row items-center justify-between mb-1">
+                <Text className="text-xs font-semibold text-slate-500">Device ID</Text>
                 {deviceLive ? (
-                  <View className="bg-green-50 px-2.5 py-1 rounded-full flex-row items-center gap-1.5 border border-green-100">
-                    <View className="w-2 h-2 bg-green-500 rounded-full" />
+                  <View className="bg-green-50 px-2 py-0.5 rounded-full flex-row items-center gap-1.5 border border-green-200 shrink-0">
+                    <View className="w-1.5 h-1.5 bg-green-500 rounded-full" />
                     <Text className="text-[10px] font-bold text-green-700 uppercase tracking-wider">Active</Text>
                   </View>
                 ) : (
-                  <View className="bg-slate-50 px-2.5 py-1 rounded-full flex-row items-center gap-1.5 border border-slate-200">
-                    <View className="w-2 h-2 bg-slate-400 rounded-full" />
+                  <View className="bg-slate-100 px-2 py-0.5 rounded-full flex-row items-center gap-1.5 border border-slate-200 shrink-0">
+                    <View className="w-1.5 h-1.5 bg-slate-400 rounded-full" />
                     <Text className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Inactive</Text>
                   </View>
                 )}
               </View>
+              <Text 
+                className="text-xl font-black text-slate-800 tracking-tight mb-1.5" 
+                numberOfLines={1} 
+                adjustsFontSizeToFit
+              >
+                {deviceId}
+              </Text>
               <View className="flex-row items-center gap-1.5">
-                <Text className="text-[11px] text-slate-500">Last updated: {telemetry?.lastSync || "Just now"}</Text>
-                <TouchableOpacity onPress={refresh} className="ml-1"><RefreshCw size={12} color="#16a34a" /></TouchableOpacity>
+                <Text className="text-[11px] text-slate-500" numberOfLines={1}>Last updated: {telemetry?.lastSync || "Just now"}</Text>
+                <TouchableOpacity onPress={refresh} className="ml-1 p-0.5" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <RefreshCw size={12} color="#16a34a" />
+                </TouchableOpacity>
               </View>
             </View>
           </View>
-          <View className={`mt-5 rounded-xl p-3 flex-row items-center gap-2 border ${deviceLive ? 'bg-[#F0FDF4] border-[#DCFCE7]' : 'bg-red-50 border-red-100'}`}>
-            <View className="w-6 h-6 bg-white rounded-full items-center justify-center shadow-sm" style={{ elevation: 1 }}>
+          <View className={`mt-4 rounded-xl p-3 flex-row items-center gap-2 border ${deviceLive ? 'bg-[#F0FDF4] border-[#DCFCE7]' : 'bg-red-50 border-red-100'}`}>
+            <View className="w-6 h-6 bg-white rounded-full items-center justify-center shadow-sm shrink-0" style={{ elevation: 1 }}>
                {deviceLive ? <Wifi size={12} color="#16a34a" /> : <WifiOff size={12} color="#dc2626" />}
             </View>
-            <Text className={`text-xs font-bold ${deviceLive ? 'text-[#166534]' : 'text-red-700'}`}>
+            <Text className={`text-xs font-bold flex-1 ${deviceLive ? 'text-[#166534]' : 'text-red-700'}`} numberOfLines={1} ellipsizeMode="tail">
               {deviceLive ? "Device is online and working properly" : "Device is offline or inactive"}
             </Text>
           </View>

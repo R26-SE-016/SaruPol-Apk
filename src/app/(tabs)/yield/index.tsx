@@ -468,14 +468,18 @@ export default function YieldDashboardScreen() {
                 return (
                   <View key={farm.id} className="bg-white rounded-[24px] p-4 border border-slate-100 mb-2" style={{ shadowColor: '#12211C', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.06, shadowRadius: 25, elevation: 5 }}>
                     {/* Top Row: Name, Location, Badge */}
-                    <View className="flex-row items-start justify-between mb-4">
-                      <View className="flex-row flex-1 pr-2 items-center gap-3">
-                        <Image source={{ uri: 'https://i.ibb.co/hxXPYgww/farm-image.png' }} style={{width: 50, height: 50, borderRadius: 25}} defaultSource={{width: 50, height: 50}} />
-                        <View>
-                          <Text className="text-[17px] font-bold text-slate-800">{farm.name}</Text>
-                          <View className="flex-row items-center gap-1 mt-1">
+                    <View className="flex-row items-center justify-between mb-4 gap-2">
+                      <View className="flex-row flex-1 min-w-0 items-center gap-3">
+                        <Image source={{ uri: 'https://i.ibb.co/hxXPYgww/farm-image.png' }} style={{width: 48, height: 48, borderRadius: 24}} defaultSource={{width: 48, height: 48}} />
+                        <View className="flex-1 min-w-0">
+                          <Text className="text-[16px] font-bold text-slate-800 leading-snug" numberOfLines={1} ellipsizeMode="tail">
+                            {farm.name}
+                          </Text>
+                          <View className="flex-row items-center gap-1 mt-0.5">
                             <MapPin size={12} color="#94a3b8" />
-                            <Text className="text-xs text-slate-500">{farm.locationName || "Location Not Set"}</Text>
+                            <Text className="text-xs text-slate-500 flex-1" numberOfLines={1} ellipsizeMode="tail">
+                              {farm.locationName || "Location Not Set"}
+                            </Text>
                           </View>
                         </View>
                       </View>
@@ -484,7 +488,7 @@ export default function YieldDashboardScreen() {
                         const isUrgent = daysLeft <= 7;
                         const isOverdue = daysLeft < 0;
                         return (
-                          <View className={`px-3 py-1.5 rounded-[20px] ${isOverdue ? 'bg-red-100' : isUrgent ? 'bg-amber-100' : 'bg-emerald-100'}`}>
+                          <View className={`px-2.5 py-1 rounded-full shrink-0 ${isOverdue ? 'bg-red-100' : isUrgent ? 'bg-amber-100' : 'bg-emerald-100'}`}>
                             <Text className={`text-[10px] font-bold ${isOverdue ? 'text-red-700' : isUrgent ? 'text-amber-700' : 'text-emerald-700'}`}>
                               {isOverdue ? `${Math.abs(daysLeft)}d Overdue` : `${daysLeft} Days Left`}
                             </Text>
