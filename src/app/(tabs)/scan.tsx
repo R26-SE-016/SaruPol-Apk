@@ -16,12 +16,32 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera } from 'expo-camera';
+import { StatusBar } from 'expo-status-bar';
 import { COLORS, ROUNDING, SHADOWS } from '../../constants/theme';
-import GlassCard from '../../components/common/GlassCard';
 import GradientButton from '../../components/common/GradientButton';
 import { classifyImage, syncDiagnostics, updateHotspotStatus, type PathologyResult } from '../../services/pathologyService';
 import { useAppStore } from '../../store/appStore';
 import { getDiseaseInfo, DISEASE_CLASS_ORDER } from '../../constants/diseaseKnowledge';
+
+const PALETTE = {
+  bg: '#F8FAF8',
+  cardBg: '#FFFFFF',
+  cardBorder: '#E8EDE8',
+  subtleBorder: '#EEF2EE',
+  brandDark: '#142817',
+  brandPrimary: '#15803D',
+  brandEmerald: '#16A34A',
+  brandLight: '#DCFCE7',
+  brandSubtle: '#F0FDF4',
+  textPrimary: '#0F172A',
+  textSecondary: '#475569',
+  textMuted: '#64748B',
+  textLight: '#94A3B8',
+  red: '#DC2626',
+  redLight: '#FEE2E2',
+  redSubtle: '#FFF7F7',
+  redBorder: '#FECACA',
+};
 
 // ── Step config ───────────────────────────────────────────────────────
 const STEPS = ['Select Part', 'Take Photo', 'Analyze'];
@@ -263,6 +283,8 @@ export default function ScanScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar style="dark" />
+
       {/* ── Header ─────────────────────────────────────────────── */}
       <View style={styles.header}>
         <Text style={styles.title}>
@@ -286,7 +308,7 @@ export default function ScanScreen() {
                 idx === currentStep && styles.stepDotActive,
               ]}>
                 {idx < currentStep ? (
-                  <Ionicons name="checkmark" size={12} color={COLORS.textDark} />
+                  <Ionicons name="checkmark" size={13} color="#FFFFFF" />
                 ) : (
                   <Text style={[
                     styles.stepDotText,
@@ -317,30 +339,25 @@ export default function ScanScreen() {
 
         {/* ── Targeted Hotspot Inspection Banner (Macro-to-Micro Bridge) ── */}
         {params.hotspot_id && (
-          <GlassCard
-            style={{
-              marginBottom: 16,
-              padding: 14,
-              borderLeftWidth: 4,
-              borderLeftColor: COLORS.diseased,
-              backgroundColor: 'rgba(239, 68, 68, 0.08)',
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-              <Ionicons name="airplane" size={18} color={COLORS.diseased} style={{ marginRight: 6 }} />
-              <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.diseased }}>
-                TARGETED DRONE HOTSPOT INSPECTION
+          <View style={styles.hotspotBanner}>
+            <View style={styles.hotspotLeftBar} />
+            <View style={styles.hotspotBannerContent}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                <Ionicons name="airplane" size={18} color={PALETTE.red} style={{ marginRight: 6 }} />
+                <Text style={styles.hotspotBannerTitle}>
+                  TARGETED DRONE HOTSPOT INSPECTION
+                </Text>
+              </View>
+              <Text style={styles.hotspotBannerDesc}>
+                {params.hotspot_action || 'Stressed tree flagged by aerial spectral scan.'}
               </Text>
+              {params.target_lat && params.target_lng && (
+                <Text style={styles.hotspotGps}>
+                  📍 GPS: {parseFloat(params.target_lat).toFixed(5)}, {parseFloat(params.target_lng).toFixed(5)}
+                </Text>
+              )}
             </View>
-            <Text style={{ fontSize: 12, color: COLORS.text, marginBottom: 2 }}>
-              {params.hotspot_action || 'Stressed tree flagged by aerial spectral scan.'}
-            </Text>
-            {params.target_lat && params.target_lng && (
-              <Text style={{ fontSize: 11, color: COLORS.textSecondary, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>
-                📍 GPS: {parseFloat(params.target_lat).toFixed(5)}, {parseFloat(params.target_lng).toFixed(5)}
-              </Text>
-            )}
-          </GlassCard>
+          </View>
         )}
 
         {/* ── Part Selector ───────────────────────────────────── */}
@@ -442,7 +459,7 @@ export default function ScanScreen() {
           ) : (
             <View style={styles.emptyImageWrapper}>
               <View style={styles.emptyIconRing}>
-                <Ionicons name="camera" size={40} color={COLORS.primaryLight} />
+                <Ionicons name="camera" size={38} color={PALETTE.brandEmerald} />
               </View>
               <Text style={styles.emptyImageText}>
                 {language === 'en' ? 'No Image Selected' : 'ඡායාරූපයක් තෝරාගෙන නැත'}
@@ -462,8 +479,9 @@ export default function ScanScreen() {
             style={styles.mediaButton}
             onPress={() => handlePickImage(true)}
             disabled={loading}
+            activeOpacity={0.75}
           >
-            <Ionicons name="camera-outline" size={20} color={COLORS.primaryLight} />
+            <Ionicons name="camera-outline" size={20} color={PALETTE.brandEmerald} />
             <Text style={styles.mediaBtnText}>
               {language === 'en' ? 'Camera' : 'කැමරාව'}
             </Text>
@@ -473,8 +491,9 @@ export default function ScanScreen() {
             style={styles.mediaButton}
             onPress={() => handlePickImage(false)}
             disabled={loading}
+            activeOpacity={0.75}
           >
-            <Ionicons name="images-outline" size={20} color={COLORS.primaryLight} />
+            <Ionicons name="images-outline" size={20} color={PALETTE.brandEmerald} />
             <Text style={styles.mediaBtnText}>
               {language === 'en' ? 'Gallery' : 'ගැලරිය'}
             </Text>
@@ -494,9 +513,9 @@ export default function ScanScreen() {
         )}
 
         {/* ── Disease Classes Info Card ────────────────────────── */}
-        <GlassCard style={styles.infoCard}>
+        <View style={styles.infoCard}>
           <View style={styles.infoCardHeader}>
-            <Ionicons name="shield-checkmark-outline" size={18} color={COLORS.primaryLight} />
+            <Ionicons name="shield-checkmark-outline" size={18} color={PALETTE.brandEmerald} />
             <Text style={styles.infoCardTitle}>
               {language === 'en' ? 'Detectable Diseases' : 'හඳුනාගත හැකි රෝග'}
             </Text>
@@ -517,7 +536,7 @@ export default function ScanScreen() {
               ? 'Powered by MobileNetV2-INT8 · Cloud Backend'
               : 'MobileNetV2-INT8 · Cloud Backend මගින් ක්‍රියා කරයි'}
           </Text>
-        </GlassCard>
+        </View>
 
       </ScrollView>
     </View>
@@ -527,25 +546,37 @@ export default function ScanScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: PALETTE.bg,
   },
   // ── Header ─────────────────────────────────────────────────────
   header: {
     paddingHorizontal: 24,
-    paddingTop: Platform.OS === 'ios' ? 60 : 30,
+    paddingTop: Platform.OS === 'ios' ? 56 : 38,
     paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(76, 175, 80, 0.12)',
-    backgroundColor: COLORS.surface,
+    borderBottomColor: '#EEF2EE',
+    backgroundColor: PALETTE.cardBg,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#12211C',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.03,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   title: {
-    color: COLORS.textPrimary,
-    fontSize: 22,
+    color: PALETTE.textPrimary,
+    fontSize: 20,
     fontWeight: '800',
     textAlign: 'center',
+    letterSpacing: -0.3,
   },
   subtitle: {
-    color: COLORS.textSecondary,
+    color: PALETTE.textSecondary,
     fontSize: 12,
     textAlign: 'center',
     marginTop: 2,
@@ -557,10 +588,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 14,
-    backgroundColor: COLORS.surface,
+    paddingVertical: 12,
+    backgroundColor: PALETTE.cardBg,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(76, 175, 80, 0.08)',
+    borderBottomColor: '#EEF2EE',
   },
   stepItem: {
     alignItems: 'center',
@@ -570,60 +601,109 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: COLORS.surfaceLight,
+    backgroundColor: '#F1F5F2',
     borderWidth: 1.5,
-    borderColor: 'rgba(76, 175, 80, 0.2)',
+    borderColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
   },
   stepDotActive: {
-    borderColor: COLORS.primaryLight,
-    backgroundColor: 'rgba(76, 175, 80, 0.15)',
+    borderColor: PALETTE.brandEmerald,
+    backgroundColor: PALETTE.brandLight,
   },
   stepDotDone: {
-    backgroundColor: COLORS.primaryLight,
-    borderColor: COLORS.primaryLight,
+    backgroundColor: PALETTE.brandEmerald,
+    borderColor: PALETTE.brandEmerald,
   },
   stepDotText: {
-    color: COLORS.textMuted,
+    color: PALETTE.textMuted,
     fontSize: 11,
     fontWeight: '700',
   },
   stepDotTextActive: {
-    color: COLORS.primaryLight,
+    color: PALETTE.brandPrimary,
   },
   stepLabel: {
-    color: COLORS.textMuted,
+    color: PALETTE.textLight,
     fontSize: 10,
     fontWeight: '600',
   },
   stepLabelActive: {
-    color: COLORS.primaryLight,
+    color: PALETTE.brandEmerald,
+    fontWeight: '700',
   },
   stepConnector: {
     width: 28,
     height: 2,
-    backgroundColor: 'rgba(76, 175, 80, 0.15)',
+    backgroundColor: '#E2E8F0',
     marginBottom: 14,
     marginHorizontal: 4,
     borderRadius: 1,
   },
   stepConnectorDone: {
-    backgroundColor: COLORS.primaryLight,
+    backgroundColor: PALETTE.brandEmerald,
   },
   // ── Scroll Content ──────────────────────────────────────────────
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 18,
     paddingBottom: 40,
   },
   sectionLabel: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.2,
+    color: PALETTE.textSecondary,
+    fontSize: 11.5,
+    fontWeight: '800',
+    letterSpacing: 0.8,
     marginBottom: 10,
     textTransform: 'uppercase',
+  },
+  // ── Drone Hotspot Banner ────────────────────────────────────────
+  hotspotBanner: {
+    backgroundColor: PALETTE.redSubtle,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: PALETTE.redBorder,
+    overflow: 'hidden',
+    marginBottom: 20,
+    position: 'relative',
+    ...Platform.select({
+      ios: {
+        shadowColor: PALETTE.red,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  hotspotLeftBar: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4.5,
+    backgroundColor: PALETTE.red,
+  },
+  hotspotBannerContent: {
+    padding: 14,
+    paddingLeft: 16,
+  },
+  hotspotBannerTitle: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    color: '#991B1B',
+  },
+  hotspotBannerDesc: {
+    fontSize: 12,
+    color: '#7F1D1D',
+    marginBottom: 3,
+  },
+  hotspotGps: {
+    fontSize: 11,
+    color: '#991B1B',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   // ── Part Selector ───────────────────────────────────────────────
   partsGrid: {
@@ -633,42 +713,64 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   partBtn: {
-    backgroundColor: COLORS.surface,
-    borderColor: 'rgba(76, 175, 80, 0.15)',
+    backgroundColor: PALETTE.cardBg,
+    borderColor: PALETTE.cardBorder,
     borderWidth: 1.5,
-    borderRadius: ROUNDING.sm,
+    borderRadius: 14,
     paddingVertical: 10,
     paddingHorizontal: 14,
     minWidth: '47%',
     flexGrow: 1,
     alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#12211C',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.03,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 1,
+      },
+    }),
   },
   partBtnSelected: {
-    borderColor: COLORS.primaryLight,
-    backgroundColor: 'rgba(27, 94, 32, 0.3)',
+    borderColor: PALETTE.brandEmerald,
+    backgroundColor: PALETTE.brandSubtle,
   },
   partBtnText: {
-    color: COLORS.textSecondary,
+    color: PALETTE.textSecondary,
     fontSize: 13,
     fontWeight: '600',
   },
   partBtnTextSelected: {
-    color: COLORS.textPrimary,
+    color: PALETTE.brandPrimary,
     fontWeight: '800',
   },
   // ── Image Area ──────────────────────────────────────────────────
   imageBox: {
     width: '100%',
     height: 240,
-    borderRadius: ROUNDING.md,
+    borderRadius: 22,
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderColor: 'rgba(76, 175, 80, 0.3)',
-    backgroundColor: 'rgba(27, 94, 32, 0.06)',
+    borderColor: '#CBD5E1',
+    backgroundColor: PALETTE.cardBg,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
     marginBottom: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.03,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 1,
+      },
+    }),
   },
   imagePreviewContainer: {
     width: '100%',
@@ -683,10 +785,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    height: 2,
-    backgroundColor: COLORS.primaryLight,
-    opacity: 0.7,
-    shadowColor: COLORS.primaryLight,
+    height: 2.5,
+    backgroundColor: PALETTE.brandEmerald,
+    opacity: 0.85,
+    shadowColor: PALETTE.brandEmerald,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.9,
     shadowRadius: 6,
@@ -697,10 +799,13 @@ const styles = StyleSheet.create({
     top: 10,
     right: 10,
     zIndex: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 2,
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(10, 31, 13, 0.82)',
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 14,
@@ -712,9 +817,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   loadingStepText: {
-    color: COLORS.textSecondary,
-    fontSize: 13,
-    fontWeight: '600',
+    color: PALETTE.textPrimary,
+    fontSize: 13.5,
+    fontWeight: '700',
   },
   loadingDots: {
     flexDirection: 'row',
@@ -724,10 +829,10 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: 'rgba(76, 175, 80, 0.25)',
+    backgroundColor: '#E2E8F0',
   },
   loadingDotActive: {
-    backgroundColor: COLORS.primaryLight,
+    backgroundColor: PALETTE.brandEmerald,
   },
   syncBadge: {
     position: 'absolute',
@@ -735,20 +840,20 @@ const styles = StyleSheet.create({
     left: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: ROUNDING.sm,
-    backgroundColor: 'rgba(10, 31, 13, 0.85)',
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderWidth: 1,
-    borderColor: 'rgba(76, 175, 80, 0.3)',
+    borderColor: '#E2E8F0',
   },
-  syncBadgeSynced: { borderColor: 'rgba(34, 197, 94, 0.4)' },
-  syncBadgeSyncing: { borderColor: 'rgba(59, 130, 246, 0.4)' },
-  syncBadgeFailed: { borderColor: 'rgba(239, 68, 68, 0.4)' },
+  syncBadgeSynced: { borderColor: '#86EFAC' },
+  syncBadgeSyncing: { borderColor: '#93C5FD' },
+  syncBadgeFailed: { borderColor: '#FCA5A5' },
   syncBadgeText: {
-    color: COLORS.textSecondary,
-    fontSize: 10,
+    color: PALETTE.textPrimary,
+    fontSize: 10.5,
     fontWeight: '700',
   },
   emptyImageWrapper: {
@@ -759,19 +864,19 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: 'rgba(76, 175, 80, 0.08)',
+    backgroundColor: PALETTE.brandSubtle,
     borderWidth: 1.5,
-    borderColor: 'rgba(76, 175, 80, 0.2)',
+    borderColor: PALETTE.brandLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
   emptyImageText: {
-    color: COLORS.textSecondary,
+    color: PALETTE.textPrimary,
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   emptyImageHint: {
-    color: COLORS.textMuted,
+    color: PALETTE.textLight,
     fontSize: 12,
     fontWeight: '500',
   },
@@ -788,23 +893,50 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: COLORS.surface,
-    borderColor: 'rgba(76, 175, 80, 0.2)',
+    backgroundColor: PALETTE.cardBg,
+    borderColor: '#E2E8F0',
     borderWidth: 1.5,
-    borderRadius: ROUNDING.sm,
+    borderRadius: 16,
     paddingVertical: 14,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   mediaBtnText: {
-    color: COLORS.textPrimary,
-    fontSize: 13,
-    fontWeight: '700',
+    color: PALETTE.textPrimary,
+    fontSize: 13.5,
+    fontWeight: '800',
   },
   scanBtn: {
     marginBottom: 20,
   },
-  // ── Info Card ───────────────────────────────────────────────────
+  // ── Info Card ─────────────────────────────────────────────────
   infoCard: {
+    backgroundColor: PALETTE.cardBg,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: PALETTE.cardBorder,
+    padding: 18,
     marginTop: 4,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#12211C',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.04,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   infoCardHeader: {
     flexDirection: 'row',
@@ -813,26 +945,26 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   infoCardTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 14,
-    fontWeight: '700',
+    color: PALETTE.textPrimary,
+    fontSize: 14.5,
+    fontWeight: '800',
   },
   diseaseGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 12,
+    marginBottom: 14,
   },
   diseasePill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(27, 94, 32, 0.15)',
+    backgroundColor: '#F8FAF8',
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: ROUNDING.full,
+    paddingVertical: 6,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(76, 175, 80, 0.15)',
+    borderColor: '#EAEFEA',
   },
   diseasePillDot: {
     width: 7,
@@ -840,17 +972,17 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   diseasePillText: {
-    color: COLORS.textSecondary,
+    color: PALETTE.textSecondary,
     fontSize: 12,
     fontWeight: '600',
   },
   infoCardFooter: {
-    color: COLORS.textMuted,
+    color: PALETTE.textLight,
     fontSize: 11,
     fontWeight: '500',
     textAlign: 'center',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(76, 175, 80, 0.1)',
+    borderTopColor: '#F1F5F2',
     paddingTop: 10,
     marginTop: 2,
   },
