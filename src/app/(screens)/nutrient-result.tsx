@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { COLORS, ROUNDING } from '../../constants/theme';
 import GradientButton from '../../components/common/GradientButton';
 import { NutrientAnalysisResponse, saveNutrientScan, getDeficiencies } from '../../services/nutrientService';
@@ -51,6 +52,7 @@ const DEFICIENCY_EXPLANATIONS: Record<string, { chemicalSymbol: string; themeCol
 
 export default function NutrientResultScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { data, imageUri, palmAge, palmStage, zone } = useLocalSearchParams<{ 
     data: string; 
     imageUri: string;
@@ -62,6 +64,15 @@ export default function NutrientResultScreen() {
   const { user, isGuest, isConnected } = useAppStore();
   const [isSaving, setIsSaving] = useState(false);
   const [deficiencies, setDeficiencies] = useState<any[]>([]);
+
+  let result: NutrientAnalysisResponse | null = null;
+  try {
+    if (data) {
+      result = JSON.parse(data);
+    }
+  } catch (error) {
+    console.error("Failed to parse analysis result:", error);
+  }
 
   useEffect(() => {
     const fetchRules = async () => {
@@ -90,14 +101,32 @@ export default function NutrientResultScreen() {
     setIsSaving(true);
     try {
       if (isConnected) {
+        const pred = result?.prediction ? {
+          nutrient: result.prediction.nutrient || "Healthy",
+          class: result.prediction.class || "Healthy",
+          confidence: result.prediction.confidence ?? 0.85
+        } : null;
+
+        const rec = result?.recommendation ? {
+          source: result.recommendation.source || "Coconut Research Institute (CRI) Diagnostic Protocol",
+          assessment_type: result.recommendation.assessment_type || "preliminary_visual_assessment",
+          advice: result.recommendation.advice || "Palm foliage appears healthy. Maintain standard CRI circular trench fertilization schedule."
+        } : {
+          source: "Coconut Research Institute (CRI) Diagnostic Protocol",
+          assessment_type: "preliminary_visual_assessment",
+          advice: pred?.class === "Healthy"
+            ? "Palm foliage appears healthy and balanced. Maintain CRI circular trench fertilization schedule."
+            : "Preliminary visual assessment indicates potential deficiency. Confirm with laboratory foliar analysis."
+        };
+
         await saveNutrientScan({
           user_id: user.id.toString(),
           palm_age: palmAge || '8',
           palm_stage: palmStage || 'adult',
           zone: zone || 'wet',
           image_uri: imageUri || '',
-          prediction: result?.prediction || null,
-          recommendation: result?.recommendation || null,
+          prediction: pred,
+          recommendation: rec,
         });
         Alert.alert("Success", "Scan results saved successfully to your cloud profile.", [
           { text: "OK", onPress: () => router.navigate('/(tabs)/soil') }
@@ -118,16 +147,6 @@ export default function NutrientResultScreen() {
   };
 
   const criRecommendation = getStandardRecommendation(palmAge || '', palmStage || '', zone || '');
-  
-  let result: NutrientAnalysisResponse | null = null;
-  
-  try {
-    if (data) {
-      result = JSON.parse(data);
-    }
-  } catch (error) {
-    console.error("Failed to parse analysis result:", error);
-  }
 
   if (!result) {
     return (
@@ -155,21 +174,21 @@ export default function NutrientResultScreen() {
         <View style={styles.card}>
           <View style={[styles.statusHeader, { backgroundColor: '#FFEBEE' }]}>
             <Ionicons name="warning" size={28} color="#D32F2F" />
-            <Text style={[styles.statusTitle, { color: '#C62828' }]}>Uncertain Detection</Text>
+            <Text style={[styles.statusTitle, { color: '#C62828' }]}>{t('soil.uncertainDetection')}</Text>
           </View>
           <Text style={styles.bodyText}>
             {message || "The leaf image could not be classified confidently. This can happen if the leaf is out of focus, has dirt/debris, or does not clearly display the key deficiency patterns."}
           </Text>
           <View style={styles.divider} />
           <View style={styles.guidelinesBox}>
-            <Text style={styles.guidelinesTitle}>Tips for better scanning:</Text>
+            <Text style={styles.guidelinesTitle}>{t('soil.uncertainTips')}</Text>
             <View style={styles.guidelineRow}>
               <Ionicons name="checkmark-circle-outline" size={16} color="#7F8C7D" />
-              <Text style={styles.guidelineText}>Ensure the leaf is in focus and well lit.</Text>
+              <Text style={styles.guidelineText}>{t('soil.uncertainTip1')}</Text>
             </View>
             <View style={styles.guidelineRow}>
               <Ionicons name="checkmark-circle-outline" size={16} color="#7F8C7D" />
-              <Text style={styles.guidelineText}>Capture the symptoms clearly against a flat background.</Text>
+              <Text style={styles.guidelineText}>{t('soil.uncertainTip2')}</Text>
             </View>
           </View>
         </View>
@@ -179,28 +198,52 @@ export default function NutrientResultScreen() {
     // 2. HEALTHY
     if (prediction.class === 'Healthy') {
       return (
-        <View style={styles.card}>
-          <View style={[styles.statusHeader, { backgroundColor: '#E8F5E9' }]}>
-            <Ionicons name="checkmark-circle" size={28} color="#2E7D32" />
-            <Text style={[styles.statusTitle, { color: '#1B5E20' }]}>Healthy Palm Leaf</Text>
+        <View>
+          <View style={styles.card}>
+            <View style={[styles.statusHeader, { backgroundColor: '#E8F5E9' }]}>
+              <Ionicons name="checkmark-circle" size={28} color="#2E7D32" />
+              <Text style={[styles.statusTitle, { color: '#1B5E20' }]}>{t('soil.healthyPalmLeaf')}</Text>
+            </View>
+
+            {/* Confidence Bar */}
+            <View style={styles.confidenceContainer}>
+              <View style={styles.confidenceRow}>
+                <Text style={styles.confidenceLabel}>{t('soil.confidenceScore')}</Text>
+                <Text style={[styles.confidenceValueText, { color: '#2E7D32' }]}>{Math.round(prediction.confidence * 100)}%</Text>
+              </View>
+              <View style={styles.progressBarTrack}>
+                <View style={[styles.progressBarFill, { width: `${prediction.confidence * 100}%`, backgroundColor: '#4CAF50' }]} />
+              </View>
+            </View>
+
+            <View style={styles.divider} />
+
+            <Text style={styles.bodyText}>
+              {t('soil.healthyLeafDesc')}
+            </Text>
           </View>
 
-          {/* Confidence Bar */}
-          <View style={styles.confidenceContainer}>
-            <View style={styles.confidenceRow}>
-              <Text style={styles.confidenceLabel}>Confidence Score</Text>
-              <Text style={[styles.confidenceValueText, { color: '#2E7D32' }]}>{Math.round(prediction.confidence * 100)}%</Text>
-            </View>
-            <View style={styles.progressBarTrack}>
-              <View style={[styles.progressBarFill, { width: `${prediction.confidence * 100}%`, backgroundColor: '#4CAF50' }]} />
-            </View>
-          </View>
-
-          <View style={styles.divider} />
-
-          <Text style={styles.bodyText}>
-            The AI model analyzed your leaf image and detected no mineral deficiencies. Your coconut palm appears healthy and well-nourished.
-          </Text>
+          {criRecommendation && (
+            <TouchableOpacity 
+              style={styles.criCallout}
+              activeOpacity={0.9}
+              onPress={() => router.push({
+                pathname: '/(screens)/cri-recommendation' as any,
+                params: { palmAge, palmStage, zone }
+              })}
+            >
+              <View style={styles.criCalloutLeft}>
+                <View style={styles.leafIconContainer}>
+                  <Ionicons name="leaf" size={22} color="#FFFFFF" />
+                </View>
+                <View>
+                  <Text style={styles.criCalloutTitle}>{t('soil.seeStandardCriPlan')}</Text>
+                  <Text style={styles.criCalloutSub}>{t('soil.recommendedSchedule')}</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
+            </TouchableOpacity>
+          )}
         </View>
       );
     }
@@ -211,20 +254,25 @@ export default function NutrientResultScreen() {
     // Find matching deficiency in our fetched list
     const dbDeficiency = deficiencies.find(d => d.id.toLowerCase() === nutrientKey);
     
-    // Map db data or fallback to local static data
-    const exp = dbDeficiency ? {
-      chemicalSymbol: dbDeficiency.chemicalSymbol,
-      themeColor: dbDeficiency.themeColor,
-      description: dbDeficiency.description || dbDeficiency.overview,
-      advice: dbDeficiency.advice || dbDeficiency.correctiveMeasures?.join('\n')
-    } : DEFICIENCY_EXPLANATIONS[nutrientKey];
+    // Check if i18n has localized info for this nutrient
+    const i18nNutrient = t(`soil.nutrients.${nutrientKey}`, { returnObjects: true }) as any;
+    const hasI18n = i18nNutrient && typeof i18nNutrient === 'object' && i18nNutrient.description;
+
+    // Map localized data or db data or fallback to local static data
+    const exp = {
+      chemicalSymbol: (hasI18n && i18nNutrient.symbol) || dbDeficiency?.chemicalSymbol || DEFICIENCY_EXPLANATIONS[nutrientKey]?.chemicalSymbol || '?',
+      themeColor: dbDeficiency?.themeColor || DEFICIENCY_EXPLANATIONS[nutrientKey]?.themeColor || '#FFB300',
+      description: (hasI18n && i18nNutrient.description) || dbDeficiency?.description || dbDeficiency?.overview || DEFICIENCY_EXPLANATIONS[nutrientKey]?.description || '',
+      advice: (hasI18n && i18nNutrient.advice) || dbDeficiency?.advice || dbDeficiency?.correctiveMeasures?.join('\n') || DEFICIENCY_EXPLANATIONS[nutrientKey]?.advice || ''
+    };
+    const displayName = (hasI18n && i18nNutrient.name) || prediction.nutrient;
 
     return (
       <View>
         <View style={styles.card}>
           <View style={[styles.statusHeader, { backgroundColor: '#FFF3E0' }]}>
             <Ionicons name="alert-circle" size={28} color="#EF6C00" />
-            <Text style={[styles.statusTitle, { color: '#E65100' }]}>Deficiency Detected</Text>
+            <Text style={[styles.statusTitle, { color: '#E65100' }]}>{t('soil.deficiencyDetected')}</Text>
           </View>
 
           {/* Large Badge Header */}
@@ -233,15 +281,15 @@ export default function NutrientResultScreen() {
               <Text style={styles.largeSymbolText}>{exp ? exp.chemicalSymbol : '?'}</Text>
             </View>
             <View style={styles.badgeInfo}>
-              <Text style={styles.badgeLabel}>Target Nutrient</Text>
-              <Text style={styles.badgeTitle}>{prediction.nutrient}</Text>
+              <Text style={styles.badgeLabel}>{t('soil.targetNutrient')}</Text>
+              <Text style={styles.badgeTitle}>{displayName}</Text>
             </View>
           </View>
 
           {/* Confidence Bar */}
           <View style={styles.confidenceContainer}>
             <View style={styles.confidenceRow}>
-              <Text style={styles.confidenceLabel}>Scan Confidence</Text>
+              <Text style={styles.confidenceLabel}>{t('soil.scanConfidence')}</Text>
               <Text style={[styles.confidenceValueText, { color: exp ? exp.themeColor : '#FFB300' }]}>
                 {Math.round(prediction.confidence * 100)}%
               </Text>
@@ -255,11 +303,11 @@ export default function NutrientResultScreen() {
 
           {recommendation && (
             <View style={styles.assessmentRow}>
-              <Text style={styles.assessmentLabel}>Assessment Mode</Text>
+              <Text style={styles.assessmentLabel}>{t('soil.assessmentMode')}</Text>
               <View style={styles.assessmentBadge}>
                 <Text style={styles.assessmentBadgeText}>
                   {recommendation.assessment_type === 'preliminary_visual_assessment' 
-                    ? 'Visual Analysis' 
+                    ? t('soil.visualAnalysis')
                     : recommendation.assessment_type}
                 </Text>
               </View>
@@ -268,10 +316,10 @@ export default function NutrientResultScreen() {
 
           {exp ? (
             <View style={styles.infoBlock}>
-              <Text style={styles.sectionLabel}>Deficiency Explanation</Text>
+              <Text style={styles.sectionLabel}>{t('soil.deficiencyExplanation')}</Text>
               <Text style={styles.descriptionText}>{exp.description}</Text>
               
-              <Text style={[styles.sectionLabel, { marginTop: 20 }]}>CRI Treatment Protocol</Text>
+              <Text style={[styles.sectionLabel, { marginTop: 20 }]}>{t('soil.criTreatmentProtocol')}</Text>
               <View style={styles.adviceHighlight}>
                 <Ionicons name="shield-checkmark" size={20} color="#2E7D32" style={{ marginRight: 8, marginTop: 2 }} />
                 <Text style={styles.adviceHighlightText}>{exp.advice}</Text>
@@ -280,7 +328,7 @@ export default function NutrientResultScreen() {
           ) : (
             recommendation && (
               <View style={styles.infoBlock}>
-                <Text style={styles.sectionLabel}>Recommendation</Text>
+                <Text style={styles.sectionLabel}>{t('soil.recommendation')}</Text>
                 <Text style={styles.bodyText}>{recommendation.advice}</Text>
               </View>
             )
@@ -301,8 +349,8 @@ export default function NutrientResultScreen() {
                 <Ionicons name="leaf" size={22} color="#FFFFFF" />
               </View>
               <View>
-                <Text style={styles.criCalloutTitle}>See Standard CRI Plan</Text>
-                <Text style={styles.criCalloutSub}>Recommended fertilizer application schedule</Text>
+                <Text style={styles.criCalloutTitle}>{t('soil.seeStandardCriPlan')}</Text>
+                <Text style={styles.criCalloutSub}>{t('soil.recommendedSchedule')}</Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
@@ -318,7 +366,7 @@ export default function NutrientResultScreen() {
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#1B2C1A" />
         </TouchableOpacity>
-        <Text style={styles.title}>Analysis Result</Text>
+        <Text style={styles.title}>{t('soil.analysisResult')}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -328,7 +376,7 @@ export default function NutrientResultScreen() {
             <Image source={{ uri: imageUri }} style={styles.image} resizeMode="cover" />
             <View style={styles.imageOverlayBadge}>
               <Ionicons name="scan" size={14} color="#FFFFFF" style={{ marginRight: 4 }} />
-              <Text style={styles.imageOverlayText}>Analyzed Specimen</Text>
+              <Text style={styles.imageOverlayText}>{t('soil.analyzedSpecimen')}</Text>
             </View>
           </View>
         )}
@@ -341,11 +389,11 @@ export default function NutrientResultScreen() {
           onPress={() => router.navigate({ pathname: '/(screens)/nutrient-analysis' as any, params: { reset: 'true' } })}
         >
           <Ionicons name="camera" size={20} color={COLORS.primary} />
-          <Text style={styles.retryBtnText}>Scan Another Leaf</Text>
+          <Text style={styles.retryBtnText}>{t('soil.scanAnotherLeaf')}</Text>
         </TouchableOpacity>
 
         <GradientButton 
-          title={isSaving ? "Saving..." : "Done & Save Results"} 
+          title={isSaving ? t('soil.saving') : t('soil.doneSaveResults')} 
           onPress={handleSaveResults} 
           style={styles.doneBtn}
           disabled={isSaving}

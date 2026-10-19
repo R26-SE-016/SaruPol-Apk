@@ -22,11 +22,11 @@ export default function HistoryScreen() {
 
   const handleClearHistory = () => {
     Alert.alert(
-      language === 'en' ? 'Clear History' : 'වාර්තා මකා දැමීම',
-      language === 'en' ? 'Are you sure you want to clear all history logs?' : 'පසුගිය සියලු වාර්තා මකා දැමීමට ඔබට අවශ්‍යද?',
+      t('history.clearTitle'),
+      t('history.clearMsg'),
       [
         { text: t('common.cancel') || 'Cancel', style: 'cancel' },
-        { text: language === 'en' ? 'Clear All' : 'මකන්න', style: 'destructive', onPress: clearHistory }
+        { text: t('history.clearBtn'), style: 'destructive', onPress: clearHistory }
       ]
     );
   };
@@ -121,49 +121,47 @@ export default function HistoryScreen() {
           icon: 'scan-outline', 
           color: '#E53935', 
           bgColor: '#FFEBEE',
-          badgeText: language === 'en' ? 'Disease Scan' : 'රෝග පරීක්ෂාව' 
+          badgeText: t('history.diseaseScanBadge') 
         };
       case 'yield':
         return { 
           icon: 'trending-up-outline', 
           color: '#F57C00', 
           bgColor: '#FFF3E0',
-          badgeText: language === 'en' ? 'Yield Predict' : 'අස්වැන්න ගණනය' 
+          badgeText: t('history.yieldPredictBadge') 
         };
       case 'soil':
         return { 
           icon: 'flask-outline', 
           color: '#1E88E5', 
           bgColor: '#E3F2FD',
-          badgeText: language === 'en' ? 'Soil Lab' : 'පස් පරීක්ෂාව' 
+          badgeText: t('history.soilLabBadge') 
         };
       case 'leaf_scan':
         return { 
           icon: 'leaf-outline', 
           color: '#2E7D32', 
           bgColor: '#E8F5E9',
-          badgeText: language === 'en' ? 'Leaf Assessment' : 'පත්‍ර පරීක්ෂාව' 
+          badgeText: t('history.leafAssessmentBadge') 
         };
       default:
         return { 
           icon: 'document-text-outline', 
           color: '#546E7A', 
           bgColor: '#ECEFF1',
-          badgeText: 'Activity Log' 
+          badgeText: t('history.activityLogBadge') 
         };
     }
   };
 
   const formatTitle = (item: any) => {
     if (item.type === 'pathology') {
-      return item.result?.diagnosis || (language === 'en' ? 'Pathology Scan' : 'රෝග පරීක්ෂාව');
+      return item.result?.diagnosis || t('history.diseaseScanBadge');
     }
     if (item.type === 'yield') {
       const is45 = item.input?.is45DayMode;
       const amount = item.result?.ensemble_prediction || item.result?.prediction || 0;
-      return language === 'en'
-        ? `Yield: ${amount} nuts (${is45 ? '45d' : 'Annual'})`
-        : `අස්වැන්න: ගෙඩි ${amount} (${is45 ? 'දින 45' : 'වාර්ෂික'})`;
+      return `${t('history.yieldTitle')}: ${amount} ${t('history.nuts')} (${is45 ? '45d' : t('history.annual')})`;
     }
     if (item.type === 'soil') {
       let score = item.result?.health_score;
@@ -179,15 +177,20 @@ export default function HistoryScreen() {
         if (evMg !== 'n/a' && (evMg.includes('deficient') || evMg.includes('excess') || evMg.includes('low') || evMg.includes('high'))) outOfRange++;
         score = outOfRange > 0 ? Math.max(40, 100 - outOfRange * 15) : 100;
       }
-      return language === 'en'
-        ? `Soil Fertility: ${score ?? 85}/100`
-        : `පාංශු සාරවත් බව: ${score ?? 85}/100`;
+      return `${t('history.soilFertilityTitle')}: ${score ?? 85}/100`;
     }
     if (item.type === 'leaf_scan') {
-      const className = item.result?.prediction?.class || item.result?.prediction?.nutrient || 'Nutrient Analysis';
-      return `${className}`;
+      const nutrientKey = (item.result?.prediction?.nutrient || item.result?.prediction?.class || '').toLowerCase();
+      if (nutrientKey.includes('healthy')) {
+        return t('soil.healthyPalmLeaf');
+      }
+      const localizedNutrient = t(`soil.nutrients.${nutrientKey}`, { returnObjects: true }) as any;
+      if (localizedNutrient && typeof localizedNutrient === 'object' && localizedNutrient.name) {
+        return localizedNutrient.name;
+      }
+      return item.result?.prediction?.class || item.result?.prediction?.nutrient || t('history.leafAssessmentBadge');
     }
-    return 'Analysis Result';
+    return t('soil.analysisResult');
   };
 
   const formatDate = (dateString: string) => {
@@ -208,11 +211,11 @@ export default function HistoryScreen() {
 
         <View style={styles.titleContainer}>
           <Text style={styles.headerTitle}>
-            {language === 'en' ? 'Activity Log' : 'පසුගිය වාර්තා'}
+            {t('history.title')}
           </Text>
           {userHistory.length > 0 && (
             <Text style={styles.headerSubtitle}>
-              {userHistory.length} {userHistory.length === 1 ? 'saved record' : 'saved records'}
+              {userHistory.length} {userHistory.length === 1 ? t('history.savedRecord') : t('history.savedRecords')}
             </Text>
           )}
         </View>
@@ -227,15 +230,13 @@ export default function HistoryScreen() {
             <Ionicons name="folder-open-outline" size={48} color="#2E7D32" />
           </View>
           <Text style={styles.emptyTitle}>
-            {language === 'en' ? 'No History Records Yet' : 'පසුගිය වාර්තා කිසිවක් නැත'}
+            {t('history.noHistoryTitle')}
           </Text>
           <Text style={styles.emptyText}>
-            {language === 'en' 
-              ? 'Your completed leaf assessments, soil lab tests, and yield predictions will appear here.'
-              : 'ඔබ සිදුකළ පත්‍ර පරීක්ෂණ, පාංශු පරීක්ෂණ සහ අස්වැන්න ගණනය කිරීම් මෙතැන සටහන් වේ.'}
+            {t('history.noHistoryText')}
           </Text>
           <GradientButton
-            title={language === 'en' ? 'Return to Dashboard' : 'ප්‍රධාන පිටුවට'}
+            title={t('history.returnHome')}
             onPress={() => router.back()}
             style={styles.backHomeBtn}
           />
@@ -282,8 +283,8 @@ export default function HistoryScreen() {
                             { color: item.synced ? "#2E7D32" : "#E65100" }
                           ]}>
                             {item.synced 
-                              ? (language === 'en' ? 'Cloud Synced' : 'සංරක්ෂිතයි') 
-                              : (language === 'en' ? 'Local' : 'දේශීය')}
+                              ? t('history.cloudSynced') 
+                              : t('history.local')}
                           </Text>
                         </View>
                       </View>

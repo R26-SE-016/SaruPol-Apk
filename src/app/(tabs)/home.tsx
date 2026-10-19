@@ -67,11 +67,9 @@ export default function HomeScreen() {
 
 
   const handleLogout = () => {
-    const logoutTitle = language === 'ta' ? 'வெளியேறு' : language === 'si' ? 'පිටවීම' : 'Logout';
-    const logoutMsg = language === 'ta' ? 'நீங்கள் வெளியேற விரும்புகிறீர்களா?' : language === 'si' ? 'ඔබට ගිණුමෙන් ඉවත් වීමට අවශ්‍ය බව ස්ථිරද?' : 'Are you sure you want to log out?';
     Alert.alert(
-      logoutTitle,
-      logoutMsg,
+      t('home.logoutTitle'),
+      t('home.logoutMsg'),
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
@@ -156,10 +154,10 @@ export default function HomeScreen() {
               </View>
               <View style={styles.weatherDetailCol}>
                 <Text style={styles.weatherDetailText}>
-                  💧 {language === 'ta' ? 'ஈரப்பதம்' : language === 'si' ? 'තෙතමනය' : 'Humidity'}: {weather?.humidity}%
+                  💧 {t('home.humidity')}: {weather?.humidity}%
                 </Text>
                 <Text style={styles.weatherDetailText}>
-                  💨 {language === 'ta' ? 'காற்று' : language === 'si' ? 'සුළඟ' : 'Wind'}: {weather?.windSpeed} km/h
+                  💨 {t('home.wind')}: {weather?.windSpeed} km/h
                 </Text>
               </View>
             </View>
@@ -232,7 +230,7 @@ export default function HomeScreen() {
               <Ionicons name="scan" size={28} color={COLORS.healthy} />
             </View>
             <Text style={styles.gridBtnText}>
-              {language === 'ta' ? 'நோய் ஸ்கேன்' : language === 'si' ? 'රෝග හඳුනාගැනීම' : 'Disease Scan'}
+              {t('home.diseaseScan')}
             </Text>
           </TouchableOpacity>
 
@@ -244,7 +242,7 @@ export default function HomeScreen() {
               <Ionicons name="trending-up" size={28} color={COLORS.accent} />
             </View>
             <Text style={styles.gridBtnText}>
-              {language === 'ta' ? 'விளைச்சல் கணிப்பு' : language === 'si' ? 'අස්වනු අනාවැකි' : 'Yield Predict'}
+              {t('home.yieldPredict')}
             </Text>
           </TouchableOpacity>
 
@@ -256,7 +254,7 @@ export default function HomeScreen() {
               <Ionicons name="leaf" size={28} color={COLORS.info} />
             </View>
             <Text style={styles.gridBtnText}>
-              {language === 'ta' ? 'மண் ஆரோக்கியம்' : language === 'si' ? 'පෝෂණ තත්ත්ව පරීක්ෂාව' : 'Nutrition Checker'}
+              {t('home.nutritionChecker')}
             </Text>
           </TouchableOpacity>
 
@@ -268,14 +266,14 @@ export default function HomeScreen() {
               <Ionicons name="chatbubbles" size={28} color={COLORS.diseased} />
             </View>
             <Text style={styles.gridBtnText}>
-              {language === 'ta' ? 'AI ஆலோசகர்' : language === 'si' ? 'AI උපදේශක' : 'Ask AI Expert'}
+              {t('home.askAiExpert')}
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Plantation Statistics */}
         <Text style={styles.sectionTitle}>
-          {language === 'ta' ? 'தோட்ட புள்ளிவிவரம்' : language === 'si' ? 'වතු දත්ත සාරාංශය' : 'Plantation Stats'}
+          {t('home.plantationStats')}
         </Text>
         <View style={styles.statsRow}>
           <GlassCard style={styles.statCard}>
@@ -316,7 +314,7 @@ export default function HomeScreen() {
             onPress={() => router.push('/(screens)/history')}
           >
             <Text style={styles.historyLinkText}>
-              {language === 'ta' ? 'அனைத்து வரலாற்றுப் பதிவுகளையும் பார்க்க' : language === 'si' ? 'පසුගිය වාර්තා සියල්ල බලන්න' : 'View All History Logs'} →
+              {t('home.viewAllHistory')} →
             </Text>
           </TouchableOpacity>
         )}

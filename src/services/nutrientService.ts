@@ -169,4 +169,45 @@ export const getLabRecommendation = async (payload: LabRecommendationRequest): P
   return response.data;
 };
 
+export interface SaveLabCalculationPayload {
+  id?: string;
+  user_id: string;
+  user_email?: string;
+  tree_no?: string;
+  estate_name?: string;
+  nitrogen: number;
+  phosphorus: number;
+  potassium: number;
+  magnesium?: number | null;
+  palm_age: number;
+  zone: string;
+  urea: number;
+  erp_or_tsp: number;
+  mop: number;
+  dolomite: number;
+  phosphate_type: string;
+  evalN: string;
+  evalP: string;
+  evalK: string;
+  evalMg: string;
+  health_status: string;
+  agronomic_advice: string[];
+}
+
+/**
+ * Saves a certified lab calculation to Firestore via the Gateway.
+ */
+export const saveLabCalculation = async (payload: SaveLabCalculationPayload): Promise<{ success: boolean; message: string; id: string }> => {
+  const response = await api.post('/soil/nutrient-analysis/lab-calculations', payload);
+  return response.data;
+};
+
+/**
+ * Fetches user lab calculation history from Firestore via the Gateway.
+ */
+export const getLabCalculations = async (userId: string): Promise<any[]> => {
+  const response = await api.get('/soil/nutrient-analysis/lab-calculations', { params: { user_id: userId } });
+  return response.data;
+};
+
 
