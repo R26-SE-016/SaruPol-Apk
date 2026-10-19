@@ -369,6 +369,7 @@ export default function HomeScreen() {
           </Text>
           <Text style={styles.sectionSubtitle}>Overview</Text>
         </View>
+        {/* 3 Stat Cards Row */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <View style={styles.statTopRow}>
