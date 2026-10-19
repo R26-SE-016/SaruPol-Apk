@@ -11,9 +11,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/theme';
-import { getDeficiencies, DeficiencyDetail } from '../../services/nutrientService';
+import { getDeficiencies } from '../../services/nutrientService';
+import { SOIL_DEFICIENCIES_GUIDE, SoilDeficiencyGuideItem, getLocalizedDeficiency } from '../../constants/deficienciesData';
 
 const { width } = Dimensions.get('window');
 
@@ -22,26 +24,32 @@ const LOCAL_DEFICIENCY_IMAGES: Record<string, any> = {
   potassium: require('../../../assets/nutrition/Potassium.png'),
   magnesium: require('../../../assets/nutrition/Magnesium.png'),
   boron: require('../../../assets/nutrition/Boron.png'),
+  phosphorus: require('../../../assets/nutrition/Nitrogen.png'),
+  zinc: require('../../../assets/nutrition/Boron.png'),
 };
 
 export default function DeficienciesScreen() {
   const router = useRouter();
-  const [deficiencies, setDeficiencies] = useState<DeficiencyDetail[]>([]);
-  const [selectedDeficiency, setSelectedDeficiency] = useState<DeficiencyDetail | null>(null);
+  const { t, i18n } = useTranslation();
+  const currentLang = i18n.language || 'en';
+
+  const [deficiencies, setDeficiencies] = useState<any[]>(SOIL_DEFICIENCIES_GUIDE);
+  const [selectedDeficiency, setSelectedDeficiency] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const loadDeficienciesData = async () => {
-      setIsLoading(true);
       try {
         const data = await getDeficiencies();
         if (data && data.length > 0) {
-          setDeficiencies(data);
+          const merged = data.map((d: any) => {
+            const local = SOIL_DEFICIENCIES_GUIDE.find(g => g.id.toLowerCase() === d.id.toLowerCase());
+            return local ? { ...d, ...local } : d;
+          });
+          setDeficiencies(merged);
         }
       } catch (err) {
         console.warn('Failed to load deficiencies from Firebase, using local offline fallback:', err);
-      } finally {
-        setIsLoading(false);
       }
     };
     loadDeficienciesData();
@@ -59,6 +67,11 @@ export default function DeficienciesScreen() {
     return LOCAL_DEFICIENCY_IMAGES[id.toLowerCase()] || LOCAL_DEFICIENCY_IMAGES['nitrogen'];
   };
 
+  const selGuide = selectedDeficiency
+    ? (SOIL_DEFICIENCIES_GUIDE.find(g => g.id.toLowerCase() === selectedDeficiency.id.toLowerCase()) || selectedDeficiency)
+    : null;
+  const localizedSel = selGuide ? getLocalizedDeficiency(selGuide, currentLang) : null;
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -66,8 +79,8 @@ export default function DeficienciesScreen() {
         <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
           <Ionicons name="arrow-back" size={24} color="#1B2C1A" />
         </TouchableOpacity>
-        <Text style={styles.title}>
-          {selectedDeficiency ? selectedDeficiency.nameEn : 'Coconut Deficiencies'}
+        <Text style={styles.title} numberOfLines={1}>
+          {localizedSel ? localizedSel.name : t('soil.deficienciesTitle')}
         </Text>
         <TouchableOpacity 
           style={{ padding: 8 }} 
@@ -78,7 +91,7 @@ export default function DeficienciesScreen() {
         </TouchableOpacity>
       </View>
 
-      {selectedDeficiency ? (
+      {localizedSel ? (
         /* DETAIL VIEW */
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Main Card */}
@@ -86,12 +99,12 @@ export default function DeficienciesScreen() {
             {/* Image banner */}
             <View style={styles.imageContainer}>
               <Image
-                source={getDeficiencyImage(selectedDeficiency.id)}
+                source={getDeficiencyImage(localizedSel.id)}
                 style={styles.detailImage}
                 resizeMode="cover"
               />
-              <View style={[styles.symbolBadge, { backgroundColor: selectedDeficiency.themeColor }]}>
-                <Text style={styles.symbolText}>{selectedDeficiency.chemicalSymbol}</Text>
+              <View style={[styles.symbolBadge, { backgroundColor: localizedSel.themeColor }]}>
+                <Text style={styles.symbolText}>{localizedSel.chemicalSymbol}</Text>
               </View>
             </View>
 
@@ -99,41 +112,41 @@ export default function DeficienciesScreen() {
               {/* Name & Symbol */}
               <View style={styles.titleRow}>
                 <View style={styles.titleLeftCol}>
-                  <Text style={styles.detailNameEn}>{selectedDeficiency.nameEn}</Text>
+                  <Text style={styles.detailNameEn}>{localizedSel.name}</Text>
                 </View>
                 <View style={styles.rangeBadge}>
-                  <Text style={styles.rangeBadgeLabel}>CRI Critical Range</Text>
-                  <Text style={styles.rangeBadgeValue}>{selectedDeficiency.criticalRange}</Text>
+                  <Text style={styles.rangeBadgeLabel}>{t('soil.criCriticalRange')}</Text>
+                  <Text style={styles.rangeBadgeValue}>{localizedSel.criticalRange}</Text>
                 </View>
               </View>
 
               <View style={styles.divider} />
 
               {/* Overview */}
-              <Text style={styles.sectionTitle}>Overview</Text>
-              <Text style={styles.bodyText}>{selectedDeficiency.overview}</Text>
+              <Text style={styles.sectionTitle}>{t('soil.overview')}</Text>
+              <Text style={styles.bodyText}>{localizedSel.overview}</Text>
 
               {/* Symptoms */}
-              <Text style={styles.sectionTitle}>Key Symptoms</Text>
-              {selectedDeficiency.symptoms.map((symptom, index) => (
+              <Text style={styles.sectionTitle}>{t('soil.keySymptoms')}</Text>
+              {localizedSel.symptoms.map((symptom: string, index: number) => (
                 <View key={index} style={styles.bulletRow}>
-                  <Text style={[styles.bulletPoint, { color: selectedDeficiency.themeColor }]}>•</Text>
+                  <Text style={[styles.bulletPoint, { color: localizedSel.themeColor }]}>•</Text>
                   <Text style={styles.bulletText}>{symptom}</Text>
                 </View>
               ))}
 
               {/* Causes */}
-              <Text style={styles.sectionTitle}>Common Causes</Text>
-              {selectedDeficiency.causes.map((cause, index) => (
+              <Text style={styles.sectionTitle}>{t('soil.commonCauses')}</Text>
+              {localizedSel.causes.map((cause: string, index: number) => (
                 <View key={index} style={styles.bulletRow}>
-                  <Text style={[styles.bulletPoint, { color: selectedDeficiency.themeColor }]}>•</Text>
+                  <Text style={[styles.bulletPoint, { color: localizedSel.themeColor }]}>•</Text>
                   <Text style={styles.bulletText}>{cause}</Text>
                 </View>
               ))}
 
               {/* Corrective Measures */}
-              <Text style={[styles.sectionTitle, { color: '#2E7D32' }]}>CRI Corrective Measures (A7)</Text>
-              {selectedDeficiency.correctiveMeasures.map((measure, index) => (
+              <Text style={[styles.sectionTitle, { color: '#2E7D32' }]}>{t('soil.criCorrectiveMeasures')}</Text>
+              {localizedSel.correctiveMeasures.map((measure: string, index: number) => (
                 <View key={index} style={styles.adviceRow}>
                   <Ionicons name="checkmark-circle" size={18} color="#2E7D32" style={styles.adviceIcon} />
                   <Text style={styles.adviceText}>{measure}</Text>
@@ -158,7 +171,7 @@ export default function DeficienciesScreen() {
               >
                 <Ionicons name="home" size={18} color="#FFFFFF" />
                 <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700' }}>
-                  Go to Dashboard
+                  {t('soil.goToDashboard')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -170,42 +183,46 @@ export default function DeficienciesScreen() {
           <View style={styles.introCard}>
             <Ionicons name="information-circle-outline" size={24} color="#1B5E20" />
             <Text style={styles.introText}>
-              Coconut palms require balanced nutrition to ensure optimal yields. Review the official CRI guidelines below to identify, prevent, and treat critical nutrient deficiencies.
+              {t('soil.deficienciesIntro')}
             </Text>
           </View>
 
           {isLoading ? (
             <View style={{ paddingVertical: 40, alignItems: 'center' }}>
               <ActivityIndicator size="large" color={COLORS.primary} />
-              <Text style={{ marginTop: 12, color: '#666', fontSize: 14 }}>Loading deficiency guidelines...</Text>
+              <Text style={{ marginTop: 12, color: '#666', fontSize: 14 }}>{t('soil.loadingDeficiencies')}</Text>
             </View>
           ) : (
             <View style={styles.grid}>
-              {deficiencies.map((item) => (
-                <TouchableOpacity
-                  key={item.id}
-                  style={styles.card}
-                  activeOpacity={0.9}
-                  onPress={() => setSelectedDeficiency(item)}
-                >
-                  <View style={styles.cardImageContainer}>
-                    <Image source={getDeficiencyImage(item.id)} style={styles.cardImage} resizeMode="cover" />
-                    <View style={[styles.cardSymbolBadge, { backgroundColor: item.themeColor }]}>
-                      <Text style={styles.cardSymbolText}>{item.chemicalSymbol}</Text>
+              {deficiencies.map((item) => {
+                const itemGuide = SOIL_DEFICIENCIES_GUIDE.find(g => g.id.toLowerCase() === item.id.toLowerCase()) || item;
+                const localized = getLocalizedDeficiency(itemGuide, currentLang);
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.card}
+                    activeOpacity={0.9}
+                    onPress={() => setSelectedDeficiency(item)}
+                  >
+                    <View style={styles.cardImageContainer}>
+                      <Image source={getDeficiencyImage(item.id)} style={styles.cardImage} resizeMode="cover" />
+                      <View style={[styles.cardSymbolBadge, { backgroundColor: item.themeColor }]}>
+                        <Text style={styles.cardSymbolText}>{item.chemicalSymbol}</Text>
+                      </View>
                     </View>
-                  </View>
 
-                  <View style={styles.cardBody}>
-                    <Text style={styles.cardNameEn}>{item.nameEn}</Text>
-                    <Text style={styles.cardRange}>Range: {item.criticalRange}</Text>
+                    <View style={styles.cardBody}>
+                      <Text style={styles.cardNameEn}>{localized.name}</Text>
+                      <Text style={styles.cardRange}>{t('soil.rangeLabel')}: {localized.criticalRange}</Text>
 
-                    <View style={styles.cardFooter}>
-                      <Text style={[styles.learnMoreText, { color: COLORS.primary }]}>Learn More</Text>
-                      <Ionicons name="arrow-forward" size={16} color={COLORS.primary} />
+                      <View style={styles.cardFooter}>
+                        <Text style={[styles.learnMoreText, { color: COLORS.primary }]}>{t('soil.learnMore')}</Text>
+                        <Ionicons name="arrow-forward" size={16} color={COLORS.primary} />
+                      </View>
                     </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           )}
         </ScrollView>

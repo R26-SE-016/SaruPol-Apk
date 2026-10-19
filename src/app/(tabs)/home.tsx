@@ -107,11 +107,9 @@ export default function HomeScreen() {
   }, [user?.estate_id]);
 
   const handleLogout = () => {
-    const logoutTitle = language === 'ta' ? 'வெளியேறு' : language === 'si' ? 'පිටවීම' : 'Logout';
-    const logoutMsg = language === 'ta' ? 'நீங்கள் வெளியேற விரும்புகிறீர்களா?' : language === 'si' ? 'ඔබට ගිණුමෙන් ඉවත් වීමට අවශ්‍ය බව ස්ථිරද?' : 'Are you sure you want to log out?';
     Alert.alert(
-      logoutTitle,
-      logoutMsg,
+      t('home.logoutTitle'),
+      t('home.logoutMsg'),
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
@@ -227,7 +225,7 @@ export default function HomeScreen() {
                   </View>
                   <View>
                     <Text style={styles.metricLabel}>
-                      {language === 'ta' ? 'ஈரப்பதம்' : language === 'si' ? 'තෙතමනය' : 'Humidity'}
+                      {t('home.humidity')}
                     </Text>
                     <Text style={styles.metricValue}>{weather?.humidity ?? 85}%</Text>
                   </View>
@@ -239,7 +237,7 @@ export default function HomeScreen() {
                   </View>
                   <View>
                     <Text style={styles.metricLabel}>
-                      {language === 'ta' ? 'காற்று' : language === 'si' ? 'සුළඟ' : 'Wind'}
+                      {t('home.wind')}
                     </Text>
                     <Text style={styles.metricValue}>{weather?.windSpeed ?? 5.2} km/h</Text>
                   </View>
@@ -305,7 +303,7 @@ export default function HomeScreen() {
               <Ionicons name="scan" size={26} color={PALETTE.brandEmerald} />
             </View>
             <Text style={styles.gridBtnText}>
-              {language === 'ta' ? 'நோய் ஸ்கேன்' : language === 'si' ? 'රෝග හඳුනාගැනීම' : 'Disease Scan'}
+              {t('home.diseaseScan')}
             </Text>
             <Text style={styles.gridBtnSubtext}>
               {language === 'ta' ? 'இலை ஸ்கேன்' : language === 'si' ? 'කොළ පරීක්ෂාව' : 'Leaf AI Vision'}
@@ -322,7 +320,7 @@ export default function HomeScreen() {
               <Ionicons name="trending-up" size={26} color={PALETTE.amber} />
             </View>
             <Text style={styles.gridBtnText}>
-              {language === 'ta' ? 'விளைச்சல் கணிப்பு' : language === 'si' ? 'අස්වනු අනාවැකි' : 'Yield Predict'}
+              {t('home.yieldPredict')}
             </Text>
             <Text style={styles.gridBtnSubtext}>
               {language === 'ta' ? 'முன்னறிவிப்பு' : language === 'si' ? 'අස්වනු පෙරදැක්ම' : 'Harvest Forecast'}
@@ -339,7 +337,7 @@ export default function HomeScreen() {
               <Ionicons name="leaf" size={26} color={PALETTE.blue} />
             </View>
             <Text style={styles.gridBtnText}>
-              {language === 'ta' ? 'மண் ஆரோக்கியம்' : language === 'si' ? 'පෝෂණ තත්ත්ව පරීක්ෂාව' : 'Nutrition Checker'}
+              {t('home.nutritionChecker')}
             </Text>
             <Text style={styles.gridBtnSubtext}>
               {language === 'ta' ? 'மண் பரிசோதனை' : language === 'si' ? 'පස් පෝෂණ මට්ටම' : 'Soil & Nutrients'}
@@ -356,7 +354,7 @@ export default function HomeScreen() {
               <Ionicons name="chatbubbles" size={26} color={PALETTE.rose} />
             </View>
             <Text style={styles.gridBtnText}>
-              {language === 'ta' ? 'AI ஆலோசகர்' : language === 'si' ? 'AI උපදේශක' : 'Ask AI Expert'}
+              {t('home.askAiExpert')}
             </Text>
             <Text style={styles.gridBtnSubtext}>
               {language === 'ta' ? '24/7 உதவி' : language === 'si' ? '24/7 AI සහායක' : '24/7 Agro Copilot'}
@@ -367,11 +365,10 @@ export default function HomeScreen() {
         {/* Plantation Statistics Header */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>
-            {language === 'ta' ? 'தோட்ட புள்ளிவிவரம்' : language === 'si' ? 'වතු දත්ත සාරාංශය' : 'Plantation Stats'}
+            {t('home.plantationStats')}
           </Text>
           <Text style={styles.sectionSubtitle}>Overview</Text>
         </View>
-
         {/* 3 Stat Cards Row */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
@@ -428,7 +425,7 @@ export default function HomeScreen() {
                 <Ionicons name="time-outline" size={18} color={PALETTE.brandEmerald} />
               </View>
               <Text style={styles.historyLinkText}>
-                {language === 'ta' ? 'அனைத்து வரலாற்றுப் பதிவுகளையும் பார்க்க' : language === 'si' ? 'පසුගිය වාර්තා සියල්ල බලන්න' : 'View All History Logs'}
+                {t('home.viewAllHistory')}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={PALETTE.brandEmerald} />

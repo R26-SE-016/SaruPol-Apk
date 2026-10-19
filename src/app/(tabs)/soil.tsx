@@ -11,11 +11,13 @@ import {
   ImageBackground,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function SoilDashboard() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   return (
     <View style={styles.container}>
@@ -24,9 +26,9 @@ export default function SoilDashboard() {
         <View style={styles.headerCard}>
           <View style={styles.headerGreenAccent} />
           <View style={styles.headerTextGroup}>
-            <Text style={styles.headerTitle}>Nutrition Checker</Text>
+            <Text style={styles.headerTitle}>{t('soil.headerTitle')}</Text>
             <Text style={styles.headerSubtitle}>
-              Monitor and manage plant nutrients
+              {t('soil.headerSubtitle')}
             </Text>
           </View>
         </View>
@@ -59,17 +61,17 @@ export default function SoilDashboard() {
         </TouchableOpacity>
 
         {/* Section Header for Leaf Analysis Range */}
-        <Text style={styles.cardsSectionHeader}>CRI Recommendation Range for 14th Leaf</Text>
+        <Text style={styles.cardsSectionHeader}>{t('soil.criOptimalRange')}</Text>
 
         {/* 4 Parameter Cards Row/Grid (N, P, K, Magnesium) */}
         <View style={styles.cardsGrid}>
           {/* Nitrogen Card */}
           <MetricCard
             icon="leaf-outline"
-            label="Nitrogen"
+            label={t('soil.nitrogen')}
             value="1.9 - 2.1"
             unit="%"
-            status="Optimal"
+            status={t('soil.optimal')}
             currentVal={2}
             minVal={0}
             maxVal={5}
@@ -78,10 +80,10 @@ export default function SoilDashboard() {
           {/* Phosphorus Card */}
           <MetricCard
             icon="layers-outline"
-            label="Phosphorus"
+            label={t('soil.phosphorus')}
             value="0.11 - 0.13"
             unit="%"
-            status="Optimal"
+            status={t('soil.optimal')}
             currentVal={0.12}
             minVal={0}
             maxVal={0.5}
@@ -90,10 +92,10 @@ export default function SoilDashboard() {
           {/* Potassium Card */}
           <MetricCard
             icon="cube-outline"
-            label="Potassium"
+            label={t('soil.potassium')}
             value="1.2 - 1.5"
             unit="%"
-            status="Optimal"
+            status={t('soil.optimal')}
             currentVal={1.35}
             minVal={0}
             maxVal={3}
@@ -102,17 +104,17 @@ export default function SoilDashboard() {
           {/* Magnesium Card */}
           <MetricCard
             icon="nutrition-outline"
-            label="Magnesium"
+            label={t('soil.magnesium')}
             value="0.20 - 0.35"
             unit="%"
-            status="Optimal"
+            status={t('soil.optimal')}
             currentVal={0.25}
             minVal={0}
             maxVal={1.0}
           />
         </View>
 
-        <Text style={styles.sectionHeader}>Nutrient Diagnostic Tools</Text>
+        <Text style={styles.sectionHeader}>{t('soil.diagnosticTools')}</Text>
         <View style={styles.sectionContainer}>
 
           {/* Tool 1: Leaf Nutrient Scan */}
@@ -127,10 +129,10 @@ export default function SoilDashboard() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.nutrientBtnTitle}>
-                  Leaf Nutrient Scan
+                  {t('soil.leafScanTitle')}
                 </Text>
                 <Text style={styles.nutrientBtnSub}>
-                  Analyze Leaf images for Nitrogen & Boron deficiencies instantly
+                  {t('soil.leafScanSub')}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#4CAF50" />
@@ -149,10 +151,10 @@ export default function SoilDashboard() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.nutrientBtnTitle, { color: '#005A9C' }]}>
-                  Lab Test Results
+                  {t('soil.labResultsTitle')}
                 </Text>
                 <Text style={styles.nutrientBtnSub}>
-                  Enter laboratory soil reports to calculate precise corrective plans
+                  {t('soil.labResultsSub')}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#005A9C" />
@@ -171,10 +173,10 @@ export default function SoilDashboard() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.nutrientBtnTitle, { color: '#FF6D00' }]}>
-                  Coconut Deficiencies Guide
+                  {t('soil.deficienciesGuideTitle')}
                 </Text>
                 <Text style={styles.nutrientBtnSub}>
-                  Browse visual symptoms and official CRI corrective measures
+                  {t('soil.deficienciesGuideSub')}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#FF6D00" />
@@ -193,10 +195,10 @@ export default function SoilDashboard() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.nutrientBtnTitle, { color: '#7B1FA2' }]}>
-                  Activity History
+                  {t('soil.activityHistoryTitle')}
                 </Text>
                 <Text style={styles.nutrientBtnSub}>
-                  View all historical records of leaf nutrient scans and lab tests
+                  {t('soil.activityHistorySub')}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#7B1FA2" />

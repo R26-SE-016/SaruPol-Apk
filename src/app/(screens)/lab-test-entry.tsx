@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { COLORS, ROUNDING } from '../../constants/theme';
 import GradientButton from '../../components/common/GradientButton';
-import { getLabRecommendation } from '../../services/nutrientService';
+import { getLabRecommendation, saveLabCalculation } from '../../services/nutrientService';
 import { ActivityIndicator } from 'react-native';
 import { useAppStore } from '../../store/appStore';
 
@@ -25,6 +25,8 @@ const { width } = Dimensions.get('window');
 export default function LabTestEntryScreen() {
   const router = useRouter();
   const addHistoryItem = useAppStore(state => state.addHistoryItem);
+  const user = useAppStore(state => state.user);
+  const isConnected = useAppStore(state => state.isConnected);
 
   // Multi-step state
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
@@ -163,6 +165,35 @@ export default function LabTestEntryScreen() {
         });
       } catch (histErr) {
         console.error("Failed to save lab result to history:", histErr);
+      }
+
+      // Sync lab analysis to cloud Firestore database via backend
+      if (isConnected) {
+        saveLabCalculation({
+          user_id: user?.id?.toString() || 'guest',
+          user_email: user?.email,
+          tree_no: palmId,
+          estate_name: user?.estate_id || `${zone} Estate`,
+          nitrogen: nVal,
+          phosphorus: pVal,
+          potassium: kVal,
+          magnesium: mgVal,
+          palm_age: ageVal,
+          zone: zone || 'Wet',
+          urea: response.urea,
+          erp_or_tsp: response.erp_or_tsp,
+          mop: response.mop,
+          dolomite: response.dolomite,
+          phosphate_type: response.phosphate_type,
+          evalN: response.evalN,
+          evalP: response.evalP,
+          evalK: response.evalK,
+          evalMg: response.evalMg,
+          health_status: response.health_status,
+          agronomic_advice: response.agronomic_advice || [],
+        }).catch(cloudErr => {
+          console.warn("Failed to sync lab calculation to cloud DB:", cloudErr);
+        });
       }
 
       router.push({

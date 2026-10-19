@@ -8,12 +8,14 @@ import {
   Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, ROUNDING } from '../../constants/theme';
 import { getStandardRecommendation } from '../../services/fertilizerTables';
 
 export default function CriRecommendationScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { palmAge, palmStage, zone } = useLocalSearchParams<{ 
     palmAge?: string;
     palmStage?: string;
@@ -22,6 +24,24 @@ export default function CriRecommendationScreen() {
   
   const criRecommendation = getStandardRecommendation(palmAge || '', palmStage || '', zone || '');
 
+  const getLocalizedStage = () => {
+    if (!palmStage) return '';
+    const s = palmStage.toLowerCase();
+    if (s.includes('seedling')) return t('soil.seedlingStage');
+    if (s.includes('young')) return t('soil.youngPalmStage');
+    if (s.includes('adult') || s.includes('bearing')) return t('soil.adultPalmStage');
+    return palmStage;
+  };
+
+  const getLocalizedZone = () => {
+    if (!zone) return '';
+    const z = zone.toLowerCase();
+    if (z.includes('wet')) return t('soil.wetZone');
+    if (z.includes('inter')) return t('soil.intermediateZone');
+    if (z.includes('dry')) return t('soil.dryZone');
+    return `${zone} Zone`;
+  };
+
   return (
     <View style={styles.container}>
       {/* ── Header ─────────────────────────────────────────────── */}
@@ -29,7 +49,7 @@ export default function CriRecommendationScreen() {
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#1B2C1A" />
         </TouchableOpacity>
-        <Text style={styles.title}>CRI Recommendation</Text>
+        <Text style={styles.title}>{t('soil.criRecTitle')}</Text>
         <TouchableOpacity 
           style={{ padding: 8, marginLeft: 'auto' }} 
           onPress={() => router.replace('/(tabs)/soil')}
@@ -46,19 +66,19 @@ export default function CriRecommendationScreen() {
           {palmAge ? (
             <View style={styles.summaryChip}>
               <Ionicons name="calendar-outline" size={14} color="#2E7D32" />
-              <Text style={styles.summaryChipText}>{palmAge} Years Old</Text>
+              <Text style={styles.summaryChipText}>{palmAge} {t('soil.yearsOld')}</Text>
             </View>
           ) : null}
           {palmStage ? (
             <View style={styles.summaryChip}>
               <Ionicons name="flower-outline" size={14} color="#2E7D32" />
-              <Text style={styles.summaryChipText}>{palmStage}</Text>
+              <Text style={styles.summaryChipText}>{getLocalizedStage()}</Text>
             </View>
           ) : null}
           {zone ? (
             <View style={styles.summaryChip}>
               <Ionicons name="location-outline" size={14} color="#2E7D32" />
-              <Text style={styles.summaryChipText}>{zone} Zone</Text>
+              <Text style={styles.summaryChipText}>{getLocalizedZone()}</Text>
             </View>
           ) : null}
         </View>
@@ -66,19 +86,19 @@ export default function CriRecommendationScreen() {
         {!criRecommendation ? (
           <View style={styles.errorCard}>
             <Ionicons name="alert-circle-outline" size={32} color="#D32F2F" />
-            <Text style={styles.errorText}>Could not generate standard recommendation based on the inputs provided.</Text>
+            <Text style={styles.errorText}>{t('soil.criRecError')}</Text>
           </View>
         ) : (
           <View>
             <View style={styles.introCard}>
               <Ionicons name="information-circle" size={20} color="#2E7D32" style={{ marginRight: 8 }} />
               <Text style={styles.introText}>
-                The Coconut Research Institute (CRI) recommends the following annual fertilizer dosage per palm:
+                {t('soil.criRecIntro')}
               </Text>
             </View>
 
             {/* ── Fertilizer Cards List ──────────────────────────────── */}
-            <Text style={styles.sectionHeader}>Required Nutrient Dosage</Text>
+            <Text style={styles.sectionHeader}>{t('soil.requiredDosage')}</Text>
             
             {/* 1. Urea Card */}
             <View style={styles.fertilizerCard}>
@@ -87,10 +107,10 @@ export default function CriRecommendationScreen() {
                   <Text style={[styles.badgeText, { color: '#2E7D32' }]}>N</Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.fertilizerName}>Urea</Text>
-                  <Text style={styles.fertilizerSource}>Nitrogen Source</Text>
+                  <Text style={styles.fertilizerName}>{t('soil.ureaName')}</Text>
+                  <Text style={styles.fertilizerSource}>{t('soil.nitrogenSource')}</Text>
                 </View>
-                <Text style={styles.dosageValue}>{criRecommendation.urea} <Text style={styles.dosageUnit}>g</Text></Text>
+                <Text style={styles.dosageValue}>{criRecommendation.urea} <Text style={styles.dosageUnit}>{t('soil.gramUnit')}</Text></Text>
               </View>
               <View style={styles.progressTrack}>
                 <View style={[styles.progressBar, { width: `${Math.min(100, (criRecommendation.urea / 1600) * 100)}%`, backgroundColor: '#4CAF50' }]} />
@@ -105,9 +125,9 @@ export default function CriRecommendationScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.fertilizerName}>{criRecommendation.phosphate_type}</Text>
-                  <Text style={styles.fertilizerSource}>Phosphorus Source</Text>
+                  <Text style={styles.fertilizerSource}>{t('soil.phosphorusSource')}</Text>
                 </View>
-                <Text style={styles.dosageValue}>{criRecommendation.erp_or_tsp} <Text style={styles.dosageUnit}>g</Text></Text>
+                <Text style={styles.dosageValue}>{criRecommendation.erp_or_tsp} <Text style={styles.dosageUnit}>{t('soil.gramUnit')}</Text></Text>
               </View>
               <View style={styles.progressTrack}>
                 <View style={[styles.progressBar, { width: `${Math.min(100, (criRecommendation.erp_or_tsp / 1600) * 100)}%`, backgroundColor: '#2196F3' }]} />
@@ -121,10 +141,10 @@ export default function CriRecommendationScreen() {
                   <Text style={[styles.badgeText, { color: '#F57F17' }]}>K</Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.fertilizerName}>Muriate of Potash (MOP)</Text>
-                  <Text style={styles.fertilizerSource}>Potassium Source</Text>
+                  <Text style={styles.fertilizerName}>{t('soil.mopName')}</Text>
+                  <Text style={styles.fertilizerSource}>{t('soil.potassiumSource')}</Text>
                 </View>
-                <Text style={styles.dosageValue}>{criRecommendation.mop} <Text style={styles.dosageUnit}>g</Text></Text>
+                <Text style={styles.dosageValue}>{criRecommendation.mop} <Text style={styles.dosageUnit}>{t('soil.gramUnit')}</Text></Text>
               </View>
               <View style={styles.progressTrack}>
                 <View style={[styles.progressBar, { width: `${Math.min(100, (criRecommendation.mop / 2000) * 100)}%`, backgroundColor: '#FFC107' }]} />
@@ -138,10 +158,10 @@ export default function CriRecommendationScreen() {
                   <Text style={[styles.badgeText, { color: '#C62828' }]}>Mg</Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.fertilizerName}>Dolomite</Text>
-                  <Text style={styles.fertilizerSource}>Magnesium & Calcium Source</Text>
+                  <Text style={styles.fertilizerName}>{t('soil.dolomiteName')}</Text>
+                  <Text style={styles.fertilizerSource}>{t('soil.magnesiumSource')}</Text>
                 </View>
-                <Text style={styles.dosageValue}>{criRecommendation.dolomite} <Text style={styles.dosageUnit}>g</Text></Text>
+                <Text style={styles.dosageValue}>{criRecommendation.dolomite} <Text style={styles.dosageUnit}>{t('soil.gramUnit')}</Text></Text>
               </View>
               <View style={styles.progressTrack}>
                 <View style={[styles.progressBar, { width: `${Math.min(100, (criRecommendation.dolomite / 1200) * 100)}%`, backgroundColor: '#F44336' }]} />
@@ -149,7 +169,7 @@ export default function CriRecommendationScreen() {
             </View>
 
             {/* ── Guidelines Section ─────────────────────────────────── */}
-            <Text style={[styles.sectionHeader, { marginTop: 24 }]}>Application Guidelines</Text>
+            <Text style={[styles.sectionHeader, { marginTop: 24 }]}>{t('soil.applicationGuidelines')}</Text>
             
             <View style={styles.guidelineCard}>
               <View style={styles.guidelineRow}>
@@ -157,9 +177,9 @@ export default function CriRecommendationScreen() {
                   <Ionicons name="radio-button-off" size={18} color="#2E7D32" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.guidelineTitle}>Circular Trenching</Text>
+                  <Text style={styles.guidelineTitle}>{t('soil.circularTrenchingTitle')}</Text>
                   <Text style={styles.guidelineText}>
-                    Apply the fertilizer mixture in a circular trench dug 1.8 meters (6 feet) away from the base of the palm.
+                    {t('soil.circularTrenchingDesc')}
                   </Text>
                 </View>
               </View>
@@ -169,9 +189,9 @@ export default function CriRecommendationScreen() {
                   <Ionicons name="calendar-outline" size={18} color="#2E7D32" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.guidelineTitle}>Split Application</Text>
+                  <Text style={styles.guidelineTitle}>{t('soil.splitApplicationTitle')}</Text>
                   <Text style={styles.guidelineText}>
-                    Divide the annual dosage into two equal applications: one during the Yala season and the other during the Maha season.
+                    {t('soil.splitApplicationDesc')}
                   </Text>
                 </View>
               </View>
@@ -181,9 +201,9 @@ export default function CriRecommendationScreen() {
                   <Ionicons name="water-outline" size={18} color="#2E7D32" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.guidelineTitle}>Soil Moisture</Text>
+                  <Text style={styles.guidelineTitle}>{t('soil.soilMoistureTitle')}</Text>
                   <Text style={styles.guidelineText}>
-                    Ensure there is adequate moisture in the soil during application to facilitate optimal absorption by the roots.
+                    {t('soil.soilMoistureDesc')}
                   </Text>
                 </View>
               </View>
@@ -212,7 +232,7 @@ export default function CriRecommendationScreen() {
             >
               <Ionicons name="home" size={20} color="#FFFFFF" />
               <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700' }}>
-                Go to Dashboard
+                {t('soil.goToDashboard')}
               </Text>
             </TouchableOpacity>
           </View>
