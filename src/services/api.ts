@@ -16,7 +16,7 @@ const getGatewayUrl = () => {
       return `http://${ip}:8000/api`;
     }
     // Fallback for emulators if hostUri is not available
-    return Platform.OS === 'android' ? 'http://10.0.2.2:8000/api' : 'http://localhost:8000/api';
+    return Platform.OS === 'android' ? 'http://10.94.213.12:8000/api' : 'http://10.94.213.12:8000/api';
   }
   // Production/fallback URL
   return 'http://192.168.1.100:8000/api';

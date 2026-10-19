@@ -5,7 +5,7 @@ import { Search, X, MapPin, ChevronRight, ArrowLeft } from "lucide-react-native"
 import { useYieldApp } from "@/store/YieldAppContext";
 import { LinearGradient } from "expo-linear-gradient";
 import { useUnifiedFarmYield } from "@/hooks/useUnifiedFarmYield";
-import { fetchHarvestLogs } from "@/services/yieldFarmDb";
+import { fetchHarvestLogs, fetchDevicePresence } from "@/services/yieldFarmDb";
 import type { Farm } from "@/types/yield";
 
 export default function YieldFarmsListScreen() {
@@ -14,6 +14,25 @@ export default function YieldFarmsListScreen() {
   const onSelectFarm = (id: string) => router.push(('/(tabs)/yield/' + id) as any);
   const { farms, user } = useYieldApp();
   const [searchQuery, setSearchQuery] = useState("");
+  const [deviceStatusMap, setDeviceStatusMap] = useState<Record<string, boolean>>({});
+  const farmsDeviceIdsStr = useMemo(() => JSON.stringify(farms.map(f => f.deviceIds?.[0] || f.deviceId || "")), [farms]);
+
+  useEffect(() => {
+    let active = true;
+    const loadStatuses = async () => {
+      const map: Record<string, boolean> = {};
+      for (const f of farms) {
+        if (f.deviceIds && f.deviceIds.length > 0) {
+          map[f.deviceIds[0]] = await fetchDevicePresence(f.deviceIds[0]);
+        } else if (f.deviceId) {
+          map[f.deviceId] = await fetchDevicePresence(f.deviceId);
+        }
+      }
+      if (active) setDeviceStatusMap(map);
+    };
+    loadStatuses();
+    return () => { active = false; };
+  }, [farmsDeviceIdsStr]);
   const { unifiedYields, isPredicting: isUnifiedPredicting } = useUnifiedFarmYield(user?.uid, farms);
 
   const filteredFarms = useMemo(() => {
@@ -65,9 +84,21 @@ export default function YieldFarmsListScreen() {
       <ScrollView className="flex-1 px-4 pt-14" contentContainerStyle={{ paddingBottom: 40 }}>
         <View className="gap-4">
           {filteredFarms.map((farm) => {
-            const isOnline = farm.deviceIds && farm.deviceIds.length > 0;
+            const isOnline = (farm.deviceIds && farm.deviceIds.length > 0 && deviceStatusMap[farm.deviceIds[0]]) || (farm.deviceId && deviceStatusMap[farm.deviceId]) || false;
             const daysLeft = getDaysLeft(farm);
-            const predictedNuts = unifiedYields[farm.id];
+            const dbPred = (() => {
+              if (farm.nextPredictedYield && Number(farm.nextPredictedYield) > 0) return Number(farm.nextPredictedYield);
+              if (farm.yieldPredictionHistory) {
+                const pending = Object.values(farm.yieldPredictionHistory).find(
+                  (p: any) => p.status === 'pending_harvest' && p.predictedYieldNuts
+                ) as any;
+                if (pending?.predictedYieldNuts && Number(pending.predictedYieldNuts) > 0) {
+                  return Number(pending.predictedYieldNuts);
+                }
+              }
+              return null;
+            })();
+            const predictedNuts = dbPred ?? unifiedYields[farm.id];
             const isPredicting = isUnifiedPredicting;
 
             return (

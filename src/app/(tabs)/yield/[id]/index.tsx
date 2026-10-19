@@ -48,9 +48,26 @@ export default function FarmDetailScreen() {
   
   const farm = currentFarmId === farmId ? currentFarm : (farms.find((f) => f.id === farmId) ?? null);
 
-  // Unified yield — aggregates individual tree predictions with weather-based base
+    // Unified yield — aggregates individual tree predictions with weather-based base
   const { unifiedYields, isPredicting } = useUnifiedFarmYield(user?.uid, farm ? [farm] : []);
-  const displayPredictedYield = farm ? (unifiedYields[farm.id] || 0) : 0;
+  
+  // Stored Pending DB Prediction if present (e.g. 316, 186, 396, 243)
+  const dbPendingPrediction = useMemo(() => {
+    if (farm?.nextPredictedYield && Number(farm.nextPredictedYield) > 0) {
+      return Number(farm.nextPredictedYield);
+    }
+    if (farm?.yieldPredictionHistory) {
+      const pending = Object.values(farm.yieldPredictionHistory).find(
+        (p: any) => p.status === 'pending_harvest' && p.predictedYieldNuts
+      ) as any;
+      if (pending?.predictedYieldNuts && Number(pending.predictedYieldNuts) > 0) {
+        return Number(pending.predictedYieldNuts);
+      }
+    }
+    return null;
+  }, [farm]);
+
+  const displayPredictedYield = dbPendingPrediction ?? (farm ? (unifiedYields[farm.id] || 0) : 0);
 
   // Hybrid Telemetry & Weather
   const { telemetry, weather, source, deviceLive, usedFallbackCoords, loading, refresh } = useYieldHybridTelemetry(farm);

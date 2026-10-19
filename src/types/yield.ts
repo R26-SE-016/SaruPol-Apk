@@ -52,6 +52,13 @@ export interface Farm {
   createdAt: number;
   lastHarvestDate?: string;
   lastHarvestYield?: number;
+  farmerName?: string;
+  address?: string;
+  initialHarvestDate?: string;
+  initialHarvestYield?: number;
+  nextPredictedYield?: number;
+  yieldPredictionHistory?: Record<string, any>;
+  yieldPredictionSummary?: { predictionsNuts?: number[] };
   /** generated tree layout, persisted so map is stable across sessions */
   treeLayout: { id: string; number: number; nx: number; nz: number }[];
 }
