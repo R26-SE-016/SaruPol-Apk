@@ -36,15 +36,18 @@ export default function HistoryScreen() {
       router.push({
         pathname: '/(screens)/scan-result',
         params: {
-          part: item.input?.part || 'Leaf',
+          part: item.input?.part || 'leaf',
+          disease_class: item.result?.disease_class || '',
           status: item.result?.status || 'healthy',
           diagnosis: item.result?.diagnosis || 'Healthy',
-          confidence: item.result?.confidence || 0.9,
-          severity: item.result?.severity || 'low',
+          confidence: String(item.result?.confidence || 0.9),
+          severity: item.result?.severity || 'Healthy',
           chemical: item.result?.recommendations?.chemical || '',
           cultural: item.result?.recommendations?.cultural || '',
           preventive: item.result?.recommendations?.preventive || '',
-          imageUri: item.input?.imageUri || ''
+          inference_time_ms: String(item.result?.inference_time_ms || 0),
+          all_predictions: JSON.stringify(item.result?.all_predictions || []),
+          imageUri: item.input?.imageUri || '',
         }
       });
     } else if (item.type === 'yield') {

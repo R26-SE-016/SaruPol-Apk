@@ -8,7 +8,6 @@ import * as Location from 'expo-location';
 import { useAppStore } from '../../store/appStore';
 import { ROUNDING } from '../../constants/theme';
 import { getLiveWeather, WeatherData } from '../../services/weatherService';
-import { getCanopyHotspots, CanopyHotspotItem } from '../../services/pathologyService';
 
 // Light theme color tokens specifically designed for modern, high-contrast outdoor & mobile use
 const PALETTE = {
@@ -50,7 +49,6 @@ export default function HomeScreen() {
 
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(true);
-  const [hotspots, setHotspots] = useState<CanopyHotspotItem[]>([]);
 
   // Time-aware greeting
   const getGreeting = () => {
@@ -93,18 +91,8 @@ export default function HomeScreen() {
       }
     }
 
-    async function loadHotspots() {
-      try {
-        const res = await getCanopyHotspots(user?.estate_id || 'estate_001');
-        setHotspots(res.hotspots || []);
-      } catch (e) {
-        // non-blocking
-      }
-    }
-
     fetchWeather();
-    loadHotspots();
-  }, [user?.estate_id]);
+  }, []);
 
   const handleLogout = () => {
     const logoutTitle = language === 'ta' ? 'வெளியேறு' : language === 'si' ? 'පිටවීම' : 'Logout';
@@ -249,43 +237,6 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Aerial Canopy Stress Hotspots Alert Card */}
-        {hotspots.length > 0 && (
-          <TouchableOpacity
-            activeOpacity={0.88}
-            onPress={() => router.push('/(screens)/canopy-hotspots' as any)}
-            style={styles.hotspotCard}
-          >
-            <View style={styles.hotspotLeftBar} />
-            <View style={styles.hotspotContent}>
-              <View style={styles.hotspotIconWrap}>
-                <Ionicons name="airplane" size={20} color={PALETTE.red} />
-              </View>
-              <View style={styles.hotspotInfo}>
-                <View style={styles.hotspotTitleRow}>
-                  <Text style={styles.hotspotTitle}>
-                    {language === 'ta'
-                      ? `${hotspots.length} விமான அச்சுறுத்தல்கள்`
-                      : language === 'si'
-                      ? `ගුවන් තර්ජන කලාප ${hotspots.length} ක්`
-                      : `${hotspots.length} Aerial Stress Hotspots`}
-                  </Text>
-                  <View style={styles.actionChip}>
-                    <Text style={styles.actionChipText}>ALERT</Text>
-                  </View>
-                </View>
-                <Text style={styles.hotspotSubtitle} numberOfLines={2}>
-                  {language === 'ta'
-                    ? 'ட்ரோன் ஸ்கேன் மூலம் கொடியிடப்பட்ட மரங்கள்'
-                    : language === 'si'
-                    ? 'ඩ්‍රෝන් මඟින් හඳුනාගත් ගස් පරීක්ෂා කරන්න'
-                    : 'Drone NDVI/VARI flagged trees requiring leaf scans'}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={PALETTE.red} />
-            </View>
-          </TouchableOpacity>
-        )}
 
         {/* Quick Actions Shortcuts Header */}
         <View style={styles.sectionHeaderRow}>
@@ -719,84 +670,6 @@ const styles = StyleSheet.create({
   },
   spinner: {
     marginVertical: 18,
-  },
-  // Hotspot Alert Card
-  hotspotCard: {
-    backgroundColor: PALETTE.redSubtle,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: PALETTE.redBorder,
-    overflow: 'hidden',
-    marginBottom: 22,
-    position: 'relative',
-    ...Platform.select({
-      ios: {
-        shadowColor: PALETTE.red,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
-  },
-  hotspotLeftBar: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4.5,
-    backgroundColor: PALETTE.red,
-  },
-  hotspotContent: {
-    padding: 14,
-    paddingLeft: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  hotspotIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: PALETTE.redLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  hotspotInfo: {
-    flex: 1,
-    marginRight: 8,
-  },
-  hotspotTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 3,
-  },
-  hotspotTitle: {
-    fontSize: 13.5,
-    fontWeight: '800',
-    color: '#991B1B',
-  },
-  actionChip: {
-    backgroundColor: '#FEE2E2',
-    paddingHorizontal: 6,
-    paddingVertical: 1.5,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#FCA5A5',
-  },
-  actionChipText: {
-    color: PALETTE.red,
-    fontSize: 9,
-    fontWeight: '800',
-  },
-  hotspotSubtitle: {
-    fontSize: 11.5,
-    color: '#7F1D1D',
-    lineHeight: 16,
-    fontWeight: '500',
   },
   // Section Headers
   sectionHeaderRow: {

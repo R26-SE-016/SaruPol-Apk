@@ -264,8 +264,8 @@ export default function ScanResultScreen() {
             {/* Disease name */}
             <Text style={[styles.diseaseName, { color: isHealthy ? PALETTE.brandPrimary : info.color }]}>
               {isHealthy
-                ? (language === 'en' ? 'No Disease Detected' : 'ලෙඩ රෝග කිසිවක් නැත')
-                : (diagnosis as string || info.displayName)}
+                ? (language === 'ta' ? 'நோய்த்தොற்று இல்லை' : language === 'si' ? 'ලෙඩ රෝග කිසිවක් නැත' : 'No Disease Detected')
+                : (language === 'ta' && info.tamilName ? info.tamilName : language === 'si' ? info.sinhalaName : (diagnosis as string || info.displayName))}
             </Text>
 
             {/* Disease description */}
@@ -274,7 +274,7 @@ export default function ScanResultScreen() {
             {/* Confidence bar */}
             <View style={styles.confRow}>
               <Text style={styles.confLabel}>
-                {language === 'en' ? 'Confidence' : 'විශ්වාස දර්ශකය'}
+                {language === 'ta' ? 'நம்பகத்தன்மை' : language === 'si' ? 'විශ්වාස දර්ශකය' : 'Confidence'}
               </Text>
               <Text style={[styles.confValue, { color: info.color }]}>
                 {percentConfidence}%
@@ -287,7 +287,7 @@ export default function ScanResultScreen() {
           {predictions.length > 0 && (
             <View style={styles.predictionsCard}>
               <Text style={styles.predictionsTitle}>
-                {language === 'en' ? '📊 All Class Probabilities' : '📊 සියලු පංතිවල සම්භාවිතාව'}
+                {language === 'ta' ? '📊 அனைத்து வகுப்பு நிகழ்தகவுகள்' : language === 'si' ? '📊 සියලු පංතිවල සම්භාවිතාව' : '📊 All Class Probabilities'}
               </Text>
               <View style={styles.predList}>
                 {(predictions.length > 0 ? predictions : DISEASE_CLASS_ORDER.map(cls => ({ class: cls, confidence: 0 }))).map(
@@ -300,7 +300,7 @@ export default function ScanResultScreen() {
                         <View style={styles.predLabelRow}>
                           <View style={[styles.predDot, { backgroundColor: predInfo.color }]} />
                           <Text style={[styles.predLabel, isTop && styles.predLabelTop]}>
-                            {predInfo.displayName}
+                            {language === 'ta' && predInfo.tamilName ? predInfo.tamilName : language === 'si' ? predInfo.sinhalaName : predInfo.displayName}
                           </Text>
                           <Text style={[styles.predPct, { color: predInfo.color }]}>
                             {pct}%
@@ -323,13 +323,25 @@ export default function ScanResultScreen() {
           {!isHealthy && (
             <View style={styles.recommendationsSection}>
               <Text style={styles.sectionTitle}>
-                {language === 'en' ? '💊 Treatment Plan' : '💊 ප්‍රතිකාර සැලැස්ම'}
+                {language === 'ta' ? '💊 சிகிச்சை திட்டம்' : language === 'si' ? '💊 ප්‍රතිකාර සැලැස්ම' : '💊 Treatment Plan'}
               </Text>
 
               {[
-                { icon: '🧪', label: language === 'en' ? 'Chemical Treatment' : 'රසායනික ප්‍රතිකාරය', text: chemical },
-                { icon: '🌱', label: language === 'en' ? 'Cultural Practice' : 'කෘෂිකාර්මික ක්‍රමය', text: cultural },
-                { icon: '🛡️', label: language === 'en' ? 'Preventive Measure' : 'වැලැක්වීමේ ක්‍රමය', text: preventive },
+                {
+                  icon: '🧪',
+                  label: language === 'ta' ? 'இரசாயன சிகிச்சை' : language === 'si' ? 'රසායනික ප්‍රතිකාරය' : 'Chemical Treatment',
+                  text: (chemical as string) || info.chemical,
+                },
+                {
+                  icon: '🌱',
+                  label: language === 'ta' ? 'விவசாய முறைகள்' : language === 'si' ? 'කෘෂිකාර්මික ක්‍රමය' : 'Cultural Practice',
+                  text: (cultural as string) || info.cultural,
+                },
+                {
+                  icon: '🛡️',
+                  label: language === 'ta' ? 'தடுப்பு நடவடிக்கைகள்' : language === 'si' ? 'වැලැක්වීමේ ක්‍රමය' : 'Preventive Measure',
+                  text: (preventive as string) || info.preventive,
+                },
               ].map(({ icon, label, text }) =>
                 text ? (
                   <View key={label} style={styles.recCard}>
