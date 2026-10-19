@@ -6,43 +6,19 @@
 // used across scan.tsx, scan-result.tsx, and history.tsx.
 // ══════════════════════════════════════════════════════════════════════
 
-export type DiseaseClass =
-  | 'bud rot'
-  | 'bud root dropping'
-  | 'gray leaf spot'
-  | 'leaf rot'
-  | 'stembleeding'
-  | 'healthy leaves';
+import {
+  DiseaseClass,
+  DiseaseSeverity,
+  DiseaseInfo,
+} from '../types/pathology';
 
-export type DiseaseSeverity = 'Critical' | 'High' | 'Moderate' | 'Healthy';
-
-export interface DiseaseInfo {
-  /** Human-readable disease name with pathogen */
-  displayName: string;
-  /** Sinhala name */
-  sinhalaName: string;
-  /** Severity classification */
-  severity: DiseaseSeverity;
-  /** Emoji icon for UI display */
-  icon: string;
-  /** Brand color for charts and badges */
-  color: string;
-  /** Brief one-line description */
-  description: string;
-  /** Affected part of the palm */
-  affectedPart: string;
-  /** Chemical treatment recommendation */
-  chemical: string;
-  /** Cultural / physical treatment recommendation */
-  cultural: string;
-  /** Preventive treatment recommendation */
-  preventive: string;
-}
+export type { DiseaseClass, DiseaseSeverity, DiseaseInfo };
 
 export const DISEASE_KNOWLEDGE: Record<DiseaseClass, DiseaseInfo> = {
   'bud rot': {
     displayName: 'Bud Rot',
     sinhalaName: 'අග කුණු වීම',
+    tamilName: 'குருத்து அழுகல்',
     severity: 'Critical',
     icon: '🔴',
     color: '#EF4444',
@@ -55,6 +31,7 @@ export const DISEASE_KNOWLEDGE: Record<DiseaseClass, DiseaseInfo> = {
   'bud root dropping': {
     displayName: 'Bud Root Dropping',
     sinhalaName: 'කරය හැලීම',
+    tamilName: 'வேர் தண்டு உதிர்தல்',
     severity: 'High',
     icon: '🟠',
     color: '#F97316',
@@ -67,6 +44,7 @@ export const DISEASE_KNOWLEDGE: Record<DiseaseClass, DiseaseInfo> = {
   'gray leaf spot': {
     displayName: 'Gray Leaf Spot',
     sinhalaName: 'කළු ලප රෝගය',
+    tamilName: 'சாம்பல் இலைப்புள்ளி',
     severity: 'Moderate',
     icon: '🟡',
     color: '#EAB308',
@@ -79,6 +57,7 @@ export const DISEASE_KNOWLEDGE: Record<DiseaseClass, DiseaseInfo> = {
   'leaf rot': {
     displayName: 'Leaf Rot',
     sinhalaName: 'කොළ කුණු වීම',
+    tamilName: 'இலை அழுகல்',
     severity: 'High',
     icon: '🟠',
     color: '#EA580C',
@@ -91,6 +70,7 @@ export const DISEASE_KNOWLEDGE: Record<DiseaseClass, DiseaseInfo> = {
   'stembleeding': {
     displayName: 'Stem Bleeding',
     sinhalaName: 'කඳෙන් ලේ වැගිරීම',
+    tamilName: 'தண்டு வடிதல்',
     severity: 'Critical',
     icon: '🔴',
     color: '#DC2626',
@@ -103,6 +83,7 @@ export const DISEASE_KNOWLEDGE: Record<DiseaseClass, DiseaseInfo> = {
   'healthy leaves': {
     displayName: 'Healthy Palm',
     sinhalaName: 'සෞඛ්‍ය සම්පන්න',
+    tamilName: 'ஆரோக்கியமான பனை',
     severity: 'Healthy',
     icon: '🟢',
     color: '#22C55E',
