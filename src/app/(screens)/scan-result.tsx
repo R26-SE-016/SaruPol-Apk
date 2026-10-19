@@ -13,8 +13,8 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
 import { COLORS, ROUNDING, SHADOWS } from '../../constants/theme';
-import GlassCard from '../../components/common/GlassCard';
 import GradientButton from '../../components/common/GradientButton';
 import { submitDiagnosisFeedback } from '../../services/pathologyService';
 import { useAppStore } from '../../store/appStore';
@@ -24,6 +24,26 @@ import {
   SEVERITY_COLORS,
   type DiseaseClass,
 } from '../../constants/diseaseKnowledge';
+
+const PALETTE = {
+  bg: '#F8FAF8',
+  cardBg: '#FFFFFF',
+  cardBorder: '#E8EDE8',
+  subtleBorder: '#EEF2EE',
+  brandDark: '#142817',
+  brandPrimary: '#15803D',
+  brandEmerald: '#16A34A',
+  brandLight: '#DCFCE7',
+  brandSubtle: '#F0FDF4',
+  textPrimary: '#0F172A',
+  textSecondary: '#475569',
+  textMuted: '#64748B',
+  textLight: '#94A3B8',
+  red: '#DC2626',
+  redLight: '#FEE2E2',
+  redSubtle: '#FFF7F7',
+  redBorder: '#FECACA',
+};
 
 // ── Prediction bar item ───────────────────────────────────────────────
 interface PredBar {
@@ -68,7 +88,7 @@ const barStyles = StyleSheet.create({
   track: {
     flex: 1,
     height: 6,
-    backgroundColor: 'rgba(76, 175, 80, 0.12)',
+    backgroundColor: '#EEF2EE',
     borderRadius: 3,
     overflow: 'hidden',
   },
@@ -170,6 +190,7 @@ export default function ScanResultScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar style="dark" />
       {/* ── Header ─────────────────────────────────────────────── */}
       <Animated.View
         style={[
@@ -181,7 +202,7 @@ export default function ScanResultScreen() {
         ]}
       >
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
+          <Ionicons name="arrow-back" size={24} color={PALETTE.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.title}>
@@ -189,7 +210,7 @@ export default function ScanResultScreen() {
           </Text>
           {inferenceMs > 0 && (
             <View style={styles.inferenceTag}>
-              <Ionicons name="flash" size={11} color={COLORS.accentLight} />
+              <Ionicons name="flash" size={11} color="#D97706" />
               <Text style={styles.inferenceText}>{inferenceMs}ms</Text>
             </View>
           )}
@@ -211,7 +232,7 @@ export default function ScanResultScreen() {
               {/* Disease class overlay */}
               <View style={[
                 styles.imageOverlay,
-                { backgroundColor: isHealthy ? 'rgba(34, 197, 94, 0.85)' : `${info.color}DD` }
+                { backgroundColor: isHealthy ? 'rgba(21, 128, 61, 0.90)' : `${info.color}EE` }
               ]}>
                 <Text style={styles.imageOverlayIcon}>{info.icon}</Text>
                 <Text style={styles.imageOverlayText}>{info.displayName}</Text>
@@ -220,19 +241,19 @@ export default function ScanResultScreen() {
             </View>
           ) : (
             <View style={styles.placeholderImage}>
-              <Ionicons name="image" size={48} color={COLORS.textMuted} />
+              <Ionicons name="image" size={48} color={PALETTE.textLight} />
             </View>
           )}
 
           {/* ── Diagnosis Summary Card ───────────────────────── */}
-          <GlassCard style={[
+          <View style={[
             styles.summaryCard,
-            isHealthy ? styles.healthyBorder : styles.diseasedBorder,
+            isHealthy ? styles.healthyCardStyle : styles.diseasedCardStyle,
           ]}>
             {/* Header row */}
             <View style={styles.summaryHeader}>
               <View style={styles.partTag}>
-                <Ionicons name="leaf-outline" size={13} color={COLORS.textSecondary} />
+                <Ionicons name="leaf-outline" size={13} color={PALETTE.brandPrimary} />
                 <Text style={styles.partTagText}>
                   {language === 'en' ? `Coconut ${part}` : `${part} කොටස`}
                 </Text>
@@ -241,7 +262,7 @@ export default function ScanResultScreen() {
             </View>
 
             {/* Disease name */}
-            <Text style={[styles.diseaseName, { color: isHealthy ? COLORS.healthy : info.color }]}>
+            <Text style={[styles.diseaseName, { color: isHealthy ? PALETTE.brandPrimary : info.color }]}>
               {isHealthy
                 ? (language === 'en' ? 'No Disease Detected' : 'ලෙඩ රෝග කිසිවක් නැත')
                 : (diagnosis as string || info.displayName)}
@@ -260,11 +281,11 @@ export default function ScanResultScreen() {
               </Text>
             </View>
             <ConfidenceBar value={numConfidence} color={info.color} />
-          </GlassCard>
+          </View>
 
           {/* ── All Predictions Chart ────────────────────────── */}
           {predictions.length > 0 && (
-            <GlassCard style={styles.predictionsCard}>
+            <View style={styles.predictionsCard}>
               <Text style={styles.predictionsTitle}>
                 {language === 'en' ? '📊 All Class Probabilities' : '📊 සියලු පංතිවල සම්භාවිතාව'}
               </Text>
@@ -295,7 +316,7 @@ export default function ScanResultScreen() {
                   }
                 )}
               </View>
-            </GlassCard>
+            </View>
           )}
 
           {/* ── Treatment Recommendations ────────────────────── */}
@@ -311,13 +332,13 @@ export default function ScanResultScreen() {
                 { icon: '🛡️', label: language === 'en' ? 'Preventive Measure' : 'වැලැක්වීමේ ක්‍රමය', text: preventive },
               ].map(({ icon, label, text }) =>
                 text ? (
-                  <GlassCard key={label} style={styles.recCard}>
+                  <View key={label} style={styles.recCard}>
                     <View style={styles.recHeader}>
                       <Text style={styles.recIcon}>{icon}</Text>
                       <Text style={styles.recTitle}>{label}</Text>
                     </View>
                     <Text style={styles.recBody}>{text}</Text>
-                  </GlassCard>
+                  </View>
                 ) : null
               )}
             </View>
@@ -325,7 +346,7 @@ export default function ScanResultScreen() {
 
           {/* ── Healthy Message ──────────────────────────────── */}
           {isHealthy && (
-            <GlassCard style={[styles.healthyCard]}>
+            <View style={[styles.healthyCard]}>
               <View style={styles.healthyRow}>
                 <Text style={styles.healthyEmoji}>✅</Text>
                 <View style={styles.healthyTextBlock}>
@@ -339,12 +360,12 @@ export default function ScanResultScreen() {
                   </Text>
                 </View>
               </View>
-            </GlassCard>
+            </View>
           )}
 
           {/* ── Feedback Card ────────────────────────────────── */}
           {!feedbackSent && (
-            <GlassCard style={styles.feedbackCard}>
+            <View style={styles.feedbackCard}>
               <Text style={styles.feedbackTitle}>
                 {language === 'en'
                   ? 'Was this diagnosis accurate?'
@@ -355,8 +376,8 @@ export default function ScanResultScreen() {
                   onPress={() => handleFeedback(true)}
                   style={[styles.feedbackBtn, styles.correctBtn]}
                 >
-                  <Ionicons name="thumbs-up" size={18} color={COLORS.textPrimary} />
-                  <Text style={styles.feedbackBtnText}>
+                  <Ionicons name="thumbs-up" size={18} color="#FFFFFF" />
+                  <Text style={[styles.feedbackBtnText, { color: '#FFFFFF' }]}>
                     {language === 'en' ? 'Correct' : 'නිවැරදියි'}
                   </Text>
                 </TouchableOpacity>
@@ -364,13 +385,13 @@ export default function ScanResultScreen() {
                   onPress={() => handleFeedback(false)}
                   style={[styles.feedbackBtn, styles.incorrectBtn]}
                 >
-                  <Ionicons name="thumbs-down" size={18} color={COLORS.textPrimary} />
-                  <Text style={styles.feedbackBtnText}>
+                  <Ionicons name="thumbs-down" size={18} color={PALETTE.textSecondary} />
+                  <Text style={[styles.feedbackBtnText, { color: PALETTE.textSecondary }]}>
                     {language === 'en' ? 'Incorrect' : 'වැරදියි'}
                   </Text>
                 </TouchableOpacity>
               </View>
-            </GlassCard>
+            </View>
           )}
 
           {/* ── Action Buttons ───────────────────────────────── */}
@@ -379,7 +400,7 @@ export default function ScanResultScreen() {
               style={styles.scanAgainBtn}
               onPress={() => router.back()}
             >
-              <Ionicons name="camera-outline" size={18} color={COLORS.primaryLight} />
+              <Ionicons name="camera-outline" size={18} color={PALETTE.brandEmerald} />
               <Text style={styles.scanAgainText}>
                 {language === 'en' ? 'Scan Again' : 'නැවත ස්කෑන් කරන්න'}
               </Text>
@@ -400,7 +421,7 @@ export default function ScanResultScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: PALETTE.bg,
   },
   // ── Header ─────────────────────────────────────────────────────
   header: {
@@ -411,8 +432,8 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 30,
     paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(76, 175, 80, 0.12)',
-    backgroundColor: COLORS.surface,
+    borderBottomColor: PALETTE.subtleBorder,
+    backgroundColor: PALETTE.cardBg,
   },
   backBtn: { padding: 8 },
   headerCenter: {
@@ -421,7 +442,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   title: {
-    color: COLORS.textPrimary,
+    color: PALETTE.textPrimary,
     fontSize: 18,
     fontWeight: '800',
   },
@@ -429,15 +450,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    backgroundColor: 'rgba(255, 179, 0, 0.12)',
+    backgroundColor: '#FEF3C7',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: ROUNDING.full,
     borderWidth: 1,
-    borderColor: 'rgba(255, 179, 0, 0.25)',
+    borderColor: '#FDE68A',
   },
   inferenceText: {
-    color: COLORS.accentLight,
+    color: '#D97706',
     fontSize: 10,
     fontWeight: '700',
   },
@@ -451,10 +472,11 @@ const styles = StyleSheet.create({
   imageContainer: {
     width: '100%',
     height: 220,
-    borderRadius: ROUNDING.lg,
+    borderRadius: 20,
     overflow: 'hidden',
     marginBottom: 16,
     position: 'relative',
+    backgroundColor: '#EEF2EE',
   },
   resultImage: {
     width: '100%',
@@ -486,16 +508,38 @@ const styles = StyleSheet.create({
   placeholderImage: {
     width: '100%',
     height: 180,
-    borderRadius: ROUNDING.lg,
-    backgroundColor: COLORS.surface,
+    borderRadius: 20,
+    backgroundColor: '#EEF2EE',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
   },
   // ── Summary Card ────────────────────────────────────────────────
-  summaryCard: { marginBottom: 14 },
-  healthyBorder: { borderColor: COLORS.healthy, borderWidth: 1.5 },
-  diseasedBorder: { borderColor: COLORS.diseased, borderWidth: 1.5 },
+  summaryCard: {
+    backgroundColor: PALETTE.cardBg,
+    borderRadius: 20,
+    padding: 18,
+    marginBottom: 16,
+    borderWidth: 1.5,
+    borderColor: PALETTE.cardBorder,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#12211C',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.04,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  healthyCardStyle: {
+    borderColor: '#86EFAC',
+  },
+  diseasedCardStyle: {
+    borderColor: '#FECACA',
+  },
   summaryHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -506,17 +550,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    backgroundColor: PALETTE.brandSubtle,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: ROUNDING.full,
     borderWidth: 1,
-    borderColor: 'rgba(76, 175, 80, 0.2)',
+    borderColor: PALETTE.brandLight,
   },
   partTagText: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    fontWeight: '600',
+    color: PALETTE.brandPrimary,
+    fontSize: 11.5,
+    fontWeight: '700',
     textTransform: 'capitalize',
   },
   diseaseName: {
@@ -525,9 +569,9 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   diseaseDesc: {
-    color: COLORS.textSecondary,
+    color: PALETTE.textSecondary,
     fontSize: 13,
-    lineHeight: 18,
+    lineHeight: 19,
     marginBottom: 14,
   },
   confRow: {
@@ -536,7 +580,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   confLabel: {
-    color: COLORS.textSecondary,
+    color: PALETTE.textMuted,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -545,23 +589,44 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   // ── Predictions Chart ────────────────────────────────────────────
-  predictionsCard: { marginBottom: 14 },
+  predictionsCard: {
+    backgroundColor: PALETTE.cardBg,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: PALETTE.cardBorder,
+    padding: 18,
+    marginBottom: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#12211C',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.04,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
   predictionsTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 14,
-    fontWeight: '700',
+    color: PALETTE.textPrimary,
+    fontSize: 14.5,
+    fontWeight: '800',
     marginBottom: 14,
   },
   predList: { gap: 10 },
   predRow: {
     gap: 6,
-    padding: 8,
-    borderRadius: ROUNDING.sm,
+    padding: 10,
+    borderRadius: 14,
+    backgroundColor: '#F8FAF8',
+    borderWidth: 1,
+    borderColor: '#EEF2EE',
   },
   predRowTop: {
-    backgroundColor: 'rgba(76, 175, 80, 0.07)',
-    borderWidth: 1,
-    borderColor: 'rgba(76, 175, 80, 0.15)',
+    backgroundColor: PALETTE.brandSubtle,
+    borderWidth: 1.5,
+    borderColor: PALETTE.brandLight,
   },
   predLabelRow: {
     flexDirection: 'row',
@@ -576,50 +641,74 @@ const styles = StyleSheet.create({
   },
   predLabel: {
     flex: 1,
-    color: COLORS.textSecondary,
-    fontSize: 12,
+    color: PALETTE.textSecondary,
+    fontSize: 12.5,
     fontWeight: '600',
   },
   predLabelTop: {
-    color: COLORS.textPrimary,
-    fontWeight: '700',
+    color: PALETTE.textPrimary,
+    fontWeight: '800',
   },
   predPct: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 12.5,
+    fontWeight: '800',
     minWidth: 36,
     textAlign: 'right',
   },
   // ── Recommendations ──────────────────────────────────────────────
-  recommendationsSection: { marginBottom: 14, gap: 10 },
+  recommendationsSection: {
+    marginBottom: 16,
+    gap: 12,
+  },
   sectionTitle: {
-    color: COLORS.textPrimary,
+    color: PALETTE.textPrimary,
     fontSize: 16,
     fontWeight: '800',
-    marginBottom: 4,
+    marginBottom: 2,
   },
-  recCard: { gap: 8 },
+  recCard: {
+    backgroundColor: PALETTE.cardBg,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: PALETTE.cardBorder,
+    padding: 16,
+    gap: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#12211C',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.03,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 1,
+      },
+    }),
+  },
   recHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  recIcon: { fontSize: 16 },
+  recIcon: { fontSize: 18 },
   recTitle: {
-    color: COLORS.accentLight,
-    fontWeight: '700',
-    fontSize: 13,
+    color: PALETTE.brandPrimary,
+    fontWeight: '800',
+    fontSize: 13.5,
   },
   recBody: {
-    color: COLORS.textPrimary,
+    color: PALETTE.textSecondary,
     fontSize: 13,
     lineHeight: 19,
   },
   // ── Healthy Card ─────────────────────────────────────────────────
   healthyCard: {
-    marginBottom: 14,
-    borderColor: COLORS.healthy,
+    backgroundColor: PALETTE.brandSubtle,
+    borderColor: '#86EFAC',
     borderWidth: 1.5,
+    borderRadius: 20,
+    padding: 18,
+    marginBottom: 16,
   },
   healthyRow: {
     flexDirection: 'row',
@@ -629,31 +718,46 @@ const styles = StyleSheet.create({
   healthyEmoji: { fontSize: 28, marginTop: 2 },
   healthyTextBlock: { flex: 1, gap: 4 },
   healthyTitle: {
-    color: COLORS.healthy,
+    color: PALETTE.brandPrimary,
     fontSize: 16,
     fontWeight: '800',
   },
   healthyDesc: {
-    color: COLORS.textSecondary,
+    color: PALETTE.textSecondary,
     fontSize: 13,
     lineHeight: 18,
   },
   // ── Feedback ─────────────────────────────────────────────────────
   feedbackCard: {
-    marginBottom: 14,
-    borderColor: 'rgba(255, 143, 0, 0.2)',
+    backgroundColor: PALETTE.cardBg,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: PALETTE.cardBorder,
+    padding: 18,
+    marginBottom: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#12211C',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.04,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   feedbackTitle: {
-    color: COLORS.textPrimary,
+    color: PALETTE.textPrimary,
     fontSize: 14,
     fontWeight: '700',
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 14,
   },
   feedbackBtnRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    gap: 10,
+    gap: 12,
   },
   feedbackBtn: {
     flex: 1,
@@ -661,22 +765,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 12,
-    borderRadius: ROUNDING.sm,
+    paddingVertical: 13,
+    borderRadius: 14,
   },
-  correctBtn: { backgroundColor: COLORS.primary },
-  incorrectBtn: { backgroundColor: COLORS.surfaceLight },
+  correctBtn: {
+    backgroundColor: PALETTE.brandPrimary,
+  },
+  incorrectBtn: {
+    backgroundColor: '#F8FAF8',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+  },
   feedbackBtnText: {
-    color: COLORS.textPrimary,
     fontWeight: '700',
     fontSize: 13,
   },
   // ── Actions ──────────────────────────────────────────────────────
   actionRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: 6,
   },
   scanAgainBtn: {
     flex: 0.45,
@@ -685,15 +794,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     paddingVertical: 14,
-    borderRadius: ROUNDING.sm,
+    borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: 'rgba(76, 175, 80, 0.3)',
-    backgroundColor: COLORS.surface,
+    borderColor: PALETTE.brandEmerald,
+    backgroundColor: PALETTE.cardBg,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#12211C',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   scanAgainText: {
-    color: COLORS.primaryLight,
-    fontWeight: '700',
-    fontSize: 13,
+    color: PALETTE.brandEmerald,
+    fontWeight: '800',
+    fontSize: 13.5,
   },
   homeBtn: { flex: 0.55 },
 });

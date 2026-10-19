@@ -1,10 +1,26 @@
 import React from 'react';
 import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Image, Platform } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { COLORS, ROUNDING } from '../../constants/theme';
-import GlassCard from '../../components/common/GlassCard';
+import { Ionicons } from '@expo/vector-icons';
+import { ROUNDING } from '../../constants/theme';
 import GradientButton from '../../components/common/GradientButton';
+
+const PALETTE = {
+  bg: '#F8FAF8',
+  cardBg: '#FFFFFF',
+  cardBorder: '#E8EDE8',
+  brandDark: '#142817',
+  brandPrimary: '#15803D',
+  brandEmerald: '#16A34A',
+  brandLight: '#DCFCE7',
+  brandSubtle: '#F0FDF4',
+  textPrimary: '#0F172A',
+  textSecondary: '#475569',
+  textMuted: '#64748B',
+  amberLight: '#FEF3C7',
+};
 
 export default function GuestInfoScreen() {
   const { t } = useTranslation();
@@ -12,13 +28,17 @@ export default function GuestInfoScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <StatusBar style="dark" />
+
+      <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Text style={styles.backText}>← {t('common.back')}</Text>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={0.7}>
+            <Ionicons name="arrow-back" size={18} color={PALETTE.textPrimary} />
+            <Text style={styles.backText}>{t('common.back')}</Text>
           </TouchableOpacity>
           <Text style={styles.title}>{t('guest.title')}</Text>
+          <View style={{ width: 60 }} />
         </View>
 
         {/* Banner Image */}
@@ -30,33 +50,59 @@ export default function GuestInfoScreen() {
         </View>
 
         {/* Who We Are Section */}
-        <GlassCard style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>{t('guest.whoWeAreTitle')}</Text>
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.iconCircleGreen}>
+              <Ionicons name="information" size={16} color={PALETTE.brandEmerald} />
+            </View>
+            <Text style={styles.sectionTitle}>{t('guest.whoWeAreTitle')}</Text>
+          </View>
           <Text style={styles.sectionText}>{t('guest.whoWeAreText')}</Text>
-        </GlassCard>
+        </View>
 
         {/* What We Do Section */}
-        <GlassCard style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>{t('guest.whatWeDoTitle')}</Text>
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.iconCircleAmber}>
+              <Ionicons name="layers" size={16} color="#D97706" />
+            </View>
+            <Text style={styles.sectionTitle}>{t('guest.whatWeDoTitle')}</Text>
+          </View>
           <Text style={styles.sectionText}>{t('guest.whatWeDoText')}</Text>
           
           <View style={styles.featuresList}>
-            <Text style={styles.featureItem}>{t('guest.featuresList.pathology')}</Text>
-            <Text style={styles.featureItem}>{t('guest.featuresList.yield')}</Text>
-            <Text style={styles.featureItem}>{t('guest.featuresList.soil')}</Text>
-            <Text style={styles.featureItem}>{t('guest.featuresList.advisor')}</Text>
+            <View style={styles.featureItemRow}>
+              <Ionicons name="checkmark-circle" size={16} color={PALETTE.brandEmerald} />
+              <Text style={styles.featureItemText}>{t('guest.featuresList.pathology')}</Text>
+            </View>
+            <View style={styles.featureItemRow}>
+              <Ionicons name="checkmark-circle" size={16} color={PALETTE.brandEmerald} />
+              <Text style={styles.featureItemText}>{t('guest.featuresList.yield')}</Text>
+            </View>
+            <View style={styles.featureItemRow}>
+              <Ionicons name="checkmark-circle" size={16} color={PALETTE.brandEmerald} />
+              <Text style={styles.featureItemText}>{t('guest.featuresList.soil')}</Text>
+            </View>
+            <View style={styles.featureItemRow}>
+              <Ionicons name="checkmark-circle" size={16} color={PALETTE.brandEmerald} />
+              <Text style={styles.featureItemText}>{t('guest.featuresList.advisor')}</Text>
+            </View>
           </View>
-        </GlassCard>
+        </View>
 
         {/* Prompt to register */}
-        <GlassCard style={styles.registerPromptCard}>
+        <View style={styles.registerPromptCard}>
+          <View style={styles.promptHeader}>
+            <Ionicons name="sparkles" size={18} color="#D97706" />
+            <Text style={styles.promptTitle}>Premium Features</Text>
+          </View>
           <Text style={styles.promptText}>{t('guest.getStartedText')}</Text>
           <GradientButton
             title={t('auth.registerTitle')}
             onPress={() => router.replace('/')}
             style={styles.regBtn}
           />
-        </GlassCard>
+        </View>
 
         {/* Continue as Guest Button */}
         <GradientButton
@@ -73,46 +119,47 @@ export default function GuestInfoScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: PALETTE.bg,
   },
   scrollContainer: {
-    paddingHorizontal: 24,
-    paddingTop: Platform.OS === 'ios' ? 60 : 30,
+    paddingHorizontal: 22,
+    paddingTop: Platform.OS === 'ios' ? 56 : 38,
     paddingBottom: 40,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 20,
-    position: 'relative',
   },
   backButton: {
-    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 7,
     paddingHorizontal: 12,
-    backgroundColor: 'rgba(27, 94, 32, 0.2)',
+    backgroundColor: PALETTE.cardBg,
     borderRadius: ROUNDING.sm,
-    borderColor: 'rgba(76, 175, 80, 0.2)',
+    borderColor: '#E2E8F0',
     borderWidth: 1,
-    position: 'absolute',
-    left: 0,
-    zIndex: 10,
   },
   backText: {
-    color: COLORS.textPrimary,
-    fontWeight: 'bold',
+    color: PALETTE.textPrimary,
+    fontWeight: '700',
+    fontSize: 13,
   },
   title: {
-    flex: 1,
-    textAlign: 'center',
-    color: COLORS.textPrimary,
-    fontSize: 22,
+    color: PALETTE.textPrimary,
+    fontSize: 18,
     fontWeight: '800',
   },
   bannerWrapper: {
     height: 160,
-    borderRadius: ROUNDING.md,
+    borderRadius: 20,
     overflow: 'hidden',
     marginBottom: 20,
+    borderWidth: 1,
+    borderColor: PALETTE.cardBorder,
   },
   banner: {
     width: '100%',
@@ -120,46 +167,105 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   sectionCard: {
+    backgroundColor: PALETTE.cardBg,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: PALETTE.cardBorder,
+    padding: 18,
     marginBottom: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#12211C',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.04,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
+  },
+  iconCircleGreen: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: PALETTE.brandLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconCircleAmber: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: PALETTE.amberLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sectionTitle: {
-    color: COLORS.accentLight,
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 8,
+    color: PALETTE.textPrimary,
+    fontSize: 16,
+    fontWeight: '800',
   },
   sectionText: {
-    color: COLORS.textPrimary,
-    fontSize: 14,
+    color: PALETTE.textSecondary,
+    fontSize: 13.5,
     lineHeight: 20,
   },
   featuresList: {
-    marginTop: 12,
+    marginTop: 14,
+    gap: 8,
+    backgroundColor: '#F8FAF8',
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#EEF2EE',
+  },
+  featureItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
-  featureItem: {
-    color: COLORS.textSecondary,
-    fontSize: 14,
+  featureItemText: {
+    color: PALETTE.textPrimary,
+    fontSize: 13,
     fontWeight: '600',
-    paddingLeft: 6,
+    flex: 1,
   },
   registerPromptCard: {
-    backgroundColor: 'rgba(255, 143, 0, 0.08)',
-    borderColor: 'rgba(255, 143, 0, 0.25)',
-    marginBottom: 24,
+    backgroundColor: '#FEFBF2',
+    borderColor: '#FEF08A',
+    borderWidth: 1,
+    borderRadius: 20,
+    padding: 18,
+    marginBottom: 20,
+  },
+  promptHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  promptTitle: {
+    color: '#92400E',
+    fontSize: 14,
+    fontWeight: '800',
   },
   promptText: {
-    color: COLORS.textPrimary,
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 16,
-    lineHeight: 20,
+    color: '#78350F',
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: 14,
   },
   regBtn: {
-    alignSelf: 'center',
-    paddingHorizontal: 32,
+    alignSelf: 'stretch',
   },
   enterBtn: {
-    marginTop: 10,
+    marginTop: 4,
   },
 });
