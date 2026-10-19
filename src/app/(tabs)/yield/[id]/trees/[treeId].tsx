@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, ActivityIndicator, TextInput, Alert, Image, Modal } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, ActivityIndicator, TextInput, Alert, Image, Modal, Share } from "react-native";
 import { ArrowLeft, Save, AlertTriangle, Thermometer, Droplets, FlaskConical, Info, FileDown, Search, CheckCircle2, XCircle, Zap, Edit3, MoreVertical, ChevronDown, Share2, MapPin, Clock, RefreshCw } from "lucide-react-native";
 import { useState, useEffect } from "react";
 import { LinearGradient } from "expo-linear-gradient";
@@ -187,6 +187,10 @@ export default function SingleTreeScreen() {
         setManualPh(String(tData.sensorData.ph ?? 6.2));
         setManualMoisture(String(tData.sensorData.soilMoisture ?? 45));
       }
+      if (tData.variety) setVariety(tData.variety);
+      if (tData.ageRange) setAgeRange(tData.ageRange);
+      if (tData.frondCount !== undefined) setFrondCount(tData.frondCount);
+
 
       // Load tree object from farm context
       const farm: any = farms.find((f: any) => f.id === farmId);
@@ -355,6 +359,19 @@ export default function SingleTreeScreen() {
     ]);
   };
 
+  
+  const handleShare = async () => {
+    try {
+      if (l) {
+        await Share.share({
+          message: 'SaruPol Prediction: My coconut tree has a yield of ' + parseFloat(l.finalYield).toFixed(0) + ' Nuts/45 Days! Soil Health: ' + (l.health_index_percentage || 60) + '%.'
+        });
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   const savePredictionToDB = async () => {
     if (!user || !currentPrediction) return;
     setSaving(true);
@@ -367,6 +384,9 @@ export default function SingleTreeScreen() {
         latest: newHistoryEntry,
         status: healthStats.status,
         health: healthStats.health,
+        variety,
+        ageRange,
+        frondCount,
       } as any);
       await saveTreeHistory(user.uid, farmId, treeId, newHistoryEntry as any);
 
@@ -918,7 +938,7 @@ export default function SingleTreeScreen() {
                     <Text className="text-[10px] text-slate-600 font-bold">Poor</Text>
                   </View>
                   {/* Custom Pin logic, default approx 60% */}
-                  <View style={{ position: 'absolute', top: -14, left: '60%' }} className="items-center">
+                  <View style={{ position: 'absolute', top: -14, left: `${l.health_index_percentage || 60}%` }} className="items-center">
                     <View className="w-3 h-3 rounded-full bg-slate-700 mb-0.5 border-2 border-white" />
                     <View className="w-[1.5px] h-3 bg-slate-700" />
                   </View>
@@ -998,7 +1018,7 @@ export default function SingleTreeScreen() {
                     <Text className="text-slate-700 font-bold text-sm">Close View</Text>
                   </TouchableOpacity>
                 )}
-                <TouchableOpacity className="flex-1 bg-white border border-slate-200 rounded-xl py-2.5 items-center flex-row justify-center gap-2 shadow-sm">
+                <TouchableOpacity onPress={handleShare} className="flex-1 bg-white border border-slate-200 rounded-xl py-2.5 items-center flex-row justify-center gap-2 shadow-sm">
                   <Share2 size={16} color="#15803d" />
                   <Text className="text-forest-700 font-bold text-sm">Share</Text>
                 </TouchableOpacity>

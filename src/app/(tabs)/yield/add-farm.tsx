@@ -233,6 +233,8 @@ export default function AddFarmScreen() {
           lng: lngNum,
           lastHarvestDate: lastHarvestDate.trim() || undefined,
           lastHarvestYield: lastHarvestYield ? parseInt(lastHarvestYield, 10) : undefined,
+          initialHarvestDate: lastHarvestDate.trim() || undefined,
+          initialHarvestYield: lastHarvestYield ? parseInt(lastHarvestYield, 10) : undefined,
           deviceId: primaryDeviceId,
           deviceIds: finalDeviceIds,
           treeLayout: layout,

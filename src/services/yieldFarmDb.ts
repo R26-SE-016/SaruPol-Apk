@@ -168,6 +168,14 @@ export async function updateTreeData(uid: string, farmId: string, treeId: string
 export async function fetchDevicePresence(deviceId: string): Promise<boolean> {
   try {
     const res = await api.get(`/yield/devices/${deviceId}/latest`);
+    const v = res.data?.latest;
+    if (v) {
+      const currentLastSeen = v.last_seen ? new Date(v.last_seen).getTime() : (v.timestamp ? new Date(v.timestamp).getTime() : Date.now());
+      // Consider online if data was received within the last 3 minutes (180,000 ms)
+      if (Date.now() - currentLastSeen < 180000) {
+        return true;
+      }
+    }
     return !!res.data?.isLive;
   } catch {
     return false;
