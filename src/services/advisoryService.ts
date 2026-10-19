@@ -1,4 +1,6 @@
+import { Platform } from 'react-native';
 import api from './api';
+import { useAppStore } from '../store/appStore';
 
 // ─── Single-LLM RAG Query ────────────────────────────────────────────────────
 // Gateway: POST /api/advisory/ask  →  Advisory Service: POST /ask
@@ -86,28 +88,69 @@ export const transcribeAudio = async (
 ): Promise<TranscribeResponse> => {
   const formData = new FormData();
 
-  const uriParts = audioUri.split('/');
-  const fileName = uriParts[uriParts.length - 1] || 'recording.m4a';
-  const fileType = fileName.endsWith('.wav')
-    ? 'audio/wav'
-    : fileName.endsWith('.mp3')
-    ? 'audio/mpeg'
-    : 'audio/m4a';
+  if (Platform.OS === 'web') {
+    // Expo Web: the URI is a blob: URL. Browser FormData can't read {uri,name,type}
+    // objects (it would send "[object Object]"), so fetch the real audio Blob.
+    const blob = await fetch(audioUri).then((r) => r.blob());
+    const mime = blob.type || 'audio/webm';
+    const ext = mime.includes('webm') ? 'webm'
+      : mime.includes('ogg') ? 'ogg'
+      : mime.includes('mp4') || mime.includes('m4a') || mime.includes('aac') ? 'm4a'
+      : mime.includes('mpeg') ? 'mp3'
+      : mime.includes('wav') ? 'wav'
+      : 'webm';
+    formData.append('audio', blob, `recording.${ext}`);
+  } else {
+    // Native Android / iOS: React Native streams the file from the local URI
+    const uriParts = audioUri.split('/');
+    const fileName = uriParts[uriParts.length - 1] || 'recording.m4a';
+    const fileType = fileName.endsWith('.wav')
+      ? 'audio/wav'
+      : fileName.endsWith('.mp3')
+      ? 'audio/mpeg'
+      : 'audio/m4a';
 
-  formData.append('audio', {
-    uri: audioUri,
-    name: fileName,
-    type: fileType,
-  } as any);
+    formData.append('audio', {
+      uri: Platform.OS === 'ios' ? audioUri.replace('file://', '') : audioUri,
+      name: fileName,
+      type: fileType,
+    } as any);
+  }
 
   formData.append('language', language || 'auto');
 
-  const response = await api.post('/advisory/transcribe', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-    timeout: 45000,
-  });
+  // Use native fetch API instead of Axios for FormData.
+  // Axios in React Native has known issues with stripping or misformatting boundaries for multipart/form-data.
+  // fetch automatically sets the correct Content-Type with multipart boundary on both Web and React Native.
+  const baseUrl = api.defaults.baseURL || 'http://localhost:8000/api';
+  const token = useAppStore.getState().token;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 45000);
 
-  return response.data;
+  try {
+    const res = await fetch(`${baseUrl}/advisory/transcribe`, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        Accept: 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        // DO NOT set Content-Type; fetch sets it automatically with the correct multipart boundary.
+      },
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data?.detail || data?.error || `Transcription failed (${res.status})`);
+    }
+    return data;
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    if (err?.name === 'AbortError') {
+      throw new Error('Transcription request timed out (45s)');
+    }
+    throw err;
+  }
 };
